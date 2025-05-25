@@ -1,29 +1,217 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE HTML>
+<html>
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Flaha Agri Tech</title>
-  <link rel="stylesheet" href="assets/css/style.css">
+  <title>FlahaSoil - Soil Texture Analysis | Flaha Agri Tech PA</title>
+  <meta name="description"
+    content="Advanced soil texture analysis tool by Flaha Agri Tech Precision Agriculture division">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="./assets/img/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="./assets/css/style.css">
+  <!-- Update to D3.js v7 -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
+
 <body>
-  <header>
-    <img src="assets/images/logo.png" alt="Flaha Agri Tech Logo" height="60">
-    <h1>Welcome to Flaha Agri Tech</h1>
+  <!-- Flaha PA Header -->
+  <header class="flaha-header">
+    <div class="header-content">
+      <div class="brand-section">
+        <div class="flaha-logo">
+          <span class="flaha-text">FLAHA</span>
+          <span class="pa-text">PA</span>
+        </div>
+        <div class="brand-tagline">Precision Agriculture</div>
+      </div>
+      <div class="app-title-section">
+        <h1 class="app-title">FlahaSoil</h1>
+        <p class="app-subtitle">Advanced Soil Texture Analysis</p>
+      </div>
+    </div>
   </header>
-  <main>
-    <section>
-      <h2>About Us</h2>
-      <p>Flaha Agri Tech is dedicated to advancing sustainable agriculture through technology and innovation.</p>
-    </section>
-    <section>
-      <h2>Contact</h2>
-      <p>Email: info@flahaagritech.com</p>
-    </section>
+
+  <main class="main-content">
+    <div class="input-container">
+      <div class="input-group">
+        <label for="clay-input">Clay %:</label>
+        <input type="number" id="clay-input" min="0" max="100" value="33">
+      </div>
+      <div class="input-group">
+        <label for="sand-input">Sand %:</label>
+        <input type="number" id="sand-input" min="0" max="100" value="33">
+      </div>
+      <div class="input-group">
+        <label for="silt-input" class="disabled-label">Silt %:</label>
+        <input type="number" id="silt-input" disabled value="34">
+      </div>
+      <button id="update-point">Update Point</button>
+    </div>
+
+    <div class="advanced-inputs">
+      <h3>Soil Properties</h3>
+      <div class="input-group">
+        <label for="om-input">Organic Matter %:</label>
+        <input type="number" id="om-input" min="0" max="8" step="0.1" value="2.5">
+      </div>
+      <div class="input-group">
+        <label for="density-input">Density Factor:</label>
+        <input type="number" id="density-input" min="0.9" max="1.2" step="0.05" value="1.0">
+      </div>
+    </div>
+
+    <div id="chart-container"></div>
+    <div id="coordinates"></div>
+    <div id="soil-texture-display"></div>
+
+    <div class="results-container">
+      <h3>Soil Water Characteristics</h3>
+      <div class="results-grid">
+        <div class="result-item">
+          <div class="result-label">Field Capacity:</div>
+          <div id="field-capacity" class="result-value">-</div>
+          <div class="result-unit">%</div>
+          <div class="progress-bar-container">
+            <div id="field-capacity-bar" class="progress-bar"></div>
+          </div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Wilting Point:</div>
+          <div id="wilting-point" class="result-value">-</div>
+          <div class="result-unit">%</div>
+          <div class="progress-bar-container">
+            <div id="wilting-point-bar" class="progress-bar"></div>
+          </div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Plant Available Water:</div>
+          <div id="plant-available-water" class="result-value">-</div>
+          <div class="result-unit">%</div>
+          <div class="progress-bar-container">
+            <div id="plant-available-water-bar" class="progress-bar"></div>
+          </div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Saturation:</div>
+          <div id="saturation" class="result-value">-</div>
+          <div class="result-unit">%</div>
+          <div class="progress-bar-container">
+            <div id="saturation-bar" class="progress-bar"></div>
+          </div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Saturated Conductivity:</div>
+          <div id="saturated-conductivity" class="result-value">-</div>
+          <div class="result-unit">mm/hr</div>
+          <div class="progress-bar-container">
+            <div id="saturated-conductivity-bar" class="progress-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="water-visualization">
+        <h4>Soil Water Content Visualization</h4>
+        <div class="visualization-container">
+          <div class="water-container">
+            <div class="water-level saturation-level">
+              <span>Saturation</span>
+            </div>
+            <div class="water-level field-capacity-level">
+              <span>Field Capacity</span>
+            </div>
+            <div class="water-level wilting-point-level">
+              <span>Wilting Point</span>
+            </div>
+
+            <!-- Water zones with labels -->
+            <div class="water-zone gravitational-zone">
+              <div class="zone-label">Gravitational Water</div>
+            </div>
+            <div class="water-zone available-zone">
+              <div class="zone-label">Plant Available Water</div>
+            </div>
+            <div class="water-zone unavailable-zone">
+              <div class="zone-label">Unavailable Water</div>
+            </div>
+          </div>
+
+          <div class="water-explanation">
+            <h5>Understanding Soil Water Zones</h5>
+            <ul>
+              <li><strong>Gravitational Water:</strong> Drains quickly from soil due to gravity. Not available to plants
+                for long.</li>
+              <li><strong>Plant Available Water:</strong> Water that plants can use. The wider this zone, the better for
+                plant growth.</li>
+              <li><strong>Unavailable Water:</strong> Water held too tightly by soil particles for plants to extract.
+              </li>
+            </ul>
+            <p class="soil-tip"><strong>Soil Tip:</strong> <span id="soil-water-tip">Loamy soils typically have the most
+                plant-available water.</span></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-section">
+        <h4>Understanding Soil Water Characteristics</h4>
+        <div class="info-grid">
+          <div class="info-item">
+            <h5>Field Capacity</h5>
+            <p>The amount of water content held in soil after excess water has drained away. This represents the upper
+              limit of water available to plants.</p>
+          </div>
+          <div class="info-item">
+            <h5>Wilting Point</h5>
+            <p>The minimum soil moisture at which a plant wilts and cannot recover. Below this point, plants cannot
+              extract water from the soil.</p>
+          </div>
+          <div class="info-item">
+            <h5>Plant Available Water</h5>
+            <p>The amount of water available for plant use, calculated as the difference between field capacity and
+              wilting point.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="recommendations-container">
+      <h3>Crop Recommendations</h3>
+      <div class="recommendations-content">
+        <div class="recommendation-section">
+          <h4>Suitable Crops</h4>
+          <ul id="suitable-crops-list">
+            <li>Loading...</li>
+          </ul>
+        </div>
+        <div class="recommendation-section">
+          <h4>Limitations</h4>
+          <ul id="limitations-list">
+            <li>Loading...</li>
+          </ul>
+        </div>
+        <div class="recommendation-section">
+          <h4>Management Tips</h4>
+          <ul id="management-tips-list">
+            <li>Loading...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </main>
-  <footer>
-    <p>&copy; 2025 Flaha Agri Tech</p>
+
+  <!-- Footer -->
+  <footer class="flaha-footer">
+    <div class="footer-content">
+      <p>&copy; 2024 Flaha Agri Tech. All rights reserved. | Precision Agriculture Division</p>
+      <p>Powered by FlahaSoil - Advanced Soil Analysis Technology</p>
+    </div>
   </footer>
-  <script src="assets/js/main.js"></script>
+
+  <script type="text/javascript" src="./assets/js/soil_water_calculations.js"></script>
+  <script type="text/javascript" src="./assets/js/main.js"></script>
 </body>
+
 </html>
