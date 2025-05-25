@@ -1,0 +1,4 @@
+# Ignore node_modules if using npm tooling
+node_modules/
+.DS_Store
+*.log
