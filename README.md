@@ -3,7 +3,7 @@
 # FlahaSoil - Advanced Soil Texture Analysis
 
 <div align="center">
-  <img src="./assets/img/icon-192x192.png" alt="FlahaSoil Logo" width="120" height="120">
+  <img src="./public/assets/img/icon-192x192.png" alt="FlahaSoil Logo" width="120" height="120">
 
 **Part of Flaha Agri Tech Precision Agriculture Division**
 
@@ -14,6 +14,8 @@
 </div>
 
 ## About FlahaSoil
+
+<![App Screenshot](./public/assets/img/FlahaSoil.png)
 
 FlahaSoil is a professional-grade soil texture analysis tool developed by **Flaha Agri Tech's Precision Agriculture Division**. This advanced web application provides interactive USDA Soil Textural Triangle visualization, helping agricultural professionals, farmers, soil scientists, and researchers understand soil composition, water characteristics, and crop suitability.
 
