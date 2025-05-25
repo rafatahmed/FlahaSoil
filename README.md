@@ -15,7 +15,7 @@
 
 ## About FlahaSoil
 
-<![App Screenshot](./public/assets/img/FlahaSoil.png)
+![App Screenshot](./public/assets/img/FlahaSoil.png)
 
 FlahaSoil is a professional-grade soil texture analysis tool developed by **Flaha Agri Tech's Precision Agriculture Division**. This advanced web application provides interactive USDA Soil Textural Triangle visualization, helping agricultural professionals, farmers, soil scientists, and researchers understand soil composition, water characteristics, and crop suitability.
 
@@ -32,6 +32,8 @@ As part of the Flaha PA suite of digital agricultural tools, FlahaSoil combines 
 
 ### 🎯 **Core Analysis Tools**
 
+![App Screenshot](./public/assets/img/Soil_triangle.png)
+
 - **Interactive USDA Soil Triangle**: Professional-grade visualization with precise soil texture classification
 - **Real-time Calculations**: Instant analysis using scientifically validated pedotransfer functions
 - **Manual Input Controls**: Direct entry of sand and clay percentages with automatic silt calculation
@@ -39,12 +41,16 @@ As part of the Flaha PA suite of digital agricultural tools, FlahaSoil combines 
 
 ### 💧 **Water Characteristics Analysis**
 
+![App Screenshot](./public/assets/img/Soil_water_char.png)
+
 - **Comprehensive Water Properties**: Field capacity, wilting point, plant available water, saturation, and hydraulic conductivity
 - **Visual Water Zone Representation**: Interactive soil column showing gravitational, plant-available, and unavailable water zones
 - **Progress Bar Indicators**: Easy-to-read visual comparisons of water characteristics
 - **Scientific Accuracy**: Based on Saxton & Rawls (2006) pedotransfer functions
 
 ### 🌱 **Agricultural Intelligence**
+
+![App Screenshot](./public/assets/img/Crop_recomend.png)
 
 - **Crop Suitability Analysis**: Data-driven crop recommendations based on soil properties
 - **Management Guidelines**: Professional tips for soil improvement and crop optimization
