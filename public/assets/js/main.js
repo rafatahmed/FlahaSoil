@@ -790,7 +790,11 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 
 // Add event listeners for the new inputs
 document.addEventListener("DOMContentLoaded", function () {
-	// Existing code...
+	// Check authentication status
+	checkAuthenticationStatus();
+
+	// Setup navigation listeners
+	setupNavigationListeners();
 
 	// Add event listeners for OM and density inputs
 	document.getElementById("om-input").addEventListener("input", function () {
@@ -829,6 +833,85 @@ document.addEventListener("DOMContentLoaded", function () {
 		initialDensity
 	);
 });
+
+/**
+ * Check authentication status and update UI
+ */
+function checkAuthenticationStatus() {
+	const token = localStorage.getItem("flahasoil_token");
+	const userStr = localStorage.getItem("flahasoil_user");
+
+	if (token && userStr) {
+		const user = JSON.parse(userStr);
+		showAuthenticatedUI(user);
+	} else {
+		showUnauthenticatedUI();
+	}
+}
+
+/**
+ * Show UI for authenticated users
+ */
+function showAuthenticatedUI(user) {
+	// Hide auth section, show user section
+	document.getElementById("authSection").style.display = "none";
+	document.getElementById("userSection").style.display = "block";
+	document.getElementById("profileLink").style.display = "block";
+
+	// Update user name
+	document.getElementById("headerUserName").textContent = user.name;
+}
+
+/**
+ * Show UI for unauthenticated users
+ */
+function showUnauthenticatedUI() {
+	// Show auth section, hide user section
+	document.getElementById("authSection").style.display = "flex";
+	document.getElementById("userSection").style.display = "none";
+	document.getElementById("profileLink").style.display = "none";
+}
+
+/**
+ * Setup navigation event listeners
+ */
+function setupNavigationListeners() {
+	// Close dropdown when clicking outside
+	document.addEventListener("click", function (event) {
+		const userMenu = document.querySelector(".user-menu");
+		const dropdown = document.getElementById("userDropdown");
+
+		if (userMenu && dropdown && !userMenu.contains(event.target)) {
+			dropdown.classList.remove("show");
+			const arrow = document.querySelector(".dropdown-arrow");
+			if (arrow) arrow.style.transform = "rotate(0deg)";
+		}
+	});
+}
+
+/**
+ * Toggle user dropdown menu
+ */
+function toggleUserDropdown() {
+	const dropdown = document.getElementById("userDropdown");
+	const arrow = document.querySelector(".dropdown-arrow");
+
+	if (dropdown) {
+		dropdown.classList.toggle("show");
+		arrow.style.transform = dropdown.classList.contains("show")
+			? "rotate(180deg)"
+			: "rotate(0deg)";
+	}
+}
+
+/**
+ * Logout user
+ */
+function logout() {
+	window.flahaSoilAPI.logout();
+	checkAuthenticationStatus();
+	location.reload();
+}
 
 // Helper functions for API integration
 function showLoadingState() {

@@ -23,14 +23,39 @@
     <div class="header-content">
       <div class="brand-section">
         <div class="flaha-logo">
-          <span class="flaha-text">FLAHA</span>
-          <span class="pa-text">PA</span>
+          <a href="./landing.html" class="logo-link">
+            <span class="flaha-text">FLAHA</span>
+            <span class="pa-text">PA</span>
+          </a>
         </div>
         <div class="brand-tagline">Precision Agriculture</div>
       </div>
       <div class="app-title-section">
         <h1 class="app-title">FlahaSoil</h1>
         <p class="app-subtitle">Advanced Soil Texture Analysis</p>
+      </div>
+      <div class="header-actions">
+        <div class="nav-links">
+          <a href="./index.html" class="nav-link active">Soil Analysis</a>
+          <a href="./profile.html" class="nav-link" id="profileLink" style="display: none;">Profile</a>
+        </div>
+        <div class="auth-section" id="authSection">
+          <button class="btn-login" onclick="showLoginModal()">Login</button>
+          <button class="btn-signup" onclick="showSignupModal()">Sign Up</button>
+        </div>
+        <div class="user-section" id="userSection" style="display: none;">
+          <div class="user-menu">
+            <button class="btn-user" onclick="toggleUserDropdown()">
+              <span class="user-name" id="headerUserName">User</span>
+              <span class="dropdown-arrow">▼</span>
+            </button>
+            <div class="user-dropdown" id="userDropdown">
+              <a href="./profile.html" class="dropdown-item">Profile</a>
+              <a href="./index.html" class="dropdown-item">Soil Analysis</a>
+              <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </header>

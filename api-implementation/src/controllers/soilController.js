@@ -132,7 +132,7 @@ class SoilController {
 				data: {
 					userId: userId || null,
 					endpoint: "soil/analyze",
-					requestData: analysisData,
+					requestData: JSON.stringify(analysisData),
 					ipAddress: req?.ip || req?.connection?.remoteAddress,
 					userAgent: req?.get("User-Agent"),
 				},

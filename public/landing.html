@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlahaSoil - Professional Soil Analysis Platform</title>
+    <link rel="stylesheet" href="./assets/css/landing.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="./assets/images/flaha-logo.png" alt="Flaha Logo" class="nav-logo">
+                <span class="brand-text">FlahaSoil</span>
+            </div>
+            <div class="nav-menu">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#about" class="nav-link">About</a>
+                <button class="btn-login" onclick="showLoginModal()">Login</button>
+                <button class="btn-signup" onclick="showSignupModal()">Get Started Free</button>
+            </div>
+            <div class="nav-toggle" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">Professional Soil Analysis Made Simple</h1>
+                <p class="hero-subtitle">
+                    Analyze soil texture, calculate water characteristics, and get crop recommendations 
+                    with our advanced Saxton & Rawls algorithms. Trusted by agricultural professionals worldwide.
+                </p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" onclick="showSignupModal()">Start Free Analysis</button>
+                    <button class="btn-secondary" onclick="startDemo()">Try Demo</button>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-number">10,000+</span>
+                        <span class="stat-label">Analyses Completed</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Active Users</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">99.9%</span>
+                        <span class="stat-label">Uptime</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="soil-triangle-preview">
+                    <img src="./assets/images/soil-triangle-preview.png" alt="Soil Triangle Analysis" class="triangle-image">
+                    <div class="preview-overlay">
+                        <div class="preview-point"></div>
+                        <div class="preview-label">Your Soil Sample</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <h2 class="section-title">Powerful Features for Soil Analysis</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔬</div>
+                    <h3>Scientific Accuracy</h3>
+                    <p>Based on Saxton & Rawls pedotransfer functions for precise soil water characteristic calculations.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Interactive Visualization</h3>
+                    <p>Real-time USDA soil triangle with D3.js visualization for immediate texture classification.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌱</div>
+                    <h3>Crop Recommendations</h3>
+                    <p>Get tailored crop suggestions and management tips based on your soil characteristics.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Mobile Friendly</h3>
+                    <p>Works perfectly on all devices - analyze soil samples anywhere, anytime.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3>Cloud & Offline</h3>
+                    <p>Seamless online/offline functionality with automatic data synchronization.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📈</div>
+                    <h3>Analysis History</h3>
+                    <p>Track your soil analyses over time with detailed history and export capabilities.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing">
+        <div class="container">
+            <h2 class="section-title">Choose Your Plan</h2>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3>Free</h3>
+                        <div class="price">$0<span>/month</span></div>
+                    </div>
+                    <ul class="plan-features">
+                        <li>✓ 50 analyses per month</li>
+                        <li>✓ Basic soil calculations</li>
+                        <li>✓ USDA triangle visualization</li>
+                        <li>✓ Mobile access</li>
+                        <li>✗ Analysis history</li>
+                        <li>✗ Export capabilities</li>
+                    </ul>
+                    <button class="btn-plan" onclick="showSignupModal()">Get Started</button>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="plan-badge">Most Popular</div>
+                    <div class="plan-header">
+                        <h3>Professional</h3>
+                        <div class="price">$29<span>/month</span></div>
+                    </div>
+                    <ul class="plan-features">
+                        <li>✓ Unlimited analyses</li>
+                        <li>✓ Advanced calculations</li>
+                        <li>✓ Analysis history</li>
+                        <li>✓ Export to PDF/CSV</li>
+                        <li>✓ Priority support</li>
+                        <li>✓ Batch processing</li>
+                    </ul>
+                    <button class="btn-plan primary" onclick="showSignupModal()">Start Free Trial</button>
+                </div>
+                <div class="pricing-card">
+                    <div class="plan-header">
+                        <h3>Enterprise</h3>
+                        <div class="price">$199<span>/month</span></div>
+                    </div>
+                    <ul class="plan-features">
+                        <li>✓ Everything in Professional</li>
+                        <li>✓ API access</li>
+                        <li>✓ White-label options</li>
+                        <li>✓ Custom integrations</li>
+                        <li>✓ Dedicated support</li>
+                        <li>✓ SLA guarantee</li>
+                    </ul>
+                    <button class="btn-plan" onclick="contactSales()">Contact Sales</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2>About FlahaSoil</h2>
+                    <p>
+                        FlahaSoil is part of the Flaha Precision Agriculture ecosystem, bringing scientific 
+                        soil analysis to agricultural professionals worldwide. Our platform combines 
+                        cutting-edge algorithms with intuitive design to make soil analysis accessible 
+                        and actionable.
+                    </p>
+                    <p>
+                        Built on proven Saxton & Rawls pedotransfer functions, FlahaSoil provides 
+                        accurate soil water characteristic calculations that help farmers, consultants, 
+                        and researchers make informed decisions about crop selection and soil management.
+                    </p>
+                </div>
+                <div class="about-image">
+                    <img src="./assets/images/about-illustration.png" alt="Soil Analysis Illustration">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <div class="footer-brand">
+                        <img src="./assets/images/flaha-logo.png" alt="Flaha Logo" class="footer-logo">
+                        <span class="brand-text">FlahaSoil</span>
+                    </div>
+                    <p>Professional soil analysis platform for modern agriculture.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#pricing">Pricing</a>
+                    <a href="./index.html">Try Demo</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="#about">About</a>
+                    <a href="mailto:contact@flaha.com">Contact</a>
+                    <a href="/privacy">Privacy</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <a href="/docs">Documentation</a>
+                    <a href="/help">Help Center</a>
+                    <a href="mailto:support@flaha.com">Support</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Flaha Precision Agriculture. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Authentication Modals -->
+    <div id="auth-modals"></div>
+
+    <!-- Scripts -->
+    <script src="./assets/js/apiClient.js"></script>
+    <script src="./assets/js/landing.js"></script>
+</body>
+</html>

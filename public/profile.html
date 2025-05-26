@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - FlahaSoil</title>
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link rel="stylesheet" href="./assets/css/profile.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <img src="./assets/images/flaha-logo.png" alt="Flaha Logo" class="nav-logo">
+                <a href="./landing.html" class="brand-text">FlahaSoil</a>
+            </div>
+            <div class="nav-menu">
+                <a href="./index.html" class="nav-link">Soil Analysis</a>
+                <a href="./profile.html" class="nav-link active">Profile</a>
+                <div class="user-menu">
+                    <button class="btn-user" onclick="toggleUserDropdown()">
+                        <span class="user-name" id="navUserName">Loading...</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </button>
+                    <div class="user-dropdown" id="userDropdown">
+                        <a href="./profile.html" class="dropdown-item">Profile</a>
+                        <a href="./index.html" class="dropdown-item">Soil Analysis</a>
+                        <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-info">
+                    <div class="profile-avatar">
+                        <span id="userInitials">U</span>
+                    </div>
+                    <div class="profile-details">
+                        <h1 id="userName">Loading...</h1>
+                        <p id="userEmail">Loading...</p>
+                        <div class="user-tier">
+                            <span class="tier-badge" id="userTier">FREE</span>
+                            <span class="tier-description" id="tierDescription">50 analyses per month</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="profile-actions">
+                    <button class="btn-secondary" onclick="editProfile()">Edit Profile</button>
+                    <button class="btn-primary" onclick="upgradePlan()">Upgrade Plan</button>
+                </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Usage Statistics -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3>Usage Statistics</h3>
+                        <span class="card-icon">📊</span>
+                    </div>
+                    <div class="usage-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalAnalyses">0</div>
+                            <div class="stat-label">Total Analyses</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="thisMonthAnalyses">0</div>
+                            <div class="stat-label">This Month</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="remainingAnalyses">50</div>
+                            <div class="stat-label">Remaining</div>
+                        </div>
+                    </div>
+                    <div class="usage-chart">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="usageProgress"></div>
+                        </div>
+                        <p class="usage-text" id="usageText">0 of 50 analyses used this month</p>
+                    </div>
+                </div>
+
+                <!-- Recent Analyses -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3>Recent Analyses</h3>
+                        <span class="card-icon">🔬</span>
+                    </div>
+                    <div class="recent-analyses" id="recentAnalyses">
+                        <div class="loading">Loading recent analyses...</div>
+                    </div>
+                </div>
+
+                <!-- Account Settings -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3>Account Settings</h3>
+                        <span class="card-icon">⚙️</span>
+                    </div>
+                    <div class="settings-list">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Email Notifications</h4>
+                                <p>Receive updates about your account</p>
+                            </div>
+                            <label class="toggle">
+                                <input type="checkbox" id="emailNotifications" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Data Export</h4>
+                                <p>Download your soil analysis data</p>
+                            </div>
+                            <button class="btn-outline" onclick="exportData()">Export</button>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <h4>Account Security</h4>
+                                <p>Change password and security settings</p>
+                            </div>
+                            <button class="btn-outline" onclick="changePassword()">Change Password</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subscription Info -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <h3>Subscription</h3>
+                        <span class="card-icon">💳</span>
+                    </div>
+                    <div class="subscription-info">
+                        <div class="current-plan">
+                            <h4 id="currentPlan">Free Plan</h4>
+                            <p id="planDescription">50 analyses per month</p>
+                        </div>
+                        <div class="plan-features" id="planFeatures">
+                            <div class="feature">✓ Basic soil calculations</div>
+                            <div class="feature">✓ USDA triangle visualization</div>
+                            <div class="feature">✗ Analysis history</div>
+                            <div class="feature">✗ Export capabilities</div>
+                        </div>
+                        <button class="btn-primary full-width" onclick="upgradePlan()">Upgrade to Professional</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeEditModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Profile</h2>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editProfileForm" onsubmit="saveProfile(event)">
+                <div class="form-group">
+                    <label for="editName">Full Name</label>
+                    <input type="text" id="editName" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="editEmail">Email</label>
+                    <input type="email" id="editEmail" name="email" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="modal" style="display: none;">
+        <div class="modal-overlay" onclick="closePasswordModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Change Password</h2>
+                <button class="modal-close" onclick="closePasswordModal()">&times;</button>
+            </div>
+            <form id="changePasswordForm" onsubmit="changeUserPassword(event)">
+                <div class="form-group">
+                    <label for="currentPassword">Current Password</label>
+                    <input type="password" id="currentPassword" name="currentPassword" required>
+                </div>
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" name="newPassword" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required minlength="6">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closePasswordModal()">Cancel</button>
+                    <button type="submit" class="btn-primary">Change Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./assets/js/apiClient.js"></script>
+    <script src="./assets/js/profile.js"></script>
+</body>
+</html>
