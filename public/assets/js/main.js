@@ -603,7 +603,7 @@ if (document.readyState === "loading") {
 	createSoilTriangle();
 }
 
-// Add this function to update the water characteristics display
+// Enhanced function to update water characteristics with advanced parameters
 async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 	// Calculate silt
 	const silt = 100 - clay - sand;
@@ -612,20 +612,38 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 	showLoadingState();
 
 	try {
-		// Use API client for calculations
-		const response = await window.flahaSoilAPI.analyzeSoil({
+		// Get all advanced parameters
+		const advancedParams = getAdvancedParameters();
+
+		// Determine user tier
+		const userTier = getUserTier();
+
+		// Prepare calculation parameters
+		const calculationParams = {
 			sand: sand,
 			clay: clay,
 			organicMatter: om,
 			densityFactor: densityFactor,
-		});
+			gravelContent: advancedParams.gravelContent,
+			electricalConductivity: advancedParams.electricalConductivity,
+			tier: userTier,
+		};
+
+		// Use API for all calculations - no client-side fallback
+		const response = await window.flahaSoilAPI.analyzeSoil(calculationParams);
 
 		if (!response.success) {
-			// Handle usage limit exceeded
+			// Handle different types of errors
 			if (response.showUpgrade) {
 				showUpgradePrompt(response.error);
 				return;
 			}
+
+			if (response.requiresConnection || response.networkError) {
+				showConnectionError(response.error);
+				return;
+			}
+
 			throw new Error(response.error);
 		}
 
@@ -636,155 +654,236 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 			showUsageInfo(response.message, response.source);
 		}
 
-		// Update display values
-		document.getElementById("field-capacity").textContent =
-			waterCharacteristics.fieldCapacity;
-		document.getElementById("wilting-point").textContent =
-			waterCharacteristics.wiltingPoint;
-		document.getElementById("plant-available-water").textContent =
-			waterCharacteristics.plantAvailableWater;
-		document.getElementById("saturation").textContent =
-			waterCharacteristics.saturation;
-		document.getElementById("saturated-conductivity").textContent =
-			waterCharacteristics.saturatedConductivity;
+		// Update all display elements with enhanced data
+		updateDisplayElements(waterCharacteristics, userTier);
 
-		// Update progress bars
-		// Convert string values to numbers
-		const fcValue = parseFloat(waterCharacteristics.fieldCapacity);
-		const wpValue = parseFloat(waterCharacteristics.wiltingPoint);
-		const pawValue = parseFloat(waterCharacteristics.plantAvailableWater);
-		const satValue = parseFloat(waterCharacteristics.saturation);
-		const ksValue = parseFloat(waterCharacteristics.saturatedConductivity);
-
-		// Set max values for scaling the progress bars
-		const maxFC = 50; // Maximum expected field capacity (%)
-		const maxWP = 30; // Maximum expected wilting point (%)
-		const maxPAW = 30; // Maximum expected plant available water (%)
-		const maxSat = 60; // Maximum expected saturation (%)
-		const maxKs = 100; // Maximum expected saturated conductivity (mm/hr)
-
-		// Update progress bar widths
-		document.getElementById("field-capacity-bar").style.width = `${Math.min(
-			100,
-			(fcValue / maxFC) * 100
-		)}%`;
-		document.getElementById("wilting-point-bar").style.width = `${Math.min(
-			100,
-			(wpValue / maxWP) * 100
-		)}%`;
-		document.getElementById(
-			"plant-available-water-bar"
-		).style.width = `${Math.min(100, (pawValue / maxPAW) * 100)}%`;
-		document.getElementById("saturation-bar").style.width = `${Math.min(
-			100,
-			(satValue / maxSat) * 100
-		)}%`;
-		document.getElementById(
-			"saturated-conductivity-bar"
-		).style.width = `${Math.min(100, (ksValue / maxKs) * 100)}%`;
-
-		// Update water visualization
-		// Position the water levels based on the values (inverted, since lower in the container = higher percentage)
-		const containerHeight = 300; // Height of the water container in pixels
-
-		// Calculate positions (from top of container)
-		// We invert the percentages because in the visualization, 0% is at the bottom
-		const satPosition =
-			containerHeight * (1 - satValue / 100) * 0.9 + containerHeight * 0.1;
-		const fcPosition =
-			containerHeight * (1 - fcValue / 100) * 0.9 + containerHeight * 0.1;
-		const wpPosition =
-			containerHeight * (1 - wpValue / 100) * 0.9 + containerHeight * 0.1;
-
-		// Update positions of water levels
-		document.querySelector(".saturation-level").style.top = `${satPosition}px`;
-		document.querySelector(
-			".field-capacity-level"
-		).style.top = `${fcPosition}px`;
-		document.querySelector(
-			".wilting-point-level"
-		).style.top = `${wpPosition}px`;
-
-		// Update positions of water zones
-		document.querySelector(
-			".gravitational-zone"
-		).style.top = `${satPosition}px`;
-		document.querySelector(".gravitational-zone").style.height = `${
-			fcPosition - satPosition
-		}px`;
-
-		document.querySelector(".available-zone").style.top = `${fcPosition}px`;
-		document.querySelector(".available-zone").style.height = `${
-			wpPosition - fcPosition
-		}px`;
-
-		document.querySelector(".unavailable-zone").style.top = `${wpPosition}px`;
-		document.querySelector(".unavailable-zone").style.height = `${
-			containerHeight - wpPosition
-		}px`;
-
-		// Update soil water tip based on soil texture
-		const soilTip = document.getElementById("soil-water-tip");
-		const textureClass = waterCharacteristics.textureClass.toLowerCase();
-
-		if (textureClass.includes("sand") && !textureClass.includes("loam")) {
-			soilTip.textContent =
-				"Sandy soils drain quickly and hold less plant-available water. Consider more frequent irrigation.";
-		} else if (textureClass.includes("clay")) {
-			soilTip.textContent =
-				"Clay soils hold more total water but may have less plant-available water. Avoid overwatering.";
-		} else if (textureClass.includes("silt") || textureClass === "loam") {
-			soilTip.textContent =
-				"Loamy soils typically have the most plant-available water, providing good growing conditions.";
-		} else {
-			soilTip.textContent =
-				"Balance between sand, silt, and clay affects how much water is available to plants.";
-		}
-
-		// Get crop recommendations using API
-		const recommendationsResponse =
-			await window.flahaSoilAPI.getCropRecommendations({
-				textureClass: waterCharacteristics.textureClass,
-				paw: parseFloat(waterCharacteristics.plantAvailableWater),
-				om: om,
-			});
-
-		const recommendations = recommendationsResponse.data;
-
-		// Update the recommendations lists
-		const suitableCropsList = document.getElementById("suitable-crops-list");
-		const limitationsList = document.getElementById("limitations-list");
-		const managementTipsList = document.getElementById("management-tips-list");
-
-		// Clear existing items
-		suitableCropsList.innerHTML = "";
-		limitationsList.innerHTML = "";
-		managementTipsList.innerHTML = "";
-
-		// Add new items
-		recommendations.suitableCrops.forEach((crop) => {
-			const li = document.createElement("li");
-			li.textContent = crop;
-			suitableCropsList.appendChild(li);
-		});
-
-		recommendations.limitations.forEach((limitation) => {
-			const li = document.createElement("li");
-			li.textContent = limitation;
-			limitationsList.appendChild(li);
-		});
-
-		recommendations.managementTips.forEach((tip) => {
-			const li = document.createElement("li");
-			li.textContent = tip;
-			managementTipsList.appendChild(li);
-		});
+		// Update tier-specific sections
+		updateTierSpecificSections(userTier, waterCharacteristics);
 	} catch (error) {
 		console.error("Error updating water characteristics:", error);
-		// Show error message to user
 		showErrorMessage(
 			"Failed to calculate soil characteristics. Please try again."
 		);
+	}
+}
+
+/**
+ * Get advanced parameters from input fields
+ * @returns {Object} Advanced parameters
+ */
+function getAdvancedParameters() {
+	return {
+		gravelContent: parseFloat(
+			document.getElementById("gravel-input")?.value || 0
+		),
+		electricalConductivity: parseFloat(
+			document.getElementById("ec-input")?.value || 0.5
+		),
+		soilTemperature: parseFloat(
+			document.getElementById("soil-temp-input")?.value || 20
+		),
+		climateZone:
+			document.getElementById("climate-zone-input")?.value || "temperate",
+		aggregateStability: parseFloat(
+			document.getElementById("aggregate-stability-input")?.value || 75
+		),
+		slope: parseFloat(document.getElementById("slope-input")?.value || 2),
+	};
+}
+
+/**
+ * Determine user tier based on authentication status
+ * @returns {string} User tier
+ */
+function getUserTier() {
+	const user = window.flahaSoilAPI?.getCurrentUser();
+	if (!user) return "free";
+	return user.tier || "professional";
+}
+
+/**
+ * Update display elements with calculation results
+ * @param {Object} waterCharacteristics - Calculation results
+ * @param {string} userTier - User tier
+ */
+function updateDisplayElements(waterCharacteristics, userTier) {
+	// Core water characteristics
+	document.getElementById("field-capacity").textContent =
+		waterCharacteristics.fieldCapacity;
+	document.getElementById("wilting-point").textContent =
+		waterCharacteristics.wiltingPoint;
+	document.getElementById("plant-available-water").textContent =
+		waterCharacteristics.plantAvailableWater;
+	document.getElementById("saturation").textContent =
+		waterCharacteristics.saturation;
+	document.getElementById("saturated-conductivity").textContent =
+		waterCharacteristics.saturatedConductivity;
+
+	// Soil quality indicators
+	document.getElementById("soil-quality-score").textContent =
+		waterCharacteristics.soilQualityIndex || "-";
+	document.getElementById("drainage-class").textContent =
+		waterCharacteristics.drainageClass || "-";
+	document.getElementById("compaction-risk").textContent =
+		waterCharacteristics.compactionRisk || "-";
+	document.getElementById("erosion-risk").textContent =
+		waterCharacteristics.erosionRisk || "-";
+
+	// Update progress bars
+	updateProgressBars(waterCharacteristics);
+
+	// Show confidence intervals in expert mode
+	if (
+		document.getElementById("expertMode")?.checked &&
+		waterCharacteristics.confidence
+	) {
+		showConfidenceIntervals(waterCharacteristics.confidence);
+	}
+}
+
+/**
+ * Update tier-specific sections visibility and content
+ * @param {string} userTier - User tier
+ * @param {Object} waterCharacteristics - Calculation results
+ */
+function updateTierSpecificSections(userTier, waterCharacteristics) {
+	// Show/hide professional features
+	const professionalSection = document.getElementById("professionalFeatures");
+	const professionalResults = document.getElementById("professionalResults");
+
+	if (userTier === "professional" || userTier === "enterprise") {
+		if (professionalSection) professionalSection.style.display = "block";
+		if (professionalResults) {
+			professionalResults.style.display = "block";
+
+			// Update professional results
+			if (waterCharacteristics.airEntryTension) {
+				document.getElementById("air-entry-tension").textContent =
+					waterCharacteristics.airEntryTension;
+			}
+			if (waterCharacteristics.bulkDensity) {
+				document.getElementById("bulk-density").textContent =
+					waterCharacteristics.bulkDensity;
+			}
+			if (waterCharacteristics.lambda) {
+				document.getElementById("lambda-value").textContent =
+					waterCharacteristics.lambda;
+			}
+		}
+	}
+
+	// Show/hide enterprise features
+	const enterpriseResults = document.getElementById("enterpriseResults");
+	if (userTier === "enterprise" && enterpriseResults) {
+		enterpriseResults.style.display = "block";
+
+		// Update enterprise results
+		if (waterCharacteristics.plantAvailableWaterBulk) {
+			document.getElementById("bulk-paw").textContent =
+				waterCharacteristics.plantAvailableWaterBulk;
+		}
+		if (waterCharacteristics.bulkConductivity) {
+			document.getElementById("bulk-conductivity").textContent =
+				waterCharacteristics.bulkConductivity;
+		}
+		if (waterCharacteristics.osmoticPotential) {
+			document.getElementById("osmotic-potential").textContent =
+				waterCharacteristics.osmoticPotential;
+		}
+	}
+}
+
+/**
+ * Update progress bars with new values
+ * @param {Object} waterCharacteristics - Calculation results
+ */
+function updateProgressBars(waterCharacteristics) {
+	// Convert string values to numbers
+	const fcValue = parseFloat(waterCharacteristics.fieldCapacity);
+	const wpValue = parseFloat(waterCharacteristics.wiltingPoint);
+	const pawValue = parseFloat(waterCharacteristics.plantAvailableWater);
+	const satValue = parseFloat(waterCharacteristics.saturation);
+	const ksValue = parseFloat(waterCharacteristics.saturatedConductivity);
+
+	// Set max values for scaling the progress bars
+	const maxFC = 50; // Maximum expected field capacity (%)
+	const maxWP = 30; // Maximum expected wilting point (%)
+	const maxPAW = 30; // Maximum expected plant available water (%)
+	const maxSat = 60; // Maximum expected saturation (%)
+	const maxKs = 100; // Maximum expected saturated conductivity (mm/hr)
+
+	// Update progress bar widths
+	document.getElementById("field-capacity-bar").style.width = `${Math.min(
+		100,
+		(fcValue / maxFC) * 100
+	)}%`;
+	document.getElementById("wilting-point-bar").style.width = `${Math.min(
+		100,
+		(wpValue / maxWP) * 100
+	)}%`;
+	document.getElementById(
+		"plant-available-water-bar"
+	).style.width = `${Math.min(100, (pawValue / maxPAW) * 100)}%`;
+	document.getElementById("saturation-bar").style.width = `${Math.min(
+		100,
+		(satValue / maxSat) * 100
+	)}%`;
+	document.getElementById(
+		"saturated-conductivity-bar"
+	).style.width = `${Math.min(100, (ksValue / maxKs) * 100)}%`;
+}
+
+/**
+ * Show confidence intervals in expert mode
+ * @param {Object} confidence - Confidence interval data
+ */
+function showConfidenceIntervals(confidence) {
+	const confidenceElements = {
+		"fc-confidence": confidence.fieldCapacity,
+		"wp-confidence": confidence.wiltingPoint,
+		"sat-confidence": confidence.saturation,
+		"aet-confidence": confidence.airEntryTension,
+	};
+
+	Object.entries(confidenceElements).forEach(([elementId, data]) => {
+		const element = document.getElementById(elementId);
+		if (element && data) {
+			element.style.display = "block";
+			element.textContent = `R² = ${data.r2}, SE = ±${data.se}`;
+		}
+	});
+}
+
+/**
+ * Toggle expert mode visibility
+ */
+function toggleExpertMode() {
+	const expertMode = document.getElementById("expertMode").checked;
+	const expertFeatures = document.getElementById("expertFeatures");
+	const confidenceElements = document.querySelectorAll(".confidence-info");
+
+	if (expertFeatures) {
+		expertFeatures.style.display = expertMode ? "block" : "none";
+	}
+
+	// Show/hide confidence intervals
+	confidenceElements.forEach((element) => {
+		element.style.display = expertMode ? "block" : "none";
+	});
+}
+
+/**
+ * Toggle collapsible sections
+ * @param {string} sectionId - ID of section to toggle
+ */
+function toggleSection(sectionId) {
+	const section = document.getElementById(sectionId);
+	const toggle = document.getElementById(sectionId.replace("Inputs", "Toggle"));
+
+	if (section && toggle) {
+		const isVisible = section.style.display !== "none";
+		section.style.display = isVisible ? "none" : "block";
+		toggle.textContent = isVisible ? "▶" : "▼";
 	}
 }
 
@@ -1107,4 +1206,52 @@ function showErrorMessage(message) {
 			errorInfo.remove();
 		}
 	}, 5000);
+}
+
+/**
+ * Show connection error message
+ * @param {string} message - Error message
+ */
+function showConnectionError(message) {
+	const connectionStatus = document.getElementById("connectionStatus");
+	const statusText = document.querySelector(".status-text");
+
+	if (connectionStatus && statusText) {
+		statusText.textContent = message;
+		connectionStatus.style.display = "block";
+	}
+
+	// Hide results sections
+	document.querySelector(".quality-overview").style.display = "none";
+	document.querySelectorAll(".results-grid").forEach((grid) => {
+		grid.style.display = "none";
+	});
+}
+
+/**
+ * Retry connection function
+ */
+function retryConnection() {
+	const connectionStatus = document.getElementById("connectionStatus");
+
+	// Hide connection error
+	if (connectionStatus) {
+		connectionStatus.style.display = "none";
+	}
+
+	// Show results sections
+	document.querySelector(".quality-overview").style.display = "flex";
+	document.querySelectorAll(".results-grid").forEach((grid) => {
+		grid.style.display = "grid";
+	});
+
+	// Retry the calculation
+	const clayValue = parseFloat(document.getElementById("clay-input").value);
+	const sandValue = parseFloat(document.getElementById("sand-input").value);
+	const om = parseFloat(document.getElementById("om-input").value);
+	const densityFactor = parseFloat(
+		document.getElementById("density-input").value
+	);
+
+	updateWaterCharacteristics(clayValue, sandValue, om, densityFactor);
 }

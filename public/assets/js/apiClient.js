@@ -62,39 +62,47 @@ class FlahaSoilAPI {
 		}
 
 		try {
-			// Try API first if online
-			if (this.isOnline) {
-				const response = await fetch(`${this.baseURL}/soil/analyze`, {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: this.token ? `Bearer ${this.token}` : "",
-					},
-					body: JSON.stringify(soilData),
-				});
-
-				if (response.ok) {
-					const result = await response.json();
-					this.incrementUsage();
-					return result;
-				}
-
-				// If API fails, fall back to client-side
-				console.warn(
-					"API unavailable, falling back to client-side calculation"
-				);
+			// Require API connection - no client-side fallback
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error:
+						"Internet connection required for soil analysis. Please check your connection and try again.",
+					requiresConnection: true,
+				};
 			}
 
-			// Fallback to client-side calculation
-			const result = this.fallbackCalculation(soilData);
-			this.incrementUsage();
-			return result;
+			const response = await fetch(`${this.baseURL}/soil/analyze`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+				body: JSON.stringify(soilData),
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				this.incrementUsage();
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error:
+						errorData.message ||
+						"Server error occurred. Please try again later.",
+					status: response.status,
+				};
+			}
 		} catch (error) {
 			console.error("API call failed:", error);
-			// Fallback to client-side calculation for demo/offline use
-			const result = this.fallbackCalculation(soilData);
-			this.incrementUsage();
-			return result;
+			return {
+				success: false,
+				error:
+					"Failed to connect to FlahaSoil servers. Please check your internet connection and try again.",
+				networkError: true,
+			};
 		}
 	}
 
@@ -105,6 +113,15 @@ class FlahaSoilAPI {
 	 */
 	async getCropRecommendations(soilData) {
 		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error:
+						"Internet connection required for crop recommendations. Please check your connection and try again.",
+					requiresConnection: true,
+				};
+			}
+
 			const response = await fetch(`${this.baseURL}/soil/recommendations`, {
 				method: "POST",
 				headers: {
@@ -114,101 +131,27 @@ class FlahaSoilAPI {
 				body: JSON.stringify(soilData),
 			});
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || `API Error: ${response.status}`);
+			if (response.ok) {
+				return await response.json();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error:
+						errorData.message ||
+						"Failed to get crop recommendations. Please try again later.",
+					status: response.status,
+				};
 			}
-
-			return await response.json();
 		} catch (error) {
 			console.error("Crop recommendations API call failed:", error);
-			return this.fallbackRecommendations(soilData);
+			return {
+				success: false,
+				error:
+					"Failed to connect to FlahaSoil servers for crop recommendations. Please check your internet connection.",
+				networkError: true,
+			};
 		}
-	}
-
-	/**
-	 * Fallback calculation using client-side algorithms
-	 * @param {Object} soilData - Soil data
-	 * @returns {Object} Calculation results
-	 */
-	fallbackCalculation(soilData) {
-		const { sand, clay, organicMatter = 2.5, densityFactor = 1.0 } = soilData;
-
-		// Use the existing client-side calculation function
-		const result = calculateSoilWaterCharacteristics(
-			sand,
-			clay,
-			organicMatter,
-			densityFactor
-		);
-
-		return {
-			success: true,
-			data: result,
-			tier: this.token ? "premium" : "free",
-			source: "client-side",
-			message: this.token
-				? null
-				: `${this.getRemainingFreeCalculations()} free calculations remaining`,
-		};
-	}
-
-	/**
-	 * Fallback crop recommendations
-	 * @param {Object} soilData - Soil data
-	 * @returns {Object} Recommendations
-	 */
-	fallbackRecommendations(soilData) {
-		const { textureClass } = soilData;
-		const texture = textureClass.toLowerCase();
-
-		let recommendations = {
-			suitableCrops: [],
-			limitations: [],
-			managementTips: [],
-		};
-
-		if (texture.includes("sand") && !texture.includes("clay")) {
-			recommendations.suitableCrops = [
-				"Carrots",
-				"Potatoes",
-				"Radishes",
-				"Peanuts",
-			];
-			recommendations.limitations = [
-				"Low water retention",
-				"Low nutrient holding capacity",
-			];
-			recommendations.managementTips = [
-				"Frequent irrigation",
-				"Regular organic matter addition",
-			];
-		} else if (texture.includes("clay")) {
-			recommendations.suitableCrops = ["Rice", "Wheat", "Cabbage", "Broccoli"];
-			recommendations.limitations = ["Poor drainage", "Slow warming in spring"];
-			recommendations.managementTips = [
-				"Avoid working when wet",
-				"Add organic matter to improve structure",
-			];
-		} else if (texture.includes("silt") || texture === "loam") {
-			recommendations.suitableCrops = [
-				"Corn",
-				"Soybeans",
-				"Most vegetables",
-				"Small grains",
-			];
-			recommendations.limitations = ["Possible crusting", "Moderate drainage"];
-			recommendations.managementTips = [
-				"Maintain organic matter",
-				"Use cover crops",
-			];
-		}
-
-		return {
-			success: true,
-			data: recommendations,
-			source: "client-side",
-		};
 	}
 
 	/**
