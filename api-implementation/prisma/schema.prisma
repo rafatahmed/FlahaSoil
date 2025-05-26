@@ -1,0 +1,163 @@
+// Prisma schema for FlahaSoil database
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for authentication and subscription management
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String   // In production, this will be hashed
+  tier      UserTier @default(FREE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Subscription information
+  subscription   Subscription?
+  
+  // Usage tracking
+  usageRecords   UsageRecord[]
+  
+  // Soil analysis history
+  soilAnalyses   SoilAnalysis[]
+  
+  @@map("users")
+}
+
+// User subscription tiers
+enum UserTier {
+  FREE
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// Subscription model for billing
+model Subscription {
+  id                String            @id @default(cuid())
+  userId            String            @unique
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tier              UserTier
+  status            SubscriptionStatus @default(ACTIVE)
+  
+  // Billing information
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  stripePriceId         String?
+  
+  // Subscription period
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  UNPAID
+}
+
+// Usage tracking for analytics and billing
+model UsageRecord {
+  id        String   @id @default(cuid())
+  userId    String?  // Nullable for anonymous users
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Usage details
+  endpoint  String   // e.g., "soil/analyze", "soil/recommendations"
+  ipAddress String?
+  userAgent String?
+  
+  // Request data for analytics
+  requestData Json?
+  
+  timestamp DateTime @default(now())
+  
+  @@map("usage_records")
+  @@index([userId, timestamp])
+  @@index([timestamp])
+}
+
+// Soil analysis history for users
+model SoilAnalysis {
+  id        String   @id @default(cuid())
+  userId    String?  // Nullable for anonymous users
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // Input parameters
+  sand          Float
+  clay          Float
+  silt          Float
+  organicMatter Float  @default(2.5)
+  densityFactor Float  @default(1.0)
+  
+  // Calculated results
+  fieldCapacity         Float
+  wiltingPoint         Float
+  plantAvailableWater  Float
+  saturation           Float
+  saturatedConductivity Float
+  textureClass         String
+  
+  // Metadata
+  calculationSource String  // "api" or "client-side"
+  ipAddress        String?
+  
+  createdAt DateTime @default(now())
+  
+  @@map("soil_analyses")
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// API keys for enterprise customers
+model ApiKey {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name      String   // User-defined name for the key
+  key       String   @unique
+  
+  // Usage limits
+  dailyLimit   Int?
+  monthlyLimit Int?
+  
+  // Status
+  isActive     Boolean  @default(true)
+  lastUsedAt   DateTime?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("api_keys")
+}
+
+// System analytics and metrics
+model SystemMetric {
+  id        String   @id @default(cuid())
+  
+  // Metric details
+  name      String   // e.g., "daily_active_users", "calculations_per_day"
+  value     Float
+  metadata  Json?    // Additional metric data
+  
+  // Time period
+  date      DateTime @default(now())
+  period    String   // "daily", "weekly", "monthly"
+  
+  @@map("system_metrics")
+  @@unique([name, date, period])
+  @@index([name, date])
+}
