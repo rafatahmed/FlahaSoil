@@ -1380,3 +1380,506 @@ input:checked + .slider:before {
 .retry-button:hover {
 	background: #1976d2;
 }
+
+/* Plan-Based UI Styles */
+
+/* Plan badges */
+.plan-badge {
+	display: inline-block;
+	padding: 4px 8px;
+	border-radius: 12px;
+	font-size: 0.75em;
+	font-weight: 600;
+	text-transform: uppercase;
+	margin-left: 8px;
+}
+
+.plan-free {
+	background: #e3f2fd;
+	color: #1976d2;
+}
+
+.plan-professional {
+	background: #f3e5f5;
+	color: #7b1fa2;
+}
+
+.plan-enterprise {
+	background: #fff3e0;
+	color: #f57c00;
+}
+
+/* Usage counter and display */
+.usage-counter {
+	font-size: 0.85em;
+	margin-top: 8px;
+	padding: 8px 12px;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 6px;
+	backdrop-filter: blur(10px);
+}
+
+.usage-display {
+	margin-top: 8px;
+	font-size: 0.85em;
+}
+
+.usage-info {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.usage-bar {
+	width: 100%;
+	height: 4px;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.usage-progress {
+	height: 100%;
+	background: linear-gradient(90deg, #4caf50, #ff9800, #f44336);
+	transition: width 0.3s ease;
+}
+
+.usage-warning {
+	color: #ff9800;
+}
+
+.usage-warning-text {
+	font-size: 0.75em;
+	color: #ff9800;
+	font-weight: 500;
+}
+
+/* Plan notification banners */
+.plan-notification {
+	padding: 12px;
+	margin: 0 0 20px 0;
+	border-radius: 8px;
+	border-left: 4px solid;
+	animation: slideIn 0.3s ease;
+}
+
+.notification-info {
+	background: #e3f2fd;
+	border-color: #2196f3;
+	color: #1565c0;
+}
+
+.notification-warning {
+	background: #fff3e0;
+	border-color: #ff9800;
+	color: #ef6c00;
+}
+
+.notification-success {
+	background: #e8f5e8;
+	border-color: #4caf50;
+	color: #2e7d32;
+}
+
+.notification-content {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.notification-message {
+	flex: 1;
+}
+
+.notification-action {
+	background: transparent;
+	border: 1px solid currentColor;
+	color: inherit;
+	padding: 4px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.85em;
+	transition: background-color 0.2s ease;
+}
+
+.notification-action:hover {
+	background: currentColor;
+	color: white;
+}
+
+.notification-close {
+	background: none;
+	border: none;
+	font-size: 1.2em;
+	cursor: pointer;
+	color: inherit;
+	opacity: 0.7;
+	transition: opacity 0.2s ease;
+}
+
+.notification-close:hover {
+	opacity: 1;
+}
+
+/* Upgrade modals */
+.upgrade-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+	animation: fadeIn 0.3s ease;
+}
+
+.upgrade-content {
+	background: white;
+	border-radius: 12px;
+	max-width: 500px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+	padding: 24px 24px 0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid #eee;
+	margin-bottom: 20px;
+}
+
+.modal-close {
+	background: none;
+	border: none;
+	font-size: 1.5em;
+	cursor: pointer;
+	color: #666;
+	transition: color 0.2s ease;
+}
+
+.modal-close:hover {
+	color: #333;
+}
+
+.modal-body {
+	padding: 0 24px;
+}
+
+.upgrade-message {
+	font-size: 1.1em;
+	margin-bottom: 20px;
+	color: #333;
+}
+
+.current-plan {
+	background: #f5f5f5;
+	padding: 8px 12px;
+	border-radius: 6px;
+	margin-bottom: 20px;
+}
+
+.plan-label {
+	font-weight: 600;
+	color: #666;
+}
+
+.upgrade-benefits h4 {
+	margin: 0 0 12px 0;
+	color: var(--flaha-green);
+}
+
+.feature-list {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 20px 0;
+}
+
+.feature-list li {
+	padding: 8px 0;
+	border-bottom: 1px solid #eee;
+}
+
+.feature-list li:last-child {
+	border-bottom: none;
+}
+
+.pricing-info {
+	text-align: center;
+	margin: 20px 0;
+}
+
+.price {
+	font-size: 2em;
+	font-weight: bold;
+	color: var(--flaha-green);
+}
+
+.modal-footer {
+	padding: 20px 24px 24px;
+	display: flex;
+	gap: 12px;
+	justify-content: flex-end;
+	border-top: 1px solid #eee;
+	margin-top: 20px;
+}
+
+/* Usage limit modal specific styles */
+.usage-limit-modal .modal-content {
+	max-width: 600px;
+}
+
+.limit-icon {
+	font-size: 3em;
+	text-align: center;
+	margin-bottom: 16px;
+}
+
+.limit-message {
+	font-size: 1.1em;
+	text-align: center;
+	margin-bottom: 12px;
+	color: #333;
+}
+
+.reset-info {
+	text-align: center;
+	color: #666;
+	margin-bottom: 24px;
+}
+
+.upgrade-options h4 {
+	margin-bottom: 16px;
+	color: var(--flaha-green);
+}
+
+.option-cards {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	margin-bottom: 20px;
+}
+
+.option-card {
+	border: 2px solid #eee;
+	border-radius: 8px;
+	padding: 20px;
+	text-align: center;
+	transition: border-color 0.2s ease;
+}
+
+.option-card.featured {
+	border-color: var(--flaha-green);
+	background: #f8fff8;
+}
+
+.option-card h5 {
+	margin: 0 0 8px 0;
+	font-size: 1.2em;
+	color: #333;
+}
+
+.option-price {
+	font-size: 1.5em;
+	font-weight: bold;
+	color: var(--flaha-green);
+	margin-bottom: 12px;
+}
+
+.option-card ul {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 16px 0;
+	font-size: 0.9em;
+}
+
+.option-card li {
+	padding: 2px 0;
+}
+
+/* Feature upgrade prompts */
+.feature-upgrade-prompt {
+	position: relative;
+	margin-top: 16px;
+}
+
+.upgrade-overlay {
+	background: linear-gradient(
+		135deg,
+		rgba(61, 122, 66, 0.05),
+		rgba(30, 95, 140, 0.05)
+	);
+	border: 2px dashed rgba(61, 122, 66, 0.3);
+	border-radius: 8px;
+	padding: 20px;
+	text-align: center;
+	backdrop-filter: blur(2px);
+}
+
+.upgrade-overlay h4 {
+	margin: 0 0 8px 0;
+	color: var(--flaha-green);
+}
+
+.upgrade-overlay p {
+	margin: 0 0 16px 0;
+	color: #666;
+	font-size: 0.9em;
+}
+
+.btn-upgrade {
+	background: linear-gradient(135deg, var(--flaha-green), var(--tech-blue));
+	color: white;
+	border: none;
+	padding: 10px 20px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-upgrade:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(61, 122, 66, 0.3);
+}
+
+/* Success toast */
+.success-toast {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	background: #4caf50;
+	color: white;
+	padding: 16px 20px;
+	border-radius: 8px;
+	box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+	z-index: 1001;
+	animation: slideInRight 0.3s ease;
+}
+
+.toast-content {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.toast-icon {
+	font-size: 1.2em;
+}
+
+/* Button styles */
+.btn-primary {
+	background: linear-gradient(135deg, var(--flaha-green), var(--tech-blue));
+	color: white;
+	border: none;
+	padding: 12px 24px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(61, 122, 66, 0.3);
+}
+
+.btn-secondary {
+	background: #f5f5f5;
+	color: #333;
+	border: 1px solid #ddd;
+	padding: 12px 24px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: background-color 0.2s ease;
+}
+
+.btn-secondary:hover {
+	background: #e9ecef;
+}
+
+.btn-outline {
+	background: transparent;
+	color: var(--flaha-green);
+	border: 2px solid var(--flaha-green);
+	padding: 10px 20px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-weight: 600;
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-outline:hover {
+	background: var(--flaha-green);
+	color: white;
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes slideIn {
+	from {
+		transform: translateY(-20px);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+@keyframes slideInRight {
+	from {
+		transform: translateX(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateX(0);
+		opacity: 1;
+	}
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+	.upgrade-content {
+		margin: 20px;
+		width: auto;
+	}
+
+	.option-cards {
+		grid-template-columns: 1fr;
+	}
+
+	.modal-footer {
+		flex-direction: column;
+	}
+
+	.modal-footer button {
+		width: 100%;
+	}
+
+	.usage-counter,
+	.usage-display {
+		font-size: 0.8em;
+	}
+
+	.plan-badge {
+		font-size: 0.7em;
+		padding: 2px 6px;
+	}
+}

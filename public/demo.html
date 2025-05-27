@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlahaSoil Demo - Try Our Soil Analysis</title>
+    <link rel="stylesheet" href="./assets/css/style.css">
+    <link rel="stylesheet" href="./assets/css/demo.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+
+<body>
+    <!-- Demo Header -->
+    <header class="demo-header">
+        <div class="header-content">
+            <div class="brand-section">
+                <img src="./assets/img/flaha-logo.svg" alt="FlahaSoil" class="logo">
+                <div class="demo-badge">DEMO MODE</div>
+            </div>
+            <div class="demo-actions">
+                <button class="btn-back" onclick="backToLanding()">← Back to Landing</button>
+                <button class="btn-signup" onclick="backToLanding()">Get Full Access</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Demo Restriction Notice -->
+    <div class="demo-notice">
+        <div class="notice-content">
+            <h3>🔍 Demo Mode - Experience FlahaSoil</h3>
+            <p>You're viewing a demonstration with preset values. Register for full access to input your own soil data
+                and unlock all features.</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Demo Controls (Read-only) -->
+            <div class="demo-panel">
+                <h2>Soil Texture Analysis Demo</h2>
+                <div class="demo-inputs">
+                    <div class="input-group">
+                        <label>Sand (%)</label>
+                        <input type="number" id="sandDemo" value="45" readonly class="demo-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Clay (%)</label>
+                        <input type="number" id="clayDemo" value="25" readonly class="demo-input">
+                    </div>
+                    <div class="input-group">
+                        <label>Silt (%)</label>
+                        <input type="number" id="siltDemo" value="30" readonly class="demo-input">
+                    </div>
+                </div>
+                <button class="btn-calculate-demo" onclick="runDemoCalculation()">
+                    View Demo Analysis
+                </button>
+            </div>
+
+            <!-- Results Display -->
+            <div class="results-container" id="demoResults" style="display: none;">
+                <div class="result-card">
+                    <h3>Soil Classification</h3>
+                    <div class="classification-result">
+                        <span class="soil-type">Loam</span>
+                    </div>
+                </div>
+
+                <div class="result-card">
+                    <h3>Water Characteristics</h3>
+                    <div class="water-results">
+                        <div class="water-property">
+                            <label>Field Capacity:</label>
+                            <span>28.5%</span>
+                        </div>
+                        <div class="water-property">
+                            <label>Wilting Point:</label>
+                            <span>14.2%</span>
+                        </div>
+                        <div class="water-property">
+                            <label>Available Water:</label>
+                            <span>14.3%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USDA Triangle Visualization -->
+                <div class="result-card full-width">
+                    <h3>USDA Soil Triangle</h3>
+                    <div id="soilTriangle" class="triangle-container"></div>
+                </div>
+            </div>
+
+            <!-- Call to Action -->
+            <div class="demo-cta">
+                <h3>Ready for Full Access?</h3>
+                <p>Get unlimited analyses, save your results, and access advanced features</p>
+                <div class="cta-buttons">
+                    <button class="btn-primary" onclick="backToLanding()">Choose Your Plan</button>
+                    <button class="btn-secondary" onclick="backToLanding()">Start Free Trial</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="./assets/js/demo.js"></script>
+</body>
+
+</html>

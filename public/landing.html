@@ -45,8 +45,8 @@
                     with our advanced Saxton & Rawls algorithms. Trusted by agricultural professionals worldwide.
                 </p>
                 <div class="hero-buttons">
-                    <button class="btn-primary" onclick="showSignupModal()">Start Free Analysis</button>
-                    <button class="btn-secondary" onclick="startDemo()">Try Demo</button>
+                    <button class="btn-primary" onclick="showPlanModal()">Choose Your Plan</button>
+                    <button class="btn-secondary" onclick="startDemo()">Try Demo First</button>
                 </div>
                 <div class="hero-stats">
                     <div class="stat">
@@ -134,7 +134,7 @@
                         <li>✗ Analysis history</li>
                         <li>✗ Export capabilities</li>
                     </ul>
-                    <button class="btn-plan" onclick="showSignupModal()">Get Started</button>
+                    <button class="btn-plan" onclick="selectPlan('FREE')">Start Free Trial</button>
                 </div>
                 <div class="pricing-card featured">
                     <div class="plan-badge">Most Popular</div>
@@ -150,7 +150,8 @@
                         <li>✓ Priority support</li>
                         <li>✓ Batch processing</li>
                     </ul>
-                    <button class="btn-plan primary" onclick="showSignupModal()">Start Free Trial</button>
+                    <button class="btn-plan primary" onclick="selectPlan('PROFESSIONAL')">Start Professional
+                        Trial</button>
                 </div>
                 <div class="pricing-card">
                     <div class="plan-header">
@@ -165,7 +166,7 @@
                         <li>✓ Dedicated support</li>
                         <li>✓ SLA guarantee</li>
                     </ul>
-                    <button class="btn-plan" onclick="contactSales()">Contact Sales</button>
+                    <button class="btn-plan" onclick="selectPlan('ENTERPRISE')">Contact Sales</button>
                 </div>
             </div>
         </div>

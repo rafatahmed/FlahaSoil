@@ -620,145 +620,260 @@ function closeModal(modalId) {
  * Start demo (redirect to main app)
  */
 function startDemo() {
-	window.location.href = "./index.html";
+	window.location.href = "./demo.html";
 }
 
 /**
- * Contact sales
+ * Show plan selection modal
+ */
+function showPlanModal() {
+	// Create plan selection modal
+	const modal = document.createElement("div");
+	modal.className = "modal plan-modal";
+	modal.innerHTML = `
+		<div class="modal-overlay" onclick="closePlanModal()"></div>
+		<div class="modal-content plan-modal-content">
+			<div class="modal-header">
+				<h2>Choose Your Plan</h2>
+				<button class="modal-close" onclick="closePlanModal()">&times;</button>
+			</div>
+			<div class="plans-container">
+				<div class="plan-option" onclick="selectPlan('FREE')">
+					<div class="plan-header">
+						<h3>Free</h3>
+						<div class="plan-price">$0<span>/month</span></div>
+					</div>
+					<div class="plan-features">
+						<p>✓ 50 analyses per month</p>
+						<p>✓ Basic calculations</p>
+						<p>✓ USDA triangle</p>
+						<p>✗ History & Export</p>
+					</div>
+					<button class="btn-select-plan">Start Free</button>
+				</div>
+				<div class="plan-option featured" onclick="selectPlan('PROFESSIONAL')">
+					<div class="plan-badge">Recommended</div>
+					<div class="plan-header">
+						<h3>Professional</h3>
+						<div class="plan-price">$29<span>/month</span></div>
+					</div>
+					<div class="plan-features">
+						<p>✓ Unlimited analyses</p>
+						<p>✓ Advanced features</p>
+						<p>✓ History & Export</p>
+						<p>✓ Priority support</p>
+					</div>
+					<button class="btn-select-plan btn-primary">Start Trial</button>
+				</div>
+				<div class="plan-option" onclick="selectPlan('ENTERPRISE')">
+					<div class="plan-header">
+						<h3>Enterprise</h3>
+						<div class="plan-price">$199<span>/month</span></div>
+					</div>
+					<div class="plan-features">
+						<p>✓ Everything in Pro</p>
+						<p>✓ API access</p>
+						<p>✓ White-label</p>
+						<p>✓ Dedicated support</p>
+					</div>
+					<button class="btn-select-plan">Contact Sales</button>
+				</div>
+			</div>
+			<div class="demo-option">
+				<p>Want to try before deciding? <a href="#" onclick="startDemo()">Try our Demo</a></p>
+			</div>
+		</div>
+	`;
+
+	document.body.appendChild(modal);
+
+	// Add plan modal styles
+	addPlanModalStyles();
+
+	// Show modal
+	setTimeout(() => {
+		modal.classList.add("show");
+	}, 10);
+}
+
+/**
+ * Close plan selection modal
+ */
+function closePlanModal() {
+	const modal = document.querySelector(".plan-modal");
+	if (modal) {
+		modal.classList.remove("show");
+		setTimeout(() => {
+			modal.remove();
+		}, 300);
+	}
+}
+
+/**
+ * Select a plan and show registration
+ */
+function selectPlan(planType) {
+	// Store selected plan
+	localStorage.setItem("selectedPlan", planType);
+
+	// Close plan modal
+	closePlanModal();
+
+	// Show appropriate action based on plan
+	if (planType === "ENTERPRISE") {
+		contactSales();
+	} else {
+		// Show signup modal with plan pre-selected
+		showSignupModal(planType);
+	}
+}
+
+/**
+ * Contact sales for enterprise
  */
 function contactSales() {
 	window.open(
-		"mailto:sales@flaha.com?subject=Enterprise%20Plan%20Inquiry",
+		"mailto:sales@flahasoil.com?subject=Enterprise Plan Inquiry&body=I am interested in the Enterprise plan. Please contact me with more details.",
 		"_blank"
 	);
 }
 
 /**
- * Schedule a demo
+ * Add styles for plan modal
  */
-function scheduleDemo() {
-	window.open(
-		"mailto:demo@flaha.com?subject=FlahaSoil%20Demo%20Request&body=Hello,%0D%0A%0D%0AI would like to schedule a demo of FlahaSoil. Please let me know your available times.%0D%0A%0D%0AThanks!",
-		"_blank"
-	);
-}
-
-/**
- * Setup smooth scrolling for navigation links
- */
-function setupSmoothScrolling() {
-	document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-		anchor.addEventListener("click", function (e) {
-			e.preventDefault();
-			const target = document.querySelector(this.getAttribute("href"));
-			if (target) {
-				target.scrollIntoView({
-					behavior: "smooth",
-					block: "start",
-				});
-			}
-		});
-	});
-}
-
-/**
- * Setup mobile menu toggle
- */
-function setupMobileMenu() {
-	addMobileMenuStyles();
-
-	const navToggle = document.querySelector(".nav-toggle");
-	if (navToggle) {
-		navToggle.addEventListener("click", toggleMobileMenu);
-	}
-}
-
-function toggleMobileMenu() {
-	const navMenu = document.querySelector(".nav-menu");
-	const navToggle = document.querySelector(".nav-toggle");
-
-	if (navMenu && navToggle) {
-		navMenu.classList.toggle("active");
-		navToggle.classList.toggle("active");
-	}
-}
-
-/**
- * Add mobile menu styles
- */
-function addMobileMenuStyles() {
-	if (document.getElementById("mobile-menu-styles")) return;
+function addPlanModalStyles() {
+	if (document.getElementById("planModalStyles")) return;
 
 	const style = document.createElement("style");
-	style.id = "mobile-menu-styles";
+	style.id = "planModalStyles";
 	style.textContent = `
+		.plan-modal-content {
+			max-width: 900px;
+			width: 90%;
+			max-height: 90vh;
+			overflow-y: auto;
+		}
+		
+		.plans-container {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+			gap: 20px;
+			margin: 20px 0;
+		}
+		
+		.plan-option {
+			border: 2px solid #E0E0E0;
+			border-radius: 12px;
+			padding: 25px;
+			text-align: center;
+			cursor: pointer;
+			transition: all 0.3s ease;
+			position: relative;
+			background: white;
+		}
+		
+		.plan-option:hover {
+			border-color: var(--primary-color);
+			transform: translateY(-5px);
+			box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+		}
+		
+		.plan-option.featured {
+			border-color: var(--primary-color);
+			background: linear-gradient(135deg, #F8F9FA 0%, #E8F5E8 100%);
+		}
+		
+		.plan-badge {
+			position: absolute;
+			top: -10px;
+			left: 50%;
+			transform: translateX(-50%);
+			background: var(--accent-color);
+			color: white;
+			padding: 5px 15px;
+			border-radius: 15px;
+			font-size: 12px;
+			font-weight: 600;
+		}
+		
+		.plan-header h3 {
+			color: var(--text-dark);
+			margin-bottom: 10px;
+			font-size: 1.5rem;
+		}
+		
+		.plan-price {
+			font-size: 2rem;
+			font-weight: 700;
+			color: var(--primary-color);
+			margin-bottom: 20px;
+		}
+		
+		.plan-price span {
+			font-size: 0.9rem;
+			color: var(--text-light);
+		}
+		
+		.plan-features {
+			text-align: left;
+			margin: 20px 0;
+		}
+		
+		.plan-features p {
+			margin: 8px 0;
+			padding: 5px 0;
+			border-bottom: 1px solid #F0F0F0;
+			color: var(--text-dark);
+		}
+		
+		.btn-select-plan {
+			background: var(--secondary-color);
+			color: white;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 6px;
+			font-weight: 600;
+			cursor: pointer;
+			width: 100%;
+			transition: all 0.3s ease;
+		}
+		
+		.btn-select-plan:hover {
+			background: #1565C0;
+		}
+		
+		.btn-select-plan.btn-primary {
+			background: var(--primary-color);
+		}
+		
+		.btn-select-plan.btn-primary:hover {
+			background: #1B5E20;
+		}
+		
+		.demo-option {
+			text-align: center;
+			margin-top: 20px;
+			padding-top: 20px;
+			border-top: 1px solid #E0E0E0;
+		}
+		
+		.demo-option a {
+			color: var(--accent-color);
+			text-decoration: none;
+			font-weight: 600;
+		}
+		
+		.demo-option a:hover {
+			text-decoration: underline;
+		}
+		
 		@media (max-width: 768px) {
-			.nav-menu {
-				position: fixed;
-				top: 70px;
-				right: -100%;
-				width: 300px;
-				height: calc(100vh - 70px);
-				background: var(--white);
-				flex-direction: column;
-				justify-content: flex-start;
-				align-items: stretch;
-				padding: 30px 0;
-				transition: right 0.3s ease;
-				box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
-				z-index: 999;
-			}
-			
-			.nav-menu.active {
-				right: 0;
-			}
-			
-			.nav-menu .nav-link {
-				display: block;
-				padding: 15px 30px;
-				border-bottom: 1px solid #f0f0f0;
-				transition: background 0.3s ease;
-			}
-			
-			.nav-menu .nav-link:hover {
-				background: var(--background-light);
-			}
-			
-			.nav-menu .btn-login,
-			.nav-menu .btn-signup {
-				margin: 10px 30px;
-				text-align: center;
-				display: block;
-			}
-			
-			.nav-toggle {
-				display: flex;
-				flex-direction: column;
-				cursor: pointer;
-				padding: 5px;
-			}
-			
-			.nav-toggle span {
-				width: 25px;
-				height: 3px;
-				background: var(--text-dark);
-				margin: 3px 0;
-				transition: all 0.3s ease;
-			}
-			
-			.nav-toggle.active span:nth-child(1) {
-				transform: rotate(45deg) translate(6px, 6px);
-			}
-			
-			.nav-toggle.active span:nth-child(2) {
-				opacity: 0;
-			}
-			
-			.nav-toggle.active span:nth-child(3) {
-				transform: rotate(-45deg) translate(6px, -6px);
+			.plans-container {
+				grid-template-columns: 1fr;
 			}
 		}
 	`;
+
 	document.head.appendChild(style);
 }
 

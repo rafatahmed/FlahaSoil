@@ -615,8 +615,12 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 		// Get all advanced parameters
 		const advancedParams = getAdvancedParameters();
 
-		// Determine user tier
-		const userTier = getUserTier();
+		// Check user plan and show plan-specific UI
+		const userPlan = window.flahaSoilAPI?.userPlan || "FREE";
+		const token = window.flahaSoilAPI?.token;
+
+		// Update plan status in UI
+		updatePlanStatusUI(userPlan, token);
 
 		// Prepare calculation parameters
 		const calculationParams = {
@@ -626,14 +630,27 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 			densityFactor: densityFactor,
 			gravelContent: advancedParams.gravelContent,
 			electricalConductivity: advancedParams.electricalConductivity,
-			tier: userTier,
 		};
 
-		// Use API for all calculations - no client-side fallback
+		// Use API for all calculations
 		const response = await window.flahaSoilAPI.analyzeSoil(calculationParams);
 
 		if (!response.success) {
 			// Handle different types of errors
+			if (response.upgradeRequired) {
+				showPlanUpgradePrompt(
+					response.error,
+					response.requiredPlan,
+					response.currentPlan
+				);
+				return;
+			}
+
+			if (response.usageLimitReached) {
+				showUsageLimitPrompt(response.error, response.resetDate);
+				return;
+			}
+
 			if (response.showUpgrade) {
 				showUpgradePrompt(response.error);
 				return;
@@ -649,16 +666,24 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 
 		const waterCharacteristics = response.data;
 
+		// Update usage display
+		if (response.usage) {
+			updateUsageDisplay(response.usage, userPlan);
+		}
+
 		// Show usage information
 		if (response.message) {
 			showUsageInfo(response.message, response.source);
 		}
 
 		// Update all display elements with enhanced data
-		updateDisplayElements(waterCharacteristics, userTier);
+		updateDisplayElements(waterCharacteristics, userPlan);
 
-		// Update tier-specific sections
-		updateTierSpecificSections(userTier, waterCharacteristics);
+		// Update plan-specific sections
+		updatePlanSpecificSections(userPlan, waterCharacteristics);
+
+		// Show plan-specific notifications
+		showPlanSpecificNotifications(userPlan, response);
 	} catch (error) {
 		console.error("Error updating water characteristics:", error);
 		showErrorMessage(
@@ -692,66 +717,374 @@ function getAdvancedParameters() {
 }
 
 /**
- * Determine user tier based on authentication status
- * @returns {string} User tier
+ * Update plan status in UI header
+ * @param {string} userPlan - Current user plan
+ * @param {string} token - Authentication token
  */
-function getUserTier() {
-	const user = window.flahaSoilAPI?.getCurrentUser();
-	if (!user) return "free";
-	return user.tier || "professional";
+function updatePlanStatusUI(userPlan, token) {
+	// Update plan badge in header
+	let planBadge = document.getElementById("planBadge");
+	if (!planBadge && token) {
+		planBadge = document.createElement("span");
+		planBadge.id = "planBadge";
+		planBadge.className = "plan-badge";
+		const userSection = document.getElementById("userSection");
+		if (userSection) {
+			userSection.appendChild(planBadge);
+		}
+	}
+
+	if (planBadge && token) {
+		planBadge.textContent = userPlan;
+		planBadge.className = `plan-badge plan-${userPlan.toLowerCase()}`;
+	} else if (planBadge && !token) {
+		planBadge.remove();
+	}
+
+	// Update usage counter
+	updateUsageCounter();
 }
 
 /**
- * Update display elements with calculation results
- * @param {Object} waterCharacteristics - Calculation results
- * @param {string} userTier - User tier
+ * Update usage counter display
  */
-function updateDisplayElements(waterCharacteristics, userTier) {
-	// Core water characteristics
-	document.getElementById("field-capacity").textContent =
-		waterCharacteristics.fieldCapacity;
-	document.getElementById("wilting-point").textContent =
-		waterCharacteristics.wiltingPoint;
-	document.getElementById("plant-available-water").textContent =
-		waterCharacteristics.plantAvailableWater;
-	document.getElementById("saturation").textContent =
-		waterCharacteristics.saturation;
-	document.getElementById("saturated-conductivity").textContent =
-		waterCharacteristics.saturatedConductivity;
+function updateUsageCounter() {
+	const remaining = window.flahaSoilAPI?.getRemainingFreeCalculations();
+	const token = window.flahaSoilAPI?.token;
 
-	// Soil quality indicators
-	document.getElementById("soil-quality-score").textContent =
-		waterCharacteristics.soilQualityIndex || "-";
-	document.getElementById("drainage-class").textContent =
-		waterCharacteristics.drainageClass || "-";
-	document.getElementById("compaction-risk").textContent =
-		waterCharacteristics.compactionRisk || "-";
-	document.getElementById("erosion-risk").textContent =
-		waterCharacteristics.erosionRisk || "-";
+	let usageCounter = document.getElementById("usageCounter");
+	if (!usageCounter && !token) {
+		usageCounter = document.createElement("div");
+		usageCounter.id = "usageCounter";
+		usageCounter.className = "usage-counter";
+		const authSection = document.getElementById("authSection");
+		if (authSection) {
+			authSection.appendChild(usageCounter);
+		}
+	}
 
-	// Update progress bars
-	updateProgressBars(waterCharacteristics);
-
-	// Show confidence intervals in expert mode
-	if (
-		document.getElementById("expertMode")?.checked &&
-		waterCharacteristics.confidence
-	) {
-		showConfidenceIntervals(waterCharacteristics.confidence);
+	if (usageCounter && !token) {
+		if (typeof remaining === "number") {
+			usageCounter.innerHTML = `
+				<span class="usage-text">Free calculations remaining: <strong>${remaining}</strong></span>
+				${remaining <= 10 ? '<span class="usage-warning">⚠️ Low usage</span>' : ""}
+			`;
+		} else {
+			usageCounter.innerHTML = `<span class="usage-text">Free calculations: <strong>Unlimited</strong></span>`;
+		}
+	} else if (usageCounter && token) {
+		usageCounter.remove();
 	}
 }
 
 /**
- * Update tier-specific sections visibility and content
- * @param {string} userTier - User tier
+ * Update usage display for authenticated users
+ * @param {Object} usage - Usage information from API
+ * @param {string} userPlan - Current user plan
+ */
+function updateUsageDisplay(usage, userPlan) {
+	let usageDisplay = document.getElementById("usageDisplay");
+	if (!usageDisplay) {
+		usageDisplay = document.createElement("div");
+		usageDisplay.id = "usageDisplay";
+		usageDisplay.className = "usage-display";
+		const userSection = document.getElementById("userSection");
+		if (userSection) {
+			userSection.appendChild(usageDisplay);
+		}
+	}
+
+	if (usage.unlimited) {
+		usageDisplay.innerHTML = `
+			<span class="usage-text">
+				<i class="fas fa-infinity"></i> Unlimited analyses
+			</span>
+		`;
+	} else {
+		const percentage = (usage.current / usage.limit) * 100;
+		const warningClass = percentage > 80 ? "usage-warning" : "";
+
+		usageDisplay.innerHTML = `
+			<div class="usage-info ${warningClass}">
+				<span class="usage-text">Usage: ${usage.current}/${usage.limit}</span>
+				<div class="usage-bar">
+					<div class="usage-progress" style="width: ${percentage}%"></div>
+				</div>
+				${
+					percentage > 80
+						? '<span class="usage-warning-text">⚠️ Usage limit approaching</span>'
+						: ""
+				}
+			</div>
+		`;
+	}
+}
+
+/**
+ * Show plan-specific upgrade prompt
+ * @param {string} message - Error message
+ * @param {string} requiredPlan - Required plan for feature
+ * @param {string} currentPlan - Current user plan
+ */
+function showPlanUpgradePrompt(message, requiredPlan, currentPlan) {
+	const modal = document.createElement("div");
+	modal.className = "upgrade-modal plan-upgrade-modal";
+
+	const planFeatures = {
+		PROFESSIONAL: [
+			"✓ 1,000 analyses per month",
+			"✓ Advanced soil calculations",
+			"✓ Analysis history & export",
+			"✓ Batch processing",
+			"✓ Priority support",
+		],
+		ENTERPRISE: [
+			"✓ Unlimited analyses",
+			"✓ All Professional features",
+			"✓ API access",
+			"✓ Custom integrations",
+			"✓ Dedicated support",
+		],
+	};
+
+	modal.innerHTML = `
+		<div class="modal-content upgrade-content">
+			<div class="modal-header">
+				<h3>Upgrade to ${requiredPlan}</h3>
+				<button class="modal-close" onclick="closePlanUpgradeModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p class="upgrade-message">${message}</p>
+				<div class="current-plan">
+					<span class="plan-label">Current: ${currentPlan}</span>
+				</div>
+				<div class="upgrade-benefits">
+					<h4>With ${requiredPlan} Plan:</h4>
+					<ul class="feature-list">
+						${(planFeatures[requiredPlan] || [])
+							.map((feature) => `<li>${feature}</li>`)
+							.join("")}
+					</ul>
+				</div>
+				<div class="pricing-info">
+					<div class="price">
+						${requiredPlan === "PROFESSIONAL" ? "$19/month" : "Contact us"}
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn-primary" onclick="handlePlanUpgrade('${requiredPlan}')">
+					Upgrade to ${requiredPlan}
+				</button>
+				<button class="btn-secondary" onclick="closePlanUpgradeModal()">
+					Continue with ${currentPlan}
+				</button>
+			</div>
+		</div>
+	`;
+
+	document.body.appendChild(modal);
+}
+
+/**
+ * Show usage limit reached prompt
+ * @param {string} message - Error message
+ * @param {string} resetDate - When usage resets
+ */
+function showUsageLimitPrompt(message, resetDate) {
+	const modal = document.createElement("div");
+	modal.className = "upgrade-modal usage-limit-modal";
+
+	const resetDateFormatted = resetDate
+		? new Date(resetDate).toLocaleDateString()
+		: "next month";
+
+	modal.innerHTML = `
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>Usage Limit Reached</h3>
+				<button class="modal-close" onclick="closeUsageLimitModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="limit-icon">📊</div>
+				<p class="limit-message">${message}</p>
+				<p class="reset-info">Your usage will reset on <strong>${resetDateFormatted}</strong></p>
+				<div class="upgrade-options">
+					<h4>Get unlimited access:</h4>
+					<div class="option-cards">
+						<div class="option-card">
+							<h5>Professional</h5>
+							<div class="option-price">$19/month</div>
+							<ul>
+								<li>1,000 analyses/month</li>
+								<li>Advanced features</li>
+								<li>Analysis history</li>
+							</ul>
+							<button class="btn-outline" onclick="handlePlanUpgrade('PROFESSIONAL')">
+								Choose Professional
+							</button>
+						</div>
+						<div class="option-card featured">
+							<h5>Enterprise</h5>
+							<div class="option-price">Contact us</div>
+							<ul>
+								<li>Unlimited analyses</li>
+								<li>API access</li>
+								<li>Priority support</li>
+							</ul>
+							<button class="btn-primary" onclick="handlePlanUpgrade('ENTERPRISE')">
+								Choose Enterprise
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn-secondary" onclick="closeUsageLimitModal()">
+					Continue (Limited Access)
+				</button>
+			</div>
+		</div>
+	`;
+
+	document.body.appendChild(modal);
+}
+
+/**
+ * Handle plan upgrade process
+ * @param {string} newPlan - Plan to upgrade to
+ */
+async function handlePlanUpgrade(newPlan) {
+	try {
+		if (!window.flahaSoilAPI?.token) {
+			// User not logged in, show signup with plan selection
+			showSignupWithPlan(newPlan);
+			return;
+		}
+
+		// For existing users, handle upgrade
+		const result = await window.flahaSoilAPI.upgradePlan(newPlan);
+
+		if (result.success) {
+			showUpgradeSuccessMessage(newPlan);
+			closePlanUpgradeModal();
+			closeUsageLimitModal();
+
+			// Refresh the page to update UI
+			setTimeout(() => {
+				location.reload();
+			}, 2000);
+		} else {
+			alert(result.error || "Upgrade failed. Please try again.");
+		}
+	} catch (error) {
+		console.error("Upgrade error:", error);
+		alert("Upgrade failed. Please try again.");
+	}
+}
+
+/**
+ * Show signup modal with plan preselected
+ * @param {string} selectedPlan - Plan to preselect
+ */
+function showSignupWithPlan(selectedPlan) {
+	closePlanUpgradeModal();
+	closeUsageLimitModal();
+
+	const modal = document.createElement("div");
+	modal.className = "signup-modal plan-signup-modal";
+	modal.innerHTML = `
+		<div class="modal-content">
+			<h3>Sign Up for FlahaSoil ${selectedPlan}</h3>
+			<p>Get started with ${selectedPlan} plan features!</p>
+			<form id="signup-form">
+				<input type="email" name="email" placeholder="Email" required>
+				<input type="password" name="password" placeholder="Password" required>
+				<input type="text" name="name" placeholder="Full Name" required>
+				<input type="hidden" name="plan" value="${selectedPlan}">
+				<button type="submit">Sign Up for ${selectedPlan}</button>
+			</form>
+			<p><a href="#" onclick="showLoginModal(); closeSignupModal()">Already have an account? Login</a></p>
+			<button onclick="closeSignupModal()">Close</button>
+		</div>
+	`;
+
+	document.body.appendChild(modal);
+
+	// Handle form submission with plan selection
+	document
+		.getElementById("signup-form")
+		.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const formData = new FormData(e.target);
+			const userData = {
+				email: formData.get("email"),
+				password: formData.get("password"),
+				name: formData.get("name"),
+				tier: formData.get("plan"),
+			};
+
+			const result = await window.flahaSoilAPI.register(userData);
+			if (result.success) {
+				showUpgradeSuccessMessage(selectedPlan);
+				closeSignupModal();
+				setTimeout(() => {
+					location.reload();
+				}, 2000);
+			} else {
+				alert(result.error || "Registration failed");
+			}
+		});
+}
+
+/**
+ * Show upgrade success message
+ * @param {string} newPlan - New plan name
+ */
+function showUpgradeSuccessMessage(newPlan) {
+	const successMessage = document.createElement("div");
+	successMessage.className = "success-toast";
+	successMessage.innerHTML = `
+		<div class="toast-content">
+			<span class="toast-icon">🎉</span>
+			<span class="toast-message">Successfully upgraded to ${newPlan}!</span>
+		</div>
+	`;
+
+	document.body.appendChild(successMessage);
+
+	setTimeout(() => {
+		successMessage.remove();
+	}, 3000);
+}
+
+/**
+ * Close plan upgrade modal
+ */
+function closePlanUpgradeModal() {
+	const modal = document.querySelector(".plan-upgrade-modal");
+	if (modal) modal.remove();
+}
+
+/**
+ * Close usage limit modal
+ */
+function closeUsageLimitModal() {
+	const modal = document.querySelector(".usage-limit-modal");
+	if (modal) modal.remove();
+}
+
+/**
+ * Update plan-specific sections visibility and content
+ * @param {string} userPlan - User plan
  * @param {Object} waterCharacteristics - Calculation results
  */
-function updateTierSpecificSections(userTier, waterCharacteristics) {
+function updatePlanSpecificSections(userPlan, waterCharacteristics) {
 	// Show/hide professional features
 	const professionalSection = document.getElementById("professionalFeatures");
 	const professionalResults = document.getElementById("professionalResults");
 
-	if (userTier === "professional" || userTier === "enterprise") {
+	if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
 		if (professionalSection) professionalSection.style.display = "block";
 		if (professionalResults) {
 			professionalResults.style.display = "block";
@@ -770,11 +1103,15 @@ function updateTierSpecificSections(userTier, waterCharacteristics) {
 					waterCharacteristics.lambda;
 			}
 		}
+	} else {
+		// Hide professional features for free users
+		if (professionalSection) professionalSection.style.display = "none";
+		if (professionalResults) professionalResults.style.display = "none";
 	}
 
 	// Show/hide enterprise features
 	const enterpriseResults = document.getElementById("enterpriseResults");
-	if (userTier === "enterprise" && enterpriseResults) {
+	if (userPlan === "ENTERPRISE" && enterpriseResults) {
 		enterpriseResults.style.display = "block";
 
 		// Update enterprise results
@@ -790,513 +1127,146 @@ function updateTierSpecificSections(userTier, waterCharacteristics) {
 			document.getElementById("osmotic-potential").textContent =
 				waterCharacteristics.osmoticPotential;
 		}
+	} else if (enterpriseResults) {
+		enterpriseResults.style.display = "none";
 	}
+
+	// Add upgrade prompts for disabled features
+	addUpgradePrompts(userPlan);
 }
 
 /**
- * Update progress bars with new values
- * @param {Object} waterCharacteristics - Calculation results
+ * Add upgrade prompts for features not available in current plan
+ * @param {string} userPlan - Current user plan
  */
-function updateProgressBars(waterCharacteristics) {
-	// Convert string values to numbers
-	const fcValue = parseFloat(waterCharacteristics.fieldCapacity);
-	const wpValue = parseFloat(waterCharacteristics.wiltingPoint);
-	const pawValue = parseFloat(waterCharacteristics.plantAvailableWater);
-	const satValue = parseFloat(waterCharacteristics.saturation);
-	const ksValue = parseFloat(waterCharacteristics.saturatedConductivity);
+function addUpgradePrompts(userPlan) {
+	// Remove existing upgrade prompts
+	document
+		.querySelectorAll(".feature-upgrade-prompt")
+		.forEach((el) => el.remove());
 
-	// Set max values for scaling the progress bars
-	const maxFC = 50; // Maximum expected field capacity (%)
-	const maxWP = 30; // Maximum expected wilting point (%)
-	const maxPAW = 30; // Maximum expected plant available water (%)
-	const maxSat = 60; // Maximum expected saturation (%)
-	const maxKs = 100; // Maximum expected saturated conductivity (mm/hr)
-
-	// Update progress bar widths
-	document.getElementById("field-capacity-bar").style.width = `${Math.min(
-		100,
-		(fcValue / maxFC) * 100
-	)}%`;
-	document.getElementById("wilting-point-bar").style.width = `${Math.min(
-		100,
-		(wpValue / maxWP) * 100
-	)}%`;
-	document.getElementById(
-		"plant-available-water-bar"
-	).style.width = `${Math.min(100, (pawValue / maxPAW) * 100)}%`;
-	document.getElementById("saturation-bar").style.width = `${Math.min(
-		100,
-		(satValue / maxSat) * 100
-	)}%`;
-	document.getElementById(
-		"saturated-conductivity-bar"
-	).style.width = `${Math.min(100, (ksValue / maxKs) * 100)}%`;
-}
-
-/**
- * Show confidence intervals in expert mode
- * @param {Object} confidence - Confidence interval data
- */
-function showConfidenceIntervals(confidence) {
-	const confidenceElements = {
-		"fc-confidence": confidence.fieldCapacity,
-		"wp-confidence": confidence.wiltingPoint,
-		"sat-confidence": confidence.saturation,
-		"aet-confidence": confidence.airEntryTension,
-	};
-
-	Object.entries(confidenceElements).forEach(([elementId, data]) => {
-		const element = document.getElementById(elementId);
-		if (element && data) {
-			element.style.display = "block";
-			element.textContent = `R² = ${data.r2}, SE = ±${data.se}`;
+	if (userPlan === "FREE") {
+		// Add prompts for professional features
+		const professionalSection = document.getElementById("professionalFeatures");
+		if (professionalSection) {
+			const prompt = document.createElement("div");
+			prompt.className = "feature-upgrade-prompt";
+			prompt.innerHTML = `
+				<div class="upgrade-overlay">
+					<h4>🔒 Professional Features</h4>
+					<p>Advanced soil calculations, analysis history, and export capabilities</p>
+					<button class="btn-upgrade" onclick="showPlanUpgradePrompt('Unlock Professional features for advanced soil analysis', 'PROFESSIONAL', 'FREE')">
+						Upgrade to Professional
+					</button>
+				</div>
+			`;
+			professionalSection.appendChild(prompt);
 		}
-	});
-}
 
-/**
- * Toggle expert mode visibility
- */
-function toggleExpertMode() {
-	const expertMode = document.getElementById("expertMode").checked;
-	const expertFeatures = document.getElementById("expertFeatures");
-	const confidenceElements = document.querySelectorAll(".confidence-info");
-
-	if (expertFeatures) {
-		expertFeatures.style.display = expertMode ? "block" : "none";
-	}
-
-	// Show/hide confidence intervals
-	confidenceElements.forEach((element) => {
-		element.style.display = expertMode ? "block" : "none";
-	});
-}
-
-/**
- * Toggle collapsible sections
- * @param {string} sectionId - ID of section to toggle
- */
-function toggleSection(sectionId) {
-	const section = document.getElementById(sectionId);
-	const toggle = document.getElementById(sectionId.replace("Inputs", "Toggle"));
-
-	if (section && toggle) {
-		const isVisible = section.style.display !== "none";
-		section.style.display = isVisible ? "none" : "block";
-		toggle.textContent = isVisible ? "▶" : "▼";
-	}
-}
-
-// Add event listeners for the new inputs
-document.addEventListener("DOMContentLoaded", function () {
-	// Check authentication status
-	checkAuthenticationStatus();
-
-	// Setup navigation listeners
-	setupNavigationListeners();
-
-	// Add event listeners for OM and density inputs
-	document.getElementById("om-input").addEventListener("input", function () {
-		const clayValue = parseFloat(document.getElementById("clay-input").value);
-		const sandValue = parseFloat(document.getElementById("sand-input").value);
-		const siltValue = 100 - clayValue - sandValue;
-		const om = parseFloat(this.value);
-		const densityFactor = parseFloat(
-			document.getElementById("density-input").value
-		);
-
-		updateWaterCharacteristics(clayValue, sandValue, om, densityFactor);
-	});
-
-	document
-		.getElementById("density-input")
-		.addEventListener("input", function () {
-			const clayValue = parseFloat(document.getElementById("clay-input").value);
-			const sandValue = parseFloat(document.getElementById("sand-input").value);
-			const siltValue = 100 - clayValue - sandValue;
-			const om = parseFloat(document.getElementById("om-input").value);
-			const densityFactor = parseFloat(this.value);
-
-			updateWaterCharacteristics(clayValue, sandValue, om, densityFactor);
-		});
-
-	// Initialize water characteristics display
-	const initialClay = 33;
-	const initialSand = 33;
-	const initialOM = 2.5;
-	const initialDensity = 1.0;
-	updateWaterCharacteristics(
-		initialClay,
-		initialSand,
-		initialOM,
-		initialDensity
-	);
-});
-
-/**
- * Check authentication status and update UI
- */
-function checkAuthenticationStatus() {
-	const token = localStorage.getItem("flahasoil_token");
-	const userStr = localStorage.getItem("flahasoil_user");
-
-	if (token && userStr) {
-		const user = JSON.parse(userStr);
-		showAuthenticatedUI(user);
-	} else {
-		showUnauthenticatedUI();
-	}
-}
-
-/**
- * Show UI for authenticated users
- */
-function showAuthenticatedUI(user) {
-	// Hide auth section, show user section
-	document.getElementById("authSection").style.display = "none";
-	document.getElementById("userSection").style.display = "block";
-	document.getElementById("profileLink").style.display = "block";
-
-	// Update user name
-	document.getElementById("headerUserName").textContent = user.name;
-}
-
-/**
- * Show UI for unauthenticated users
- */
-function showUnauthenticatedUI() {
-	// Show auth section, hide user section
-	document.getElementById("authSection").style.display = "flex";
-	document.getElementById("userSection").style.display = "none";
-	document.getElementById("profileLink").style.display = "none";
-}
-
-/**
- * Setup navigation event listeners
- */
-function setupNavigationListeners() {
-	// Close dropdown when clicking outside
-	document.addEventListener("click", function (event) {
-		const userMenu = document.querySelector(".user-menu");
-		const dropdown = document.getElementById("userDropdown");
-
-		if (userMenu && dropdown && !userMenu.contains(event.target)) {
-			dropdown.classList.remove("show");
-			const arrow = document.querySelector(".dropdown-arrow");
-			if (arrow) arrow.style.transform = "rotate(0deg)";
+		// Add prompts for enterprise features
+		const enterpriseSection = document.getElementById("enterpriseResults");
+		if (enterpriseSection) {
+			const prompt = document.createElement("div");
+			prompt.className = "feature-upgrade-prompt";
+			prompt.innerHTML = `
+				<div class="upgrade-overlay">
+					<h4>🏢 Enterprise Features</h4>
+					<p>API access, unlimited analyses, and priority support</p>
+					<button class="btn-upgrade" onclick="showPlanUpgradePrompt('Unlock Enterprise features for unlimited access', 'ENTERPRISE', 'FREE')">
+						Upgrade to Enterprise
+					</button>
+				</div>
+			`;
+			enterpriseSection.appendChild(prompt);
 		}
-	});
-}
-
-/**
- * Toggle user dropdown menu
- */
-function toggleUserDropdown() {
-	const dropdown = document.getElementById("userDropdown");
-	const arrow = document.querySelector(".dropdown-arrow");
-
-	if (dropdown) {
-		dropdown.classList.toggle("show");
-		arrow.style.transform = dropdown.classList.contains("show")
-			? "rotate(180deg)"
-			: "rotate(0deg)";
+	} else if (userPlan === "PROFESSIONAL") {
+		// Add prompts for enterprise features
+		const enterpriseSection = document.getElementById("enterpriseResults");
+		if (enterpriseSection) {
+			const prompt = document.createElement("div");
+			prompt.className = "feature-upgrade-prompt";
+			prompt.innerHTML = `
+				<div class="upgrade-overlay">
+					<h4>🏢 Enterprise Only</h4>
+					<p>API access and unlimited analyses</p>
+					<button class="btn-upgrade" onclick="showPlanUpgradePrompt('Upgrade to Enterprise for unlimited access and API features', 'ENTERPRISE', 'PROFESSIONAL')">
+						Upgrade to Enterprise
+					</button>
+				</div>
+			`;
+			enterpriseSection.appendChild(prompt);
+		}
 	}
 }
 
 /**
- * Logout user
+ * Show plan-specific notifications
+ * @param {string} userPlan - User plan
+ * @param {Object} response - API response
  */
-function logout() {
-	window.flahaSoilAPI.logout();
-	checkAuthenticationStatus();
-	location.reload();
-}
-
-// Helper functions for API integration
-function showLoadingState() {
-	const loadingElements = [
-		"field-capacity",
-		"wilting-point",
-		"plant-available-water",
-		"saturation",
-		"saturated-conductivity",
-	];
-
-	loadingElements.forEach((id) => {
-		document.getElementById(id).textContent = "...";
-	});
-}
-
-function showUsageInfo(message, source) {
-	// Create or update usage info display
-	let usageInfo = document.getElementById("usage-info");
-	if (!usageInfo) {
-		usageInfo = document.createElement("div");
-		usageInfo.id = "usage-info";
-		usageInfo.className = "usage-info";
-		document
-			.querySelector(".results-container")
-			.insertBefore(
-				usageInfo,
-				document.querySelector(".results-container").firstChild
+function showPlanSpecificNotifications(userPlan, response) {
+	// Show notifications based on plan and response
+	if (userPlan === "FREE" && response.usage) {
+		const remaining = response.usage.limit - response.usage.current;
+		if (remaining <= 10 && remaining > 0) {
+			showPlanNotification(
+				`⚠️ Only ${remaining} free analyses remaining this month. Upgrade for unlimited access.`,
+				"warning",
+				() =>
+					showPlanUpgradePrompt(
+						"Upgrade for unlimited analyses",
+						"PROFESSIONAL",
+						"FREE"
+					)
 			);
-	}
-
-	const sourceIcon = source === "client-side" ? "🔄" : "☁️";
-	usageInfo.innerHTML = `
-    <div class="usage-message">
-      ${sourceIcon} ${message}
-      ${
-				!window.flahaSoilAPI.isAuthenticated()
-					? '<a href="#" onclick="showSignupModal()">Sign up for unlimited calculations</a>'
-					: ""
-			}
-    </div>
-  `;
-}
-
-function showUpgradePrompt(message) {
-	// Create upgrade modal
-	const modal = document.createElement("div");
-	modal.className = "upgrade-modal";
-	modal.innerHTML = `
-    <div class="modal-content">
-      <h3>Upgrade Required</h3>
-      <p>${message}</p>
-      <div class="modal-buttons">
-        <button onclick="showSignupModal(); closeUpgradeModal()">Sign Up Free</button>
-        <button onclick="closeUpgradeModal()">Continue with Limited Access</button>
-      </div>
-    </div>
-  `;
-
-	document.body.appendChild(modal);
-}
-
-function closeUpgradeModal() {
-	const modal = document.querySelector(".upgrade-modal");
-	if (modal) {
-		modal.remove();
+		}
 	}
 }
 
-function showSignupModal() {
-	// Create signup modal
-	const modal = document.createElement("div");
-	modal.className = "signup-modal";
-	modal.innerHTML = `
-    <div class="modal-content">
-      <h3>Sign Up for FlahaSoil</h3>
-      <p>Get unlimited soil analysis calculations and advanced features!</p>
-      <form id="signup-form">
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <input type="text" name="name" placeholder="Full Name" required>
-        <button type="submit">Sign Up Free</button>
-      </form>
-      <p><a href="#" onclick="showLoginModal(); closeSignupModal()">Already have an account? Login</a></p>
-      <button onclick="closeSignupModal()">Close</button>
-    </div>
-  `;
+/**
+ * Show plan notification banner
+ * @param {string} message - Notification message
+ * @param {string} type - Notification type (info, warning, success)
+ * @param {Function} action - Optional action function
+ */
+function showPlanNotification(message, type = "info", action = null) {
+	// Remove existing notifications
+	document.querySelectorAll(".plan-notification").forEach((el) => el.remove());
 
-	document.body.appendChild(modal);
-
-	// Handle form submission
-	document
-		.getElementById("signup-form")
-		.addEventListener("submit", async (e) => {
-			e.preventDefault();
-			const formData = new FormData(e.target);
-			const userData = {
-				email: formData.get("email"),
-				password: formData.get("password"),
-				name: formData.get("name"),
-			};
-
-			const result = await window.flahaSoilAPI.register(userData);
-			if (result.success) {
-				alert("Registration successful! Please login.");
-				closeSignupModal();
-				showLoginModal();
-			} else {
-				alert(result.error || "Registration failed");
-			}
-		});
-}
-
-function closeSignupModal() {
-	const modal = document.querySelector(".signup-modal");
-	if (modal) {
-		modal.remove();
-	}
-}
-
-function showLoginModal() {
-	// Create login modal
-	const modal = document.createElement("div");
-	modal.className = "login-modal";
-	modal.innerHTML = `
-    <div class="modal-content">
-      <h3>Login to FlahaSoil</h3>
-      <form id="login-form">
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Login</button>
-      </form>
-      <p><a href="#" onclick="showForgotPasswordDialog()">Forgot your password?</a></p>
-      <p><a href="#" onclick="showSignupModal(); closeLoginModal()">Don't have an account? Sign up</a></p>
-      <button onclick="closeLoginModal()">Close</button>
-    </div>
-  `;
-
-	document.body.appendChild(modal);
-
-	// Handle form submission
-	document
-		.getElementById("login-form")
-		.addEventListener("submit", async (e) => {
-			e.preventDefault();
-			const formData = new FormData(e.target);
-
-			const result = await window.flahaSoilAPI.login(
-				formData.get("email"),
-				formData.get("password")
-			);
-
-			if (result.success) {
-				alert("Login successful!");
-				closeLoginModal();
-				location.reload(); // Refresh to update UI
-			} else {
-				alert(result.error || "Login failed");
-			}
-		});
-}
-
-function closeLoginModal() {
-	const modal = document.querySelector(".login-modal");
-	if (modal) {
-		modal.remove();
-	}
-}
-
-function showErrorMessage(message) {
-	// Create or update error message display
-	let errorInfo = document.getElementById("error-info");
-	if (!errorInfo) {
-		errorInfo = document.createElement("div");
-		errorInfo.id = "error-info";
-		errorInfo.className = "error-info";
-		document
-			.querySelector(".results-container")
-			.insertBefore(
-				errorInfo,
-				document.querySelector(".results-container").firstChild
-			);
-	}
-
-	errorInfo.innerHTML = `
-		<div class="error-message">
-			⚠️ ${message}
+	const notification = document.createElement("div");
+	notification.className = `plan-notification notification-${type}`;
+	notification.innerHTML = `
+		<div class="notification-content">
+			<span class="notification-message">${message}</span>
+			${action ? '<button class="notification-action">Learn More</button>' : ""}
+			<button class="notification-close">&times;</button>
 		</div>
 	`;
 
-	// Auto-hide after 5 seconds
+	// Insert at top of main content
+	const mainContent =
+		document.querySelector(".results-container") || document.body;
+	mainContent.insertBefore(notification, mainContent.firstChild);
+
+	// Add event listeners
+	if (action) {
+		notification
+			.querySelector(".notification-action")
+			.addEventListener("click", action);
+	}
+
+	notification
+		.querySelector(".notification-close")
+		.addEventListener("click", () => {
+			notification.remove();
+		});
+
+	// Auto-hide after 10 seconds
 	setTimeout(() => {
-		if (errorInfo) {
-			errorInfo.remove();
+		if (notification.parentNode) {
+			notification.remove();
 		}
-	}, 5000);
+	}, 10000);
 }
 
-/**
- * Show connection error message
- * @param {string} message - Error message
- */
-function showConnectionError(message) {
-	const connectionStatus = document.getElementById("connectionStatus");
-	const statusText = document.querySelector(".status-text");
-
-	if (connectionStatus && statusText) {
-		statusText.textContent = message;
-		connectionStatus.style.display = "block";
-	}
-
-	// Hide results sections
-	document.querySelector(".quality-overview").style.display = "none";
-	document.querySelectorAll(".results-grid").forEach((grid) => {
-		grid.style.display = "none";
-	});
-}
-
-/**
- * Retry connection function
- */
-function retryConnection() {
-	const connectionStatus = document.getElementById("connectionStatus");
-
-	// Hide connection error
-	if (connectionStatus) {
-		connectionStatus.style.display = "none";
-	}
-
-	// Show results sections
-	document.querySelector(".quality-overview").style.display = "flex";
-	document.querySelectorAll(".results-grid").forEach((grid) => {
-		grid.style.display = "grid";
-	});
-
-	// Retry the calculation
-	const clayValue = parseFloat(document.getElementById("clay-input").value);
-	const sandValue = parseFloat(document.getElementById("sand-input").value);
-	const om = parseFloat(document.getElementById("om-input").value);
-	const densityFactor = parseFloat(
-		document.getElementById("density-input").value
-	);
-
-	updateWaterCharacteristics(clayValue, sandValue, om, densityFactor);
-}
-
-/**
- * Show forgot password dialog
- */
-function showForgotPasswordDialog() {
-	const email = prompt("Enter your email address to reset password:");
-	if (email && email.trim()) {
-		handleForgotPasswordRequest(email.trim());
-	}
-}
-
-/**
- * Handle forgot password request
- * @param {string} email - User's email address
- */
-async function handleForgotPasswordRequest(email) {
-	try {
-		const result = await window.flahaSoilAPI.forgotPassword(email);
-		if (result.success) {
-			alert("Password reset instructions sent to your email!");
-			// In development, show the token
-			if (result.resetToken) {
-				const newPassword = prompt(
-					"Development mode: Enter new password (token received):"
-				);
-				if (newPassword) {
-					const resetResult = await window.flahaSoilAPI.resetPassword(
-						result.resetToken,
-						newPassword
-					);
-					if (resetResult.success) {
-						alert("Password reset successfully! You can now login.");
-					} else {
-						alert(resetResult.error || "Failed to reset password");
-					}
-				}
-			}
-		} else {
-			alert(result.error || "Failed to send reset email");
-		}
-	} catch (error) {
-		alert("Failed to send reset email. Please try again.");
-	}
-}
+// ...existing code...

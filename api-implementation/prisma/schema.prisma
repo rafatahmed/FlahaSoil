@@ -10,23 +10,28 @@ datasource db {
 
 // User model for authentication and subscription management
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  password      String   // In production, this will be hashed
-  tier          String   @default("FREE") // FREE, PROFESSIONAL, ENTERPRISE
-  emailVerified Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  password         String   // In production, this will be hashed
+  tier             String   @default("FREE") // FREE, PROFESSIONAL, ENTERPRISE
+  emailVerified    Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Plan management
+  planSelectedAt   DateTime?
+  usageCount       Int      @default(0)
+  usageResetDate   DateTime?
 
   // Subscription information
-  subscription   Subscription?
+  subscription     Subscription?
 
   // Usage tracking
-  usageRecords   UsageRecord[]
+  usageRecords     UsageRecord[]
 
   // Soil analysis history
-  soilAnalyses   SoilAnalysis[]
+  soilAnalyses     SoilAnalysis[]
 
   @@map("users")
 }

@@ -44,6 +44,14 @@
           <button class="btn-signup" onclick="showSignupModal()">Sign Up</button>
         </div>
         <div class="user-section" id="userSection" style="display: none;">
+          <!-- Plan Status Display -->
+          <div class="plan-status-container" id="planStatusContainer">
+            <div class="plan-badge" id="planBadge">FREE</div>
+            <div class="usage-counter" id="usageCounter" style="display: none;">
+              <span class="usage-text">Usage: <span id="usageCount">0</span>/<span id="usageLimit">50</span></span>
+            </div>
+          </div>
+
           <div class="user-menu">
             <button class="btn-user" onclick="toggleUserDropdown()">
               <span class="user-name" id="headerUserName">User</span>
@@ -52,6 +60,7 @@
             <div class="user-dropdown" id="userDropdown">
               <a href="./profile.html" class="dropdown-item">Profile</a>
               <a href="./index.html" class="dropdown-item">Soil Analysis</a>
+              <a href="#" class="dropdown-item" onclick="showPlanUpgradePrompt()">Upgrade Plan</a>
               <a href="#" class="dropdown-item" onclick="logout()">Logout</a>
             </div>
           </div>
@@ -75,6 +84,24 @@
         <input type="number" id="silt-input" disabled value="34">
       </div>
       <button id="update-point">Update Point</button>
+
+      <!-- Advanced Actions (Plan-based) -->
+      <div class="advanced-actions" id="advancedActions" style="display: none;">
+        <div class="action-buttons">
+          <button class="btn-secondary" id="batchAnalysisBtn" onclick="showBatchAnalysis()" style="display: none;">
+            <span class="btn-icon">📊</span>
+            Batch Analysis
+          </button>
+          <button class="btn-secondary" id="historyBtn" onclick="showAnalysisHistory()" style="display: none;">
+            <span class="btn-icon">📋</span>
+            Analysis History
+          </button>
+          <button class="btn-secondary" id="exportBtn" onclick="exportCurrentAnalysis()" style="display: none;">
+            <span class="btn-icon">💾</span>
+            Export Results
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="advanced-inputs">
@@ -106,6 +133,16 @@
             <span id="professionalToggle">▼</span>
           </button>
         </h4>
+        <div class="feature-upgrade-overlay" id="professionalUpgradeOverlay">
+          <div class="upgrade-content">
+            <div class="upgrade-icon">🔒</div>
+            <h4>Professional Features</h4>
+            <p>Unlock advanced soil parameters and detailed analysis</p>
+            <button class="btn-upgrade-feature" onclick="showPlanUpgradePrompt('PROFESSIONAL')">
+              Upgrade to Professional
+            </button>
+          </div>
+        </div>
         <div class="collapsible-content" id="professionalInputs">
           <div class="input-row">
             <div class="input-group">
@@ -281,6 +318,16 @@
           Advanced Parameters
           <span class="tier-badge professional">PRO</span>
         </h4>
+        <div class="feature-upgrade-overlay" id="professionalResultsUpgradeOverlay">
+          <div class="upgrade-content">
+            <div class="upgrade-icon">🔒</div>
+            <h4>Professional Analysis</h4>
+            <p>Get detailed soil parameters and advanced calculations</p>
+            <button class="btn-upgrade-feature" onclick="showPlanUpgradePrompt('PROFESSIONAL')">
+              Upgrade to Professional
+            </button>
+          </div>
+        </div>
         <div class="results-grid">
           <div class="result-item">
             <div class="result-label">Air-Entry Tension:</div>
@@ -309,6 +356,16 @@
           Gravel & Salinity Effects
           <span class="tier-badge enterprise">ENTERPRISE</span>
         </h4>
+        <div class="feature-upgrade-overlay" id="enterpriseResultsUpgradeOverlay">
+          <div class="upgrade-content">
+            <div class="upgrade-icon">🔒</div>
+            <h4>Enterprise Analysis</h4>
+            <p>Advanced gravel and salinity analysis for professional farming</p>
+            <button class="btn-upgrade-feature" onclick="showPlanUpgradePrompt('ENTERPRISE')">
+              Upgrade to Enterprise
+            </button>
+          </div>
+        </div>
         <div class="results-grid">
           <div class="result-item">
             <div class="result-label">Bulk PAW:</div>
@@ -416,6 +473,195 @@
       </div>
     </div>
   </main>
+
+  <!-- Plan-based Notification Banner -->
+  <div class="notification-banner" id="notificationBanner" style="display: none;">
+    <div class="notification-content">
+      <span class="notification-icon">⚠️</span>
+      <span class="notification-message" id="notificationMessage"></span>
+      <button class="notification-close" onclick="hideNotificationBanner()">×</button>
+    </div>
+  </div>
+
+  <!-- Plan Upgrade Modal -->
+  <div class="modal-overlay" id="planUpgradeModal" style="display: none;">
+    <div class="modal-content plan-upgrade-modal">
+      <div class="modal-header">
+        <h2 id="upgradeModalTitle">Upgrade Your Plan</h2>
+        <button class="modal-close" onclick="hidePlanUpgradeModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="upgrade-message" id="upgradeMessage">
+          <p>Unlock advanced features with a plan upgrade!</p>
+        </div>
+
+        <div class="plan-comparison">
+          <div class="plan-card current-plan" id="currentPlanCard">
+            <h3>FREE</h3>
+            <div class="plan-price">$0/month</div>
+            <ul class="plan-features">
+              <li>✓ Basic soil analysis</li>
+              <li>✓ 50 analyses per month</li>
+              <li>✓ Soil texture classification</li>
+              <li>✓ Basic water characteristics</li>
+            </ul>
+          </div>
+
+          <div class="plan-card recommended-plan" id="recommendedPlanCard">
+            <h3>PROFESSIONAL</h3>
+            <div class="plan-price">$29/month</div>
+            <div class="plan-badge-popular">Most Popular</div>
+            <ul class="plan-features">
+              <li>✓ Everything in FREE</li>
+              <li>✓ 1,000 analyses per month</li>
+              <li>✓ Advanced soil parameters</li>
+              <li>✓ Batch analysis</li>
+              <li>✓ Analysis history</li>
+              <li>✓ Export results</li>
+            </ul>
+            <button class="btn-upgrade" onclick="handlePlanUpgrade('PROFESSIONAL')">
+              Upgrade to Professional
+            </button>
+          </div>
+
+          <div class="plan-card enterprise-plan">
+            <h3>ENTERPRISE</h3>
+            <div class="plan-price">$99/month</div>
+            <ul class="plan-features">
+              <li>✓ Everything in PROFESSIONAL</li>
+              <li>✓ Unlimited analyses</li>
+              <li>✓ Gravel content analysis</li>
+              <li>✓ Salinity effects</li>
+              <li>✓ Priority support</li>
+              <li>✓ API access</li>
+            </ul>
+            <button class="btn-upgrade enterprise" onclick="handlePlanUpgrade('ENTERPRISE')">
+              Upgrade to Enterprise
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature Upgrade Prompts -->
+  <div class="feature-upgrade-prompt" id="featureUpgradePrompt" style="display: none;">
+    <div class="prompt-content">
+      <div class="prompt-icon">🔒</div>
+      <div class="prompt-text">
+        <h4 id="promptTitle">Professional Feature</h4>
+        <p id="promptMessage">This feature is available with Professional plan.</p>
+      </div>
+      <div class="prompt-actions">
+        <button class="btn-upgrade-small" onclick="showPlanUpgradePrompt()">Upgrade</button>
+        <button class="btn-dismiss" onclick="hideFeatureUpgradePrompt()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authentication Modals -->
+  <div class="modal-overlay" id="authModalOverlay" style="display: none;">
+    <!-- Login Modal -->
+    <div class="modal-content auth-modal" id="loginModal" style="display: none;">
+      <div class="modal-header">
+        <h2>Login to FlahaSoil</h2>
+        <button class="modal-close" onclick="hideAuthModals()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="loginEmail">Email:</label>
+            <input type="email" id="loginEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password:</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit" class="btn-primary">Login</button>
+          <div class="auth-error" id="loginError" style="display: none;"></div>
+        </form>
+        <div class="auth-links">
+          <p>Don't have an account? <a href="#" onclick="showSignupModal()">Sign up here</a></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signup Modal -->
+    <div class="modal-content auth-modal" id="signupModal" style="display: none;">
+      <div class="modal-header">
+        <h2>Sign Up for FlahaSoil</h2>
+        <button class="modal-close" onclick="hideAuthModals()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="signupForm" onsubmit="handleSignup(event)">
+          <div class="form-group">
+            <label for="signupName">Name:</label>
+            <input type="text" id="signupName" required>
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email:</label>
+            <input type="email" id="signupEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password:</label>
+            <input type="password" id="signupPassword" required minlength="6">
+          </div>
+
+          <!-- Plan Selection -->
+          <div class="form-group">
+            <label>Choose Your Plan:</label>
+            <div class="plan-selection">
+              <div class="plan-option">
+                <input type="radio" id="planFree" name="selectedPlan" value="FREE" checked>
+                <label for="planFree" class="plan-option-label">
+                  <div class="plan-option-header">
+                    <span class="plan-name">FREE</span>
+                    <span class="plan-price">$0/month</span>
+                  </div>
+                  <div class="plan-option-features">
+                    <small>50 analyses/month, Basic features</small>
+                  </div>
+                </label>
+              </div>
+
+              <div class="plan-option">
+                <input type="radio" id="planPro" name="selectedPlan" value="PROFESSIONAL">
+                <label for="planPro" class="plan-option-label recommended">
+                  <div class="plan-option-header">
+                    <span class="plan-name">PROFESSIONAL</span>
+                    <span class="plan-price">$29/month</span>
+                  </div>
+                  <div class="plan-option-features">
+                    <small>1,000 analyses/month, Advanced features</small>
+                  </div>
+                  <div class="plan-popular-badge">Most Popular</div>
+                </label>
+              </div>
+
+              <div class="plan-option">
+                <input type="radio" id="planEnterprise" name="selectedPlan" value="ENTERPRISE">
+                <label for="planEnterprise" class="plan-option-label">
+                  <div class="plan-option-header">
+                    <span class="plan-name">ENTERPRISE</span>
+                    <span class="plan-price">$99/month</span>
+                  </div>
+                  <div class="plan-option-features">
+                    <small>Unlimited analyses, All features</small>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary">Sign Up</button>
+          <div class="auth-error" id="signupError" style="display: none;"></div>
+        </form>
+        <div class="auth-links">
+          <p>Already have an account? <a href="#" onclick="showLoginModal()">Login here</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer class="flaha-footer">

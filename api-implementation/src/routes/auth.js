@@ -27,7 +27,7 @@ router.post(
 	validationRules.register,
 	async (req, res) => {
 		try {
-			const { email, password, name } = req.body;
+			const { email, password, name, plan } = req.body;
 
 			// Validate input
 			if (!email || !password || !name) {
@@ -36,6 +36,13 @@ router.post(
 					error: "Email, password, and name are required",
 				});
 			}
+
+			// Validate plan type
+			const validPlans = ["FREE", "PROFESSIONAL", "ENTERPRISE"];
+			const selectedPlan =
+				plan && validPlans.includes(plan.toUpperCase())
+					? plan.toUpperCase()
+					: "FREE";
 
 			// Check if user already exists
 			const existingUser = await prisma.user.findUnique({
@@ -58,7 +65,10 @@ router.post(
 					email,
 					name,
 					password: hashedPassword,
-					tier: "FREE",
+					tier: selectedPlan,
+					planSelectedAt: new Date(),
+					usageCount: 0,
+					usageResetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
 				},
 			});
 
@@ -91,7 +101,6 @@ router.post(
 				);
 				// Continue anyway - user is registered successfully
 			}
-
 			res.json({
 				success: true,
 				message: "User registered successfully",
@@ -102,6 +111,9 @@ router.post(
 					name: user.name,
 					tier: user.tier,
 					emailVerified: user.emailVerified,
+					planSelectedAt: user.planSelectedAt,
+					usageCount: user.usageCount,
+					usageLimit: getPlanUsageLimit(user.tier),
 				},
 			});
 		} catch (error) {
@@ -167,6 +179,10 @@ router.post("/login", authLimit, validationRules.login, async (req, res) => {
 				name: user.name,
 				tier: user.tier,
 				emailVerified: user.emailVerified,
+				planSelectedAt: user.planSelectedAt,
+				usageCount: user.usageCount,
+				usageLimit: getPlanUsageLimit(user.tier),
+				usageResetDate: user.usageResetDate,
 			},
 		});
 	} catch (error) {
@@ -225,6 +241,10 @@ router.get("/profile", async (req, res) => {
 				name: user.name,
 				tier: user.tier,
 				emailVerified: user.emailVerified,
+				planSelectedAt: user.planSelectedAt,
+				usageCount: user.usageCount,
+				usageLimit: getPlanUsageLimit(user.tier),
+				usageResetDate: user.usageResetDate,
 			},
 		});
 	} catch (error) {
@@ -686,5 +706,134 @@ router.post(
 		}
 	}
 );
+
+/**
+ * Plan upgrade endpoint
+ */
+router.post("/upgrade-plan", async (req, res) => {
+	try {
+		// Verify JWT token
+		const authHeader = req.headers.authorization;
+		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+			return res.status(401).json({
+				success: false,
+				error: "No token provided",
+			});
+		}
+
+		const token = authHeader.substring(7);
+		let decoded;
+		try {
+			decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret");
+		} catch (error) {
+			return res.status(401).json({
+				success: false,
+				error: "Invalid token",
+			});
+		}
+
+		const { newPlan } = req.body;
+		const validPlans = ["FREE", "PROFESSIONAL", "ENTERPRISE"];
+
+		if (!newPlan || !validPlans.includes(newPlan.toUpperCase())) {
+			return res.status(400).json({
+				success: false,
+				error: "Invalid plan type",
+			});
+		}
+
+		// Update user plan
+		const user = await prisma.user.update({
+			where: { id: decoded.userId },
+			data: {
+				tier: newPlan.toUpperCase(),
+				planSelectedAt: new Date(),
+				usageCount: 0, // Reset usage count on plan change
+				usageResetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+			},
+		});
+
+		res.json({
+			success: true,
+			message: "Plan upgraded successfully",
+			user: {
+				id: user.id,
+				email: user.email,
+				name: user.name,
+				tier: user.tier,
+				emailVerified: user.emailVerified,
+				planSelectedAt: user.planSelectedAt,
+				usageCount: user.usageCount,
+				usageLimit: getPlanUsageLimit(user.tier),
+				usageResetDate: user.usageResetDate,
+			},
+		});
+	} catch (error) {
+		console.error("Plan upgrade error:", error);
+		res.status(500).json({
+			success: false,
+			error: "Internal server error",
+		});
+	}
+});
+
+/**
+ * Get plan usage limit based on tier
+ */
+function getPlanUsageLimit(tier) {
+	switch (tier) {
+		case "FREE":
+			return 50;
+		case "PROFESSIONAL":
+			return -1; // Unlimited
+		case "ENTERPRISE":
+			return -1; // Unlimited
+		default:
+			return 50;
+	}
+}
+
+/**
+ * Get plan features based on tier
+ */
+function getPlanFeatures(tier) {
+	switch (tier) {
+		case "FREE":
+			return {
+				analysesPerMonth: 50,
+				advancedCalculations: false,
+				analysisHistory: false,
+				exportCapabilities: false,
+				prioritySupport: false,
+				batchProcessing: false,
+				apiAccess: false,
+				whiteLabel: false,
+			};
+		case "PROFESSIONAL":
+			return {
+				analysesPerMonth: -1, // Unlimited
+				advancedCalculations: true,
+				analysisHistory: true,
+				exportCapabilities: true,
+				prioritySupport: true,
+				batchProcessing: true,
+				apiAccess: false,
+				whiteLabel: false,
+			};
+		case "ENTERPRISE":
+			return {
+				analysesPerMonth: -1, // Unlimited
+				advancedCalculations: true,
+				analysisHistory: true,
+				exportCapabilities: true,
+				prioritySupport: true,
+				batchProcessing: true,
+				apiAccess: true,
+				whiteLabel: true,
+			};
+		default:
+			return getPlanFeatures("FREE");
+	}
+}
 
 module.exports = router;

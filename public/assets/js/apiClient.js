@@ -10,6 +10,7 @@ class FlahaSoilAPI {
 		this.baseURL = "http://localhost:3001/api/v1";
 		this.token = localStorage.getItem("flahasoil_token");
 		this.isOnline = navigator.onLine;
+		this.userPlan = localStorage.getItem("flahasoil_user_plan") || "FREE";
 		this.usageCount = parseInt(
 			localStorage.getItem("flahasoil_usage_count") || "0"
 		);
@@ -24,14 +25,17 @@ class FlahaSoilAPI {
 	 * Check if user has exceeded free usage limit
 	 */
 	hasExceededFreeLimit() {
-		return this.usageCount >= this.maxFreeUsage && !this.token;
+		return (
+			this.usageCount >= this.maxFreeUsage &&
+			(!this.token || this.userPlan === "FREE")
+		);
 	}
 
 	/**
-	 * Increment usage counter for free users
+	 * Increment usage counter for users
 	 */
 	incrementUsage() {
-		if (!this.token) {
+		if (!this.token || this.userPlan === "FREE") {
 			this.usageCount++;
 			localStorage.setItem("flahasoil_usage_count", this.usageCount.toString());
 		}
@@ -41,8 +45,32 @@ class FlahaSoilAPI {
 	 * Get remaining free calculations
 	 */
 	getRemainingFreeCalculations() {
-		if (this.token) return "Unlimited";
+		if (this.token && this.userPlan !== "FREE") return "Unlimited";
 		return Math.max(0, this.maxFreeUsage - this.usageCount);
+	}
+
+	/**
+	 * Set user authentication and plan info
+	 */
+	setAuth(token, userPlan = "FREE", usageCount = 0) {
+		this.token = token;
+		this.userPlan = userPlan;
+		this.usageCount = usageCount;
+		localStorage.setItem("flahasoil_token", token);
+		localStorage.setItem("flahasoil_user_plan", userPlan);
+		localStorage.setItem("flahasoil_usage_count", usageCount.toString());
+	}
+
+	/**
+	 * Clear authentication
+	 */
+	clearAuth() {
+		this.token = null;
+		this.userPlan = "FREE";
+		this.usageCount = 0;
+		localStorage.removeItem("flahasoil_token");
+		localStorage.removeItem("flahasoil_user_plan");
+		localStorage.removeItem("flahasoil_usage_count");
 	}
 
 	/**
@@ -83,13 +111,47 @@ class FlahaSoilAPI {
 
 			if (response.ok) {
 				const result = await response.json();
-				this.incrementUsage();
+
+				// Update usage count if provided in response
+				if (result.usage && result.usage.current !== undefined) {
+					this.usageCount = result.usage.current;
+					localStorage.setItem(
+						"flahasoil_usage_count",
+						this.usageCount.toString()
+					);
+				} else {
+					this.incrementUsage();
+				}
+
 				return result;
 			} else {
 				const errorData = await response.json().catch(() => ({}));
+
+				// Handle plan-based restrictions
+				if (response.status === 403 && errorData.upgradeRequired) {
+					return {
+						success: false,
+						error: errorData.error,
+						upgradeRequired: true,
+						requiredPlan: errorData.requiredPlan,
+						currentPlan: errorData.currentPlan,
+					};
+				}
+
+				// Handle usage limits
+				if (response.status === 429) {
+					return {
+						success: false,
+						error: errorData.error || "Usage limit exceeded",
+						usageLimitReached: true,
+						resetDate: errorData.resetDate,
+					};
+				}
+
 				return {
 					success: false,
 					error:
+						errorData.error ||
 						errorData.message ||
 						"Server error occurred. Please try again later.",
 					status: response.status,
@@ -107,6 +169,268 @@ class FlahaSoilAPI {
 	}
 
 	/**
+	 * Advanced soil analysis for Professional+ users
+	 * @param {Object} soilData - Enhanced soil data
+	 * @returns {Promise<Object>} Advanced analysis results
+	 */
+	async analyzeSoilAdvanced(soilData) {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required for advanced analysis.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required for advanced analysis.",
+					upgradeRequired: true,
+					requiredPlan: "PROFESSIONAL",
+				};
+			}
+
+			const response = await fetch(`${this.baseURL}/soil/analyze-advanced`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${this.token}`,
+				},
+				body: JSON.stringify(soilData),
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+
+				if (response.status === 403 && errorData.upgradeRequired) {
+					return {
+						success: false,
+						error: errorData.error,
+						upgradeRequired: true,
+						requiredPlan: errorData.requiredPlan,
+						currentPlan: errorData.currentPlan,
+					};
+				}
+
+				return {
+					success: false,
+					error: errorData.error || "Advanced analysis failed",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Advanced analysis failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
+	 * Batch soil analysis for Professional+ users
+	 * @param {Array} soilDataArray - Array of soil data objects
+	 * @returns {Promise<Object>} Batch analysis results
+	 */
+	async analyzeBatch(soilDataArray) {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required for batch analysis.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required for batch analysis.",
+					upgradeRequired: true,
+					requiredPlan: "PROFESSIONAL",
+				};
+			}
+
+			const response = await fetch(`${this.baseURL}/soil/batch-analyze`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${this.token}`,
+				},
+				body: JSON.stringify({ analyses: soilDataArray }),
+			});
+
+			if (response.ok) {
+				return await response.json();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+
+				if (response.status === 403 && errorData.upgradeRequired) {
+					return {
+						success: false,
+						error: errorData.error,
+						upgradeRequired: true,
+						requiredPlan: errorData.requiredPlan,
+						currentPlan: errorData.currentPlan,
+					};
+				}
+
+				return {
+					success: false,
+					error: errorData.error || "Batch analysis failed",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Batch analysis failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
+	 * Get analysis history for Professional+ users
+	 * @param {number} page - Page number for pagination
+	 * @param {number} limit - Number of items per page
+	 * @returns {Promise<Object>} Analysis history
+	 */
+	async getAnalysisHistory(page = 1, limit = 10) {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required.",
+					upgradeRequired: true,
+					requiredPlan: "PROFESSIONAL",
+				};
+			}
+
+			const response = await fetch(
+				`${this.baseURL}/soil/history?page=${page}&limit=${limit}`,
+				{
+					method: "GET",
+					headers: {
+						Authorization: `Bearer ${this.token}`,
+					},
+				}
+			);
+
+			if (response.ok) {
+				return await response.json();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+
+				if (response.status === 403 && errorData.upgradeRequired) {
+					return {
+						success: false,
+						error: errorData.error,
+						upgradeRequired: true,
+						requiredPlan: errorData.requiredPlan,
+						currentPlan: errorData.currentPlan,
+					};
+				}
+
+				return {
+					success: false,
+					error: errorData.error || "Failed to get history",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Get history failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
+	 * Export analysis data for Professional+ users
+	 * @param {string} analysisId - Analysis ID to export
+	 * @param {string} format - Export format (csv, json)
+	 * @returns {Promise<Object>} Export result
+	 */
+	async exportAnalysis(analysisId, format = "csv") {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required.",
+					upgradeRequired: true,
+					requiredPlan: "PROFESSIONAL",
+				};
+			}
+
+			const response = await fetch(
+				`${this.baseURL}/soil/export/${analysisId}?format=${format}`,
+				{
+					method: "GET",
+					headers: {
+						Authorization: `Bearer ${this.token}`,
+					},
+				}
+			);
+
+			if (response.ok) {
+				const result = await response.json();
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+
+				if (response.status === 403 && errorData.upgradeRequired) {
+					return {
+						success: false,
+						error: errorData.error,
+						upgradeRequired: true,
+						requiredPlan: errorData.requiredPlan,
+						currentPlan: errorData.currentPlan,
+					};
+				}
+
+				return {
+					success: false,
+					error: errorData.error || "Export failed",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Export failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
 	 * Get crop recommendations
 	 * @param {Object} soilData - Soil data including textureClass, paw, om
 	 * @returns {Promise<Object>} Crop recommendations
@@ -116,13 +440,12 @@ class FlahaSoilAPI {
 			if (!this.isOnline) {
 				return {
 					success: false,
-					error:
-						"Internet connection required for crop recommendations. Please check your connection and try again.",
+					error: "Internet connection required for crop recommendations.",
 					requiresConnection: true,
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/soil/recommendations`, {
+			const response = await fetch(`${this.baseURL}/crop/recommendations`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -137,18 +460,15 @@ class FlahaSoilAPI {
 				const errorData = await response.json().catch(() => ({}));
 				return {
 					success: false,
-					error:
-						errorData.message ||
-						"Failed to get crop recommendations. Please try again later.",
+					error: errorData.error || "Failed to get crop recommendations",
 					status: response.status,
 				};
 			}
 		} catch (error) {
-			console.error("Crop recommendations API call failed:", error);
+			console.error("Get crop recommendations failed:", error);
 			return {
 				success: false,
-				error:
-					"Failed to connect to FlahaSoil servers for crop recommendations. Please check your internet connection.",
+				error: "Failed to connect to FlahaSoil servers.",
 				networkError: true,
 			};
 		}
@@ -173,8 +493,10 @@ class FlahaSoilAPI {
 			const result = await response.json();
 
 			if (result.success) {
-				this.token = result.token;
-				localStorage.setItem("flahasoil_token", this.token);
+				// Store authentication and plan information
+				this.setAuth(result.token, result.user.tier, result.user.usageCount);
+
+				// Store user data
 				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
 			}
 
@@ -200,7 +522,17 @@ class FlahaSoilAPI {
 				body: JSON.stringify(userData),
 			});
 
-			return await response.json();
+			const result = await response.json();
+
+			if (result.success) {
+				// Store authentication and plan information
+				this.setAuth(result.token, result.user.tier, result.user.usageCount);
+
+				// Store user data
+				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+			}
+
+			return result;
 		} catch (error) {
 			console.error("Registration failed:", error);
 			return {
@@ -214,30 +546,14 @@ class FlahaSoilAPI {
 	 * Logout user
 	 */
 	logout() {
-		this.token = null;
-		localStorage.removeItem("flahasoil_token");
+		this.clearAuth();
 		localStorage.removeItem("flahasoil_user");
-	}
-
-	/**
-	 * Check if user is authenticated
-	 */
-	isAuthenticated() {
-		return !!this.token;
-	}
-
-	/**
-	 * Get current user info
-	 */
-	getCurrentUser() {
-		const userStr = localStorage.getItem("flahasoil_user");
-		return userStr ? JSON.parse(userStr) : null;
 	}
 
 	/**
 	 * Forgot password
 	 * @param {string} email - User email
-	 * @returns {Promise<Object>} Forgot password result
+	 * @returns {Promise<Object>} Result
 	 */
 	async forgotPassword(email) {
 		try {
@@ -252,18 +568,15 @@ class FlahaSoilAPI {
 			return await response.json();
 		} catch (error) {
 			console.error("Forgot password failed:", error);
-			return {
-				success: false,
-				error: "Failed to send password reset email. Please try again.",
-			};
+			return { success: false, error: "Request failed. Please try again." };
 		}
 	}
 
 	/**
-	 * Reset password with token
+	 * Reset password
 	 * @param {string} token - Reset token
 	 * @param {string} newPassword - New password
-	 * @returns {Promise<Object>} Reset password result
+	 * @returns {Promise<Object>} Result
 	 */
 	async resetPassword(token, newPassword) {
 		try {
@@ -277,67 +590,35 @@ class FlahaSoilAPI {
 
 			return await response.json();
 		} catch (error) {
-			console.error("Password reset failed:", error);
-			return {
-				success: false,
-				error: "Password reset failed. Please try again.",
-			};
+			console.error("Reset password failed:", error);
+			return { success: false, error: "Reset failed. Please try again." };
 		}
 	}
 
 	/**
-	 * Update user profile
-	 * @param {Object} profileData - Profile update data
-	 * @returns {Promise<Object>} Profile update result
-	 */
-	async updateProfile(profileData) {
-		try {
-			const response = await fetch(`${this.baseURL}/auth/profile`, {
-				method: "PUT",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: this.token ? `Bearer ${this.token}` : "",
-				},
-				body: JSON.stringify(profileData),
-			});
-
-			const result = await response.json();
-
-			if (result.success && result.user) {
-				// Update stored user data
-				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
-			}
-
-			return result;
-		} catch (error) {
-			console.error("Profile update failed:", error);
-			return {
-				success: false,
-				error: "Profile update failed. Please try again.",
-			};
-		}
-	}
-
-	/**
-	 * Change password
+	 * Change password for authenticated users
 	 * @param {string} currentPassword - Current password
 	 * @param {string} newPassword - New password
-	 * @returns {Promise<Object>} Change password result
+	 * @returns {Promise<Object>} Result
 	 */
 	async changePassword(currentPassword, newPassword) {
 		try {
+			if (!this.token) {
+				return { success: false, error: "Authentication required" };
+			}
+
 			const response = await fetch(`${this.baseURL}/auth/change-password`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: this.token ? `Bearer ${this.token}` : "",
+					Authorization: `Bearer ${this.token}`,
 				},
 				body: JSON.stringify({ currentPassword, newPassword }),
 			});
 
 			return await response.json();
 		} catch (error) {
-			console.error("Password change failed:", error);
+			console.error("Change password failed:", error);
 			return {
 				success: false,
 				error: "Password change failed. Please try again.",
@@ -346,85 +627,81 @@ class FlahaSoilAPI {
 	}
 
 	/**
-	 * Verify email with token
-	 * @param {string} token - Verification token
-	 * @returns {Promise<Object>} Email verification result
-	 */
-	async verifyEmail(token) {
-		try {
-			const response = await fetch(`${this.baseURL}/auth/verify-email`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ token }),
-			});
-
-			return await response.json();
-		} catch (error) {
-			console.error("Email verification failed:", error);
-			return {
-				success: false,
-				error: "Email verification failed. Please try again.",
-			};
-		}
-	}
-
-	/**
-	 * Resend email verification
-	 * @param {string} email - User email
-	 * @returns {Promise<Object>} Resend verification result
-	 */
-	async resendVerification(email) {
-		try {
-			const response = await fetch(`${this.baseURL}/auth/resend-verification`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ email }),
-			});
-
-			return await response.json();
-		} catch (error) {
-			console.error("Resend verification failed:", error);
-			return {
-				success: false,
-				error: "Failed to resend verification email. Please try again.",
-			};
-		}
-	}
-
-	/**
-	 * Get user profile from server
-	 * @returns {Promise<Object>} Profile fetch result
+	 * Get user profile
+	 * @returns {Promise<Object>} Profile data
 	 */
 	async getProfile() {
 		try {
+			if (!this.token) {
+				return { success: false, error: "Authentication required" };
+			}
+
 			const response = await fetch(`${this.baseURL}/auth/profile`, {
 				method: "GET",
 				headers: {
-					Authorization: this.token ? `Bearer ${this.token}` : "",
+					Authorization: `Bearer ${this.token}`,
 				},
 			});
 
 			const result = await response.json();
 
-			if (result.success && result.user) {
-				// Update stored user data
+			if (result.success) {
+				// Update local usage count if provided
+				if (result.user.usageCount !== undefined) {
+					this.usageCount = result.user.usageCount;
+					localStorage.setItem(
+						"flahasoil_usage_count",
+						this.usageCount.toString()
+					);
+				}
+			}
+
+			return result;
+		} catch (error) {
+			console.error("Get profile failed:", error);
+			return {
+				success: false,
+				error: "Failed to get profile. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Upgrade user plan
+	 * @param {string} newPlan - New plan tier
+	 * @returns {Promise<Object>} Result
+	 */
+	async upgradePlan(newPlan) {
+		try {
+			if (!this.token) {
+				return { success: false, error: "Authentication required" };
+			}
+
+			const response = await fetch(`${this.baseURL}/auth/upgrade-plan`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${this.token}`,
+				},
+				body: JSON.stringify({ newPlan }),
+			});
+
+			const result = await response.json();
+
+			if (result.success) {
+				// Update local plan information
+				this.userPlan = result.user.tier;
+				localStorage.setItem("flahasoil_user_plan", this.userPlan);
 				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
 			}
 
 			return result;
 		} catch (error) {
-			console.error("Profile fetch failed:", error);
+			console.error("Plan upgrade failed:", error);
 			return {
 				success: false,
-				error: "Failed to fetch profile. Please try again.",
+				error: "Plan upgrade failed. Please try again.",
 			};
 		}
 	}
 }
-
-// Create global API client instance
-window.flahaSoilAPI = new FlahaSoilAPI();
