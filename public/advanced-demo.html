@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlahaSoil - Advanced Visualizations Demo</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/visualizations.css">
+    <link rel="stylesheet" href="assets/css/demo.css">
+    <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <img src="assets/img/flaha-logo.svg" alt="FlahaSoil Logo" class="logo-img">
+                <span class="logo-text">FlahaSoil</span>
+            </div>
+            <div class="nav-menu">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="demo.html" class="nav-link">Basic Demo</a>
+                <a href="advanced-demo.html" class="nav-link active">Advanced Features</a>
+                <a href="profile.html" class="nav-link">Profile</a>
+            </div>
+            <div class="nav-auth">
+                <span id="user-info" class="user-info"></span>
+                <button id="auth-btn" class="btn btn-primary">Sign In</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <!-- Header Section -->
+        <section class="demo-header">
+            <div class="container">
+                <h1>Advanced Soil Visualization Suite</h1>
+                <p class="subtitle">Professional+ features for comprehensive soil analysis and visualization</p>
+                <div class="feature-badges">
+                    <span class="badge badge-pro">Professional+</span>
+                    <span class="badge badge-feature">Interactive Charts</span>
+                    <span class="badge badge-feature">3D Profiles</span>
+                    <span class="badge badge-feature">Real-time Analysis</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Plan Status Banner -->
+        <div id="plan-status" class="plan-status">
+            <div class="container">
+                <div class="status-content">
+                    <span id="plan-text">Free Plan - Limited Access</span>
+                    <button id="upgrade-btn" class="btn btn-upgrade">Upgrade to Professional</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Feature Showcase -->
+        <section class="feature-showcase">
+            <div class="container">
+
+                <!-- Soil Input Section -->
+                <div class="demo-section">
+                    <h2>🧪 Soil Analysis Input</h2>
+                    <div class="input-grid">
+                        <div class="input-group">
+                            <label for="demo-sand">Sand (%)</label>
+                            <input type="number" id="demo-sand" value="45" min="0" max="100" class="form-input">
+                        </div>
+                        <div class="input-group">
+                            <label for="demo-clay">Clay (%)</label>
+                            <input type="number" id="demo-clay" value="25" min="0" max="100" class="form-input">
+                        </div>
+                        <div class="input-group">
+                            <label for="demo-om">Organic Matter (%)</label>
+                            <input type="number" id="demo-om" value="3.2" min="0" max="10" step="0.1"
+                                class="form-input">
+                        </div>
+                        <div class="input-group">
+                            <label for="demo-region">Region</label>
+                            <select id="demo-region" class="form-input">
+                                <option value="">Select Region</option>
+                                <option value="us-midwest">US Midwest</option>
+                                <option value="california-central">California Central Valley</option>
+                                <option value="texas-high-plains">Texas High Plains</option>
+                                <option value="european-lowlands">European Lowlands</option>
+                                <option value="australian-wheat">Australian Wheat Belt</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="analyze-btn" class="btn btn-primary">🔬 Enhanced Analysis</button>
+                        <button id="compare-btn" class="btn btn-secondary">📊 Compare Analyses</button>
+                    </div>
+                </div>
+
+                <!-- Feature Tabs -->
+                <div class="feature-tabs">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="moisture-curve">📈 Moisture-Tension Curve</button>
+                        <button class="tab-btn" data-tab="soil-profile">🏔️ 3D Soil Profile</button>
+                        <button class="tab-btn" data-tab="comparison">⚖️ Comparative Analysis</button>
+                        <button class="tab-btn" data-tab="realtime">⚡ Real-time Adjustment</button>
+                    </div>
+
+                    <!-- Moisture-Tension Curve Tab -->
+                    <div id="moisture-curve" class="tab-content active">
+                        <h3>Interactive Moisture-Tension Curve</h3>
+                        <p>Visualize soil water retention characteristics across different tension levels</p>
+                        <div id="moisture-tension-chart" class="chart-container"></div>
+                        <div class="feature-info">
+                            <h4>What you see:</h4>
+                            <ul>
+                                <li>Water retention curve from saturation to wilting point</li>
+                                <li>Key water retention points (FC, PWP, SAT)</li>
+                                <li>Plant available water capacity visualization</li>
+                                <li>Regional climate adjustments</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- 3D Soil Profile Tab -->
+                    <div id="soil-profile" class="tab-content">
+                        <h3>Interactive 3D Soil Profile</h3>
+                        <p>Explore soil horizons and their properties in three dimensions</p>
+                        <div id="soil-profile-3d" class="profile-container"></div>
+                        <div class="feature-info">
+                            <h4>Profile Features:</h4>
+                            <ul>
+                                <li>Multiple soil horizons (O, A, B, C layers)</li>
+                                <li>Organic matter distribution by depth</li>
+                                <li>Water holding capacity per horizon</li>
+                                <li>Root zone characterization</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Comparative Analysis Tab -->
+                    <div id="comparison" class="tab-content">
+                        <h3>Multi-Analysis Comparison</h3>
+                        <p>Compare soil properties across different samples or conditions</p>
+                        <div id="comparison-chart" class="chart-container"></div>
+                        <div class="feature-info">
+                            <h4>Comparison Capabilities:</h4>
+                            <ul>
+                                <li>Radar chart visualization of key properties</li>
+                                <li>Statistical analysis and trend detection</li>
+                                <li>Side-by-side parameter comparison table</li>
+                                <li>Performance benchmarking</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Real-time Adjustment Tab -->
+                    <div id="realtime" class="tab-content">
+                        <h3>Real-time Parameter Adjustment</h3>
+                        <p>Dynamically adjust soil parameters and see immediate results</p>
+                        <div id="realtime-adjustment" class="adjustment-container"></div>
+                        <div class="feature-info">
+                            <h4>Interactive Features:</h4>
+                            <ul>
+                                <li>Live parameter sliders (sand, clay, OM, density)</li>
+                                <li>Instant recalculation of soil properties</li>
+                                <li>Real-time texture classification updates</li>
+                                <li>What-if scenario modeling</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Features Preview -->
+                <div class="additional-features">
+                    <h2>🚀 Professional+ Benefits</h2>
+                    <div class="benefits-grid">
+                        <div class="benefit-card">
+                            <div class="benefit-icon">📊</div>
+                            <h4>Advanced Analytics</h4>
+                            <p>Statistical analysis, trend detection, and predictive modeling for soil management
+                                decisions.</p>
+                        </div>
+                        <div class="benefit-card">
+                            <div class="benefit-icon">🌍</div>
+                            <h4>Regional Data Integration</h4>
+                            <p>Access to regional soil databases with climate factors and seasonal adjustments.</p>
+                        </div>
+                        <div class="benefit-card">
+                            <div class="benefit-icon">📈</div>
+                            <h4>Historical Tracking</h4>
+                            <p>Store and analyze soil analysis history with change tracking over time.</p>
+                        </div>
+                        <div class="benefit-card">
+                            <div class="benefit-icon">💾</div>
+                            <h4>Data Export</h4>
+                            <p>Export analysis results in multiple formats (CSV, JSON, PDF reports).</p>
+                        </div>
+                        <div class="benefit-card">
+                            <div class="benefit-icon">🔄</div>
+                            <h4>Batch Processing</h4>
+                            <p>Analyze multiple soil samples simultaneously with comparative insights.</p>
+                        </div>
+                        <div class="benefit-card">
+                            <div class="benefit-icon">🎯</div>
+                            <h4>Custom Recommendations</h4>
+                            <p>Personalized management recommendations based on soil properties and regional conditions.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Call to Action -->
+        <section class="cta-section">
+            <div class="container">
+                <h2>Ready to unlock advanced soil analysis?</h2>
+                <p>Upgrade to Professional+ and get access to all visualization features</p>
+                <div class="cta-buttons">
+                    <button class="btn btn-primary btn-large" onclick="window.location.href='profile.html#upgrade'">
+                        Upgrade Now - $19/month
+                    </button>
+                    <button class="btn btn-secondary btn-large" onclick="window.location.href='index.html'">
+                        Learn More
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <img src="assets/img/flaha-logo.svg" alt="FlahaSoil" class="footer-logo">
+                    <p>Advanced soil analysis for modern agriculture</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Features</h4>
+                    <ul>
+                        <li><a href="demo.html">Basic Analysis</a></li>
+                        <li><a href="advanced-demo.html">Advanced Visualizations</a></li>
+                        <li><a href="#regional">Regional Data</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#help">Documentation</a></li>
+                        <li><a href="#contact">Contact Us</a></li>
+                        <li><a href="#api">API Access</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 FlahaSoil. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loader"></div>
+            <p>Processing advanced soil analysis...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/apiClient.js"></script>
+    <script src="assets/js/visualizationManager.js"></script>
+    <script>
+        // Initialize the advanced demo
+        document.addEventListener('DOMContentLoaded', function () {
+            const apiClient = new FlahaSoilAPI();
+            const visualizationManager = new VisualizationManager(apiClient);
+
+            // Check authentication status
+            updateAuthUI();
+
+            // Initialize demo with sample data
+            initializeDemo();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            function updateAuthUI() {
+                const userInfo = document.getElementById('user-info');
+                const authBtn = document.getElementById('auth-btn');
+                const planStatus = document.getElementById('plan-status');
+                const planText = document.getElementById('plan-text');
+
+                if (apiClient.token) {
+                    userInfo.textContent = `Plan: ${apiClient.userPlan}`;
+                    authBtn.textContent = 'Sign Out';
+                    authBtn.onclick = logout;
+
+                    if (apiClient.userPlan === 'FREE') {
+                        planStatus.style.display = 'block';
+                        planText.textContent = 'Free Plan - Upgrade for full access to advanced features';
+                    } else {
+                        planStatus.style.display = 'none';
+                    }
+                } else {
+                    userInfo.textContent = '';
+                    authBtn.textContent = 'Sign In';
+                    authBtn.onclick = () => window.location.href = 'index.html#login';
+                    planStatus.style.display = 'block';
+                    planText.textContent = 'Sign in to access advanced visualization features';
+                }
+            }
+
+            function logout() {
+                apiClient.logout();
+                updateAuthUI();
+                initializeDemo();
+            }
+
+            function initializeDemo() {
+                // Show sample visualizations or upgrade prompts based on user plan
+                const hasAccess = apiClient.hasAdvancedVisualizationAccess();
+
+                if (hasAccess) {
+                    loadSampleAnalysis();
+                } else {
+                    showUpgradePrompts();
+                }
+            }
+
+            async function loadSampleAnalysis() {
+                try {
+                    // Create sample enhanced analysis
+                    const sampleData = {
+                        sand: parseFloat(document.getElementById('demo-sand').value),
+                        clay: parseFloat(document.getElementById('demo-clay').value),
+                        organicMatter: parseFloat(document.getElementById('demo-om').value),
+                        densityFactor: 1.3,
+                        regionId: document.getElementById('demo-region').value || 'us-midwest',
+                        location: { latitude: 40.7128, longitude: -74.0060 }
+                    };
+
+                    const response = await apiClient.createEnhancedAnalysis(sampleData);
+                    if (response.success) {
+                        const analysisId = response.data.analysis.id;
+
+                        // Load visualizations
+                        await visualizationManager.createMoistureTensionCurve('moisture-tension-chart', analysisId);
+                        await visualizationManager.createSoilProfile3D('soil-profile-3d', analysisId);
+                        await visualizationManager.createRealtimeAdjustment('realtime-adjustment', analysisId);
+
+                        // Create sample comparison
+                        const sampleAnalyses = [analysisId]; // In real app, would have multiple IDs
+                        await visualizationManager.createComparativeAnalysis('comparison-chart', sampleAnalyses);
+                    }
+                } catch (error) {
+                    console.error('Error loading sample analysis:', error);
+                }
+            }
+
+            function showUpgradePrompts() {
+                visualizationManager.showUpgradePrompt('moisture-tension-chart', 'Moisture-Tension Curves');
+                visualizationManager.showUpgradePrompt('soil-profile-3d', '3D Soil Profiles');
+                visualizationManager.showUpgradePrompt('comparison-chart', 'Comparative Analysis');
+                visualizationManager.showUpgradePrompt('realtime-adjustment', 'Real-time Parameter Adjustment');
+            }
+
+            function setupEventListeners() {
+                // Tab switching
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const tabId = this.dataset.tab;
+                        switchTab(tabId);
+                    });
+                });
+
+                // Analyze button
+                document.getElementById('analyze-btn').addEventListener('click', async function () {
+                    if (!apiClient.hasAdvancedVisualizationAccess()) {
+                        alert('Please upgrade to Professional+ to access enhanced analysis features.');
+                        return;
+                    }
+
+                    const loadingOverlay = document.getElementById('loading-overlay');
+                    loadingOverlay.style.display = 'flex';
+
+                    try {
+                        await loadSampleAnalysis();
+                    } finally {
+                        loadingOverlay.style.display = 'none';
+                    }
+                });
+
+                // Input change listeners for live updates
+                ['demo-sand', 'demo-clay', 'demo-om', 'demo-region'].forEach(inputId => {
+                    document.getElementById(inputId).addEventListener('change', function () {
+                        if (apiClient.hasAdvancedVisualizationAccess()) {
+                            debounce(loadSampleAnalysis, 1000)();
+                        }
+                    });
+                });
+
+                // Upgrade button
+                document.getElementById('upgrade-btn').addEventListener('click', function () {
+                    window.location.href = 'profile.html#upgrade';
+                });
+            }
+
+            function switchTab(tabId) {
+                // Update tab buttons
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
+
+                // Update tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+            }
+
+            function debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+        });
+    </script>
+</body>
+
+</html>

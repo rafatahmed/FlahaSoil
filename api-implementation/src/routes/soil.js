@@ -3,6 +3,7 @@
 const express = require("express");
 const { body } = require("express-validator");
 const SoilController = require("../controllers/soilController");
+const EnhancedSoilController = require("../controllers/enhancedSoilController");
 const authMiddleware = require("../middleware/auth");
 const { freeTierLimit, professionalLimit } = require("../middleware/rateLimit");
 const {
@@ -95,6 +96,66 @@ router.post(
 	planBasedRateLimit(),
 	soilAnalysisValidation,
 	SoilController.apiAnalyzeSoil
+);
+
+// ENHANCED VISUALIZATION ENDPOINTS (Professional+ features)
+
+// Get moisture-tension curve data for visualization
+router.get(
+	"/moisture-tension/:analysisId",
+	authMiddleware,
+	requireFeature("advancedVisualizations"),
+	EnhancedSoilController.getMoistureTensionCurve
+);
+
+// Get 3D soil profile visualization data
+router.get(
+	"/profile-3d/:analysisId",
+	authMiddleware,
+	requireFeature("profile3D"),
+	EnhancedSoilController.getSoilProfile3D
+);
+
+// Comparative analysis between multiple soil samples
+router.post(
+	"/compare",
+	authMiddleware,
+	requireFeature("comparativeAnalysis"),
+	checkUsageLimit(),
+	EnhancedSoilController.compareAnalyses
+);
+
+// Real-time parameter adjustment for interactive visualization
+router.post(
+	"/adjust-realtime",
+	authMiddleware,
+	requireFeature("realtimeAdjustment"),
+	EnhancedSoilController.adjustParametersRealtime
+);
+
+// Regional soil data lookup
+router.get(
+	"/regional-data/:regionId",
+	authMiddleware,
+	EnhancedSoilController.getRegionalSoilData
+);
+
+// List available regions for soil analysis
+router.get(
+	"/regions",
+	authMiddleware,
+	EnhancedSoilController.getAvailableRegions
+);
+
+// Enhanced analysis with regional context
+router.post(
+	"/analyze/enhanced",
+	authMiddleware,
+	requireFeature("enhancedAnalysis"),
+	checkUsageLimit(),
+	incrementUsage(),
+	soilAnalysisValidation,
+	EnhancedSoilController.createEnhancedAnalysis
 );
 
 module.exports = router;

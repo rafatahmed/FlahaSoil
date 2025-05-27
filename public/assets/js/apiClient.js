@@ -482,6 +482,14 @@ class FlahaSoilAPI {
 	 */
 	async login(email, password) {
 		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required for authentication.",
+					requiresConnection: true,
+				};
+			}
+
 			const response = await fetch(`${this.baseURL}/auth/login`, {
 				method: "POST",
 				headers: {
@@ -490,212 +498,130 @@ class FlahaSoilAPI {
 				body: JSON.stringify({ email, password }),
 			});
 
-			const result = await response.json();
-
-			if (result.success) {
-				// Store authentication and plan information
-				this.setAuth(result.token, result.user.tier, result.user.usageCount);
-
-				// Store user data
-				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success) {
+					this.setAuth(result.token, result.plan, result.usageCount || 0);
+				}
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Authentication failed",
+					status: response.status,
+				};
 			}
-
-			return result;
 		} catch (error) {
 			console.error("Login failed:", error);
-			return { success: false, error: "Login failed. Please try again." };
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
 		}
 	}
 
 	/**
+	/**
 	 * User registration
-	 * @param {Object} userData - User registration data
+	 * @param {string} email - User email
+	 * @param {string} password - User password
+	 * @param {string} name - User name
 	 * @returns {Promise<Object>} Registration result
 	 */
-	async register(userData) {
+	async register(email, password, name) {
 		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required for registration.",
+					requiresConnection: true,
+				};
+			}
+
 			const response = await fetch(`${this.baseURL}/auth/register`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(userData),
+				body: JSON.stringify({ email, password, name }),
 			});
 
-			const result = await response.json();
-
-			if (result.success) {
-				// Store authentication and plan information
-				this.setAuth(result.token, result.user.tier, result.user.usageCount);
-
-				// Store user data
-				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+			if (response.ok) {
+				return await response.json();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Registration failed",
+					status: response.status,
+				};
 			}
-
-			return result;
 		} catch (error) {
 			console.error("Registration failed:", error);
 			return {
 				success: false,
-				error: "Registration failed. Please try again.",
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
 			};
 		}
 	}
 
 	/**
-	 * Logout user
+	 * User logout
 	 */
 	logout() {
 		this.clearAuth();
-		localStorage.removeItem("flahasoil_user");
-	}
-
-	/**
-	 * Forgot password
-	 * @param {string} email - User email
-	 * @returns {Promise<Object>} Result
-	 */
-	async forgotPassword(email) {
-		try {
-			const response = await fetch(`${this.baseURL}/auth/forgot-password`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ email }),
-			});
-
-			return await response.json();
-		} catch (error) {
-			console.error("Forgot password failed:", error);
-			return { success: false, error: "Request failed. Please try again." };
-		}
-	}
-
-	/**
-	 * Reset password
-	 * @param {string} token - Reset token
-	 * @param {string} newPassword - New password
-	 * @returns {Promise<Object>} Result
-	 */
-	async resetPassword(token, newPassword) {
-		try {
-			const response = await fetch(`${this.baseURL}/auth/reset-password`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ token, newPassword }),
-			});
-
-			return await response.json();
-		} catch (error) {
-			console.error("Reset password failed:", error);
-			return { success: false, error: "Reset failed. Please try again." };
-		}
-	}
-
-	/**
-	 * Change password for authenticated users
-	 * @param {string} currentPassword - Current password
-	 * @param {string} newPassword - New password
-	 * @returns {Promise<Object>} Result
-	 */
-	async changePassword(currentPassword, newPassword) {
-		try {
-			if (!this.token) {
-				return { success: false, error: "Authentication required" };
-			}
-
-			const response = await fetch(`${this.baseURL}/auth/change-password`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${this.token}`,
-				},
-				body: JSON.stringify({ currentPassword, newPassword }),
-			});
-
-			return await response.json();
-		} catch (error) {
-			console.error("Change password failed:", error);
-			return {
-				success: false,
-				error: "Password change failed. Please try again.",
-			};
-		}
-	}
-
-	/**
-	 * Get user profile
-	 * @returns {Promise<Object>} Profile data
-	 */
-	async getProfile() {
-		try {
-			if (!this.token) {
-				return { success: false, error: "Authentication required" };
-			}
-
-			const response = await fetch(`${this.baseURL}/auth/profile`, {
-				method: "GET",
-				headers: {
-					Authorization: `Bearer ${this.token}`,
-				},
-			});
-
-			const result = await response.json();
-
-			if (result.success) {
-				// Update local usage count if provided
-				if (result.user.usageCount !== undefined) {
-					this.usageCount = result.user.usageCount;
-					localStorage.setItem(
-						"flahasoil_usage_count",
-						this.usageCount.toString()
-					);
-				}
-			}
-
-			return result;
-		} catch (error) {
-			console.error("Get profile failed:", error);
-			return {
-				success: false,
-				error: "Failed to get profile. Please try again.",
-			};
-		}
+		return { success: true };
 	}
 
 	/**
 	 * Upgrade user plan
-	 * @param {string} newPlan - New plan tier
-	 * @returns {Promise<Object>} Result
+	 * @param {string} plan - Target plan (PROFESSIONAL, ENTERPRISE)
+	 * @returns {Promise<Object>} Upgrade result
 	 */
-	async upgradePlan(newPlan) {
+	async upgradePlan(plan) {
 		try {
-			if (!this.token) {
-				return { success: false, error: "Authentication required" };
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required for plan upgrade.",
+					requiresConnection: true,
+				};
 			}
 
-			const response = await fetch(`${this.baseURL}/auth/upgrade-plan`, {
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required for plan upgrade.",
+				};
+			}
+
+			const response = await fetch(`${this.baseURL}/auth/upgrade`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
 					Authorization: `Bearer ${this.token}`,
 				},
-				body: JSON.stringify({ newPlan }),
+				body: JSON.stringify({ plan }),
 			});
 
-			const result = await response.json();
-
-			if (result.success) {
-				// Update local plan information
-				this.userPlan = result.user.tier;
-				localStorage.setItem("flahasoil_user_plan", this.userPlan);
-				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success) {
+					this.userPlan = plan;
+					localStorage.setItem("flahasoil_user_plan", plan);
+				}
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Plan upgrade failed",
+					status: response.status,
+				};
 			}
-
-			return result;
 		} catch (error) {
 			console.error("Plan upgrade failed:", error);
 			return {
@@ -703,5 +629,321 @@ class FlahaSoilAPI {
 				error: "Plan upgrade failed. Please try again.",
 			};
 		}
+	}
+
+	// Advanced Visualization Methods (Professional+ only)
+
+	/**
+	 * Get moisture-tension curve data for visualization
+	 * @param {string} analysisId - Analysis ID
+	 * @returns {Promise<Object>} Moisture-tension curve data
+	 */
+	async getMoistureTensionCurve(analysisId) {
+		if (this.userPlan === "FREE") {
+			return {
+				success: false,
+				error:
+					"Moisture-tension curves are available for Professional+ users only.",
+				showUpgrade: true,
+			};
+		}
+
+		try {
+			const response = await fetch(
+				`${this.baseURL}/soil/moisture-tension/${analysisId}`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: this.token ? `Bearer ${this.token}` : "",
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
+		} catch (error) {
+			console.error("Moisture-tension curve error:", error);
+			return {
+				success: false,
+				error: "Failed to fetch moisture-tension curve data.",
+			};
+		}
+	}
+
+	/**
+	 * Get 3D soil profile data for visualization
+	 * @param {string} analysisId - Analysis ID
+	 * @returns {Promise<Object>} 3D profile data
+	 */
+	async getSoilProfile3D(analysisId) {
+		if (this.userPlan === "FREE") {
+			return {
+				success: false,
+				error: "3D soil profiles are available for Professional+ users only.",
+				showUpgrade: true,
+			};
+		}
+
+		try {
+			const response = await fetch(
+				`${this.baseURL}/soil/profile-3d/${analysisId}`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: this.token ? `Bearer ${this.token}` : "",
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
+		} catch (error) {
+			console.error("3D profile error:", error);
+			return {
+				success: false,
+				error: "Failed to fetch 3D soil profile data.",
+			};
+		}
+	}
+
+	/**
+	 * Compare multiple soil analyses
+	 * @param {Array} analysisIds - Array of analysis IDs to compare
+	 * @param {string} comparisonType - Type of comparison ('basic', 'detailed', 'statistical')
+	 * @returns {Promise<Object>} Comparative analysis data
+	 */
+	async compareAnalyses(analysisIds, comparisonType = "basic") {
+		if (this.userPlan === "FREE") {
+			return {
+				success: false,
+				error:
+					"Comparative analysis is available for Professional+ users only.",
+				showUpgrade: true,
+			};
+		}
+
+		try {
+			const response = await fetch(`${this.baseURL}/soil/compare`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+				body: JSON.stringify({
+					analysisIds,
+					comparisonType,
+					timestamp: new Date().toISOString(),
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
+		} catch (error) {
+			console.error("Comparative analysis error:", error);
+			return {
+				success: false,
+				error: "Failed to perform comparative analysis.",
+			};
+		}
+	}
+
+	/**
+	 * Adjust soil parameters in real-time for visualization
+	 * @param {string} analysisId - Base analysis ID
+	 * @param {Object} adjustments - Parameter adjustments
+	 * @returns {Promise<Object>} Updated analysis data
+	 */
+	async adjustParametersRealtime(analysisId, adjustments) {
+		if (this.userPlan === "FREE") {
+			return {
+				success: false,
+				error:
+					"Real-time parameter adjustment is available for Professional+ users only.",
+				showUpgrade: true,
+			};
+		}
+
+		try {
+			const response = await fetch(`${this.baseURL}/soil/adjust-realtime`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+				body: JSON.stringify({
+					analysisId,
+					adjustments,
+					timestamp: new Date().toISOString(),
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
+		} catch (error) {
+			console.error("Real-time adjustment error:", error);
+			return {
+				success: false,
+				error: "Failed to adjust parameters in real-time.",
+			};
+		}
+	}
+
+	/**
+	 * Get regional soil data
+	 * @param {string} regionId - Region identifier
+	 * @returns {Promise<Object>} Regional soil data
+	 */
+	async getRegionalData(regionId) {
+		try {
+			const response = await fetch(
+				`${this.baseURL}/soil/regional-data/${regionId}`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: this.token ? `Bearer ${this.token}` : "",
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
+		} catch (error) {
+			console.error("Regional data error:", error);
+			return {
+				success: false,
+				error: "Failed to fetch regional soil data.",
+			};
+		}
+	}
+
+	/**
+	 * Get list of available soil regions
+	 * @returns {Promise<Object>} List of regions
+	 */
+	async getAvailableRegions() {
+		try {
+			const response = await fetch(`${this.baseURL}/soil/regions`, {
+				method: "GET",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
+		} catch (error) {
+			console.error("Regions list error:", error);
+			return {
+				success: false,
+				error: "Failed to fetch available regions.",
+			};
+		}
+	}
+
+	/**
+	 * Create enhanced soil analysis with regional context
+	 * @param {Object} analysisData - Enhanced analysis data
+	 * @returns {Promise<Object>} Enhanced analysis results
+	 */
+	async createEnhancedAnalysis(analysisData) {
+		if (this.userPlan === "FREE") {
+			return {
+				success: false,
+				error: "Enhanced analysis is available for Professional+ users only.",
+				showUpgrade: true,
+			};
+		}
+
+		try {
+			const response = await fetch(`${this.baseURL}/soil/analyze/enhanced`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+				body: JSON.stringify({
+					...analysisData,
+					timestamp: new Date().toISOString(),
+				}),
+			});
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			this.incrementUsage();
+			return { success: true, data };
+		} catch (error) {
+			console.error("Enhanced analysis error:", error);
+			return {
+				success: false,
+				error: "Enhanced soil analysis failed. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Check if user has access to advanced visualization features
+	 * @returns {boolean} True if user has Professional+ plan
+	 */
+	hasAdvancedVisualizationAccess() {
+		return this.token && this.userPlan !== "FREE";
+	}
+
+	/**
+	 * Get visualization feature availability
+	 * @returns {Object} Feature availability by plan
+	 */
+	getVisualizationFeatures() {
+		const baseFeatures = {
+			basicSoilAnalysis: true,
+			soilTriangle: true,
+			basicCharts: true,
+		};
+
+		if (this.hasAdvancedVisualizationAccess()) {
+			return {
+				...baseFeatures,
+				moistureTensionCurves: true,
+				soilProfile3D: true,
+				comparativeAnalysis: true,
+				realtimeAdjustment: true,
+				regionalData: true,
+				enhancedAnalysis: true,
+				seasonalVariation: true,
+				exportData: true,
+			};
+		}
+
+		return baseFeatures;
 	}
 }

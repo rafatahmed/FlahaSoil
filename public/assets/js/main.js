@@ -741,6 +741,16 @@ function updatePlanStatusUI(userPlan, token) {
 		planBadge.remove();
 	}
 
+	// Show/hide advanced demo link based on user plan
+	const advancedDemoLink = document.getElementById("advancedDemoLink");
+	if (advancedDemoLink) {
+		if (token && (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE")) {
+			advancedDemoLink.style.display = "inline-block";
+		} else {
+			advancedDemoLink.style.display = "none";
+		}
+	}
+
 	// Update usage counter
 	updateUsageCounter();
 }

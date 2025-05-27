@@ -225,6 +225,12 @@ function getPlanFeatures(tier) {
 				batchProcessing: false,
 				apiAccess: false,
 				whiteLabel: false,
+				// Enhanced visualization features
+				advancedVisualizations: false,
+				profile3D: false,
+				comparativeAnalysis: false,
+				realtimeAdjustment: false,
+				enhancedAnalysis: false,
 			};
 		case "PROFESSIONAL":
 			return {
@@ -236,6 +242,12 @@ function getPlanFeatures(tier) {
 				batchProcessing: true,
 				apiAccess: false,
 				whiteLabel: false,
+				// Enhanced visualization features
+				advancedVisualizations: true,
+				profile3D: true,
+				comparativeAnalysis: true,
+				realtimeAdjustment: true,
+				enhancedAnalysis: true,
 			};
 		case "ENTERPRISE":
 			return {
@@ -247,6 +259,12 @@ function getPlanFeatures(tier) {
 				batchProcessing: true,
 				apiAccess: true,
 				whiteLabel: true,
+				// Enhanced visualization features
+				advancedVisualizations: true,
+				profile3D: true,
+				comparativeAnalysis: true,
+				realtimeAdjustment: true,
+				enhancedAnalysis: true,
 			};
 		default:
 			return getPlanFeatures("FREE");
@@ -265,6 +283,12 @@ function getRequiredPlanForFeature(featureName) {
 		batchProcessing: "PROFESSIONAL",
 		apiAccess: "ENTERPRISE",
 		whiteLabel: "ENTERPRISE",
+		// Enhanced visualization features
+		advancedVisualizations: "PROFESSIONAL",
+		profile3D: "PROFESSIONAL",
+		comparativeAnalysis: "PROFESSIONAL",
+		realtimeAdjustment: "PROFESSIONAL",
+		enhancedAnalysis: "PROFESSIONAL",
 	};
 
 	return featureRequirements[featureName] || "FREE";

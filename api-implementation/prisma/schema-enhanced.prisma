@@ -1,3 +1,6 @@
+// Enhanced Prisma schema for advanced FlahaSoil features
+// This extends the existing schema with regional soil data and visualization support
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,93 +10,107 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// EXISTING MODELS - Keep unchanged for compatibility
 model User {
-  id             String         @id @default(cuid())
-  email          String         @unique
-  name           String
-  password       String
-  tier           String         @default("FREE")
-  emailVerified  Boolean        @default(false)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  planSelectedAt DateTime?
-  usageCount     Int            @default(0)
-  usageResetDate DateTime?
-  soilAnalyses   SoilAnalysis[]
-  subscription   Subscription?
-  usageRecords   UsageRecord[]
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  password         String
+  tier             String   @default("FREE")
+  emailVerified    Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  // Enhanced features
-  comparativeAnalyses ComparativeAnalysis[]
+  planSelectedAt   DateTime?
+  usageCount       Int      @default(0)
+  usageResetDate   DateTime?
+
+  subscription     Subscription?
+  usageRecords     UsageRecord[]
+  soilAnalyses     SoilAnalysis[]
 
   @@map("users")
 }
 
 model Subscription {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  tier                 String
-  status               String   @default("ACTIVE")
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  stripePriceId        String?
-  currentPeriodStart   DateTime
-  currentPeriodEnd     DateTime
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tier              String
+  status            String   @default("ACTIVE")
+
+  stripeCustomerId      String?
+  stripeSubscriptionId  String?
+  stripePriceId         String?
+
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@map("subscriptions")
 }
 
 model UsageRecord {
-  id          String   @id @default(cuid())
-  userId      String?
-  endpoint    String
-  ipAddress   String?
-  userAgent   String?
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  endpoint  String
+  ipAddress String?
+  userAgent String?
   requestData String?
-  timestamp   DateTime @default(now())
-  user        User?    @relation(fields: [userId], references: [id])
+  source    String?  @default("web")
+
+  timestamp DateTime @default(now())
 
   @@map("usage_records")
 }
 
 model SoilAnalysis {
-  id                    String   @id @default(cuid())
-  userId                String?
-  sand                  Float
-  clay                  Float
-  silt                  Float
-  organicMatter         Float    @default(2.5)
-  densityFactor         Float    @default(1.0)
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Input parameters
+  sand          Float
+  clay          Float
+  silt          Float
+  organicMatter Float  @default(2.5)
+  densityFactor Float  @default(1.0)
+
+  // Calculated results
   fieldCapacity         Float
-  wiltingPoint          Float
-  plantAvailableWater   Float
-  saturation            Float
+  wiltingPoint         Float
+  plantAvailableWater  Float
+  saturation           Float
   saturatedConductivity Float
-  textureClass          String
-  calculationSource     String
-  ipAddress             String?
-  createdAt             DateTime @default(now())
-  user                  User?    @relation(fields: [userId], references: [id])
+  textureClass         String
 
-  // Enhanced features relationship
-  enhancedAnalysis     EnhancedSoilAnalysis?
+  // Metadata
+  calculationSource String  @default("api")
+  ipAddress        String?
 
+  createdAt DateTime @default(now())
+
+  // NEW: Relationship to enhanced analysis
+  enhancedAnalysis EnhancedSoilAnalysis?
+
+  @@map("soil_analyses")
   @@index([userId, createdAt])
   @@index([createdAt])
-  @@map("soil_analyses")
 }
 
-// NEW ENHANCED MODELS FOR ADVANCED FEATURES
+// NEW MODELS FOR ADVANCED FEATURES
 
 // Regional soil characteristics database
 model SoilRegion {
   id          String @id @default(cuid())
   
   // Geographic information
-  regionName  String @unique // "US Midwest", "Mediterranean Basin", etc.
+  regionName  String // "US Midwest", "Mediterranean Basin", etc.
   country     String
   state       String?
   climateZone String // "Humid Continental", "Mediterranean", etc.
@@ -154,7 +171,7 @@ model EnhancedSoilAnalysis {
   pH                    Float?
   electricalConductivity Float? // dS/m
   cationExchangeCapacity Float? // cmol/kg
-  baseSaturation        Float?  // %
+  baseSturation         Float?  // %
   
   // Physical properties  
   gravelContent         Float?  // %
@@ -163,7 +180,6 @@ model EnhancedSoilAnalysis {
   
   // Calculated advanced results (stored as JSON text for flexibility)
   moistureTensionCurve  String? // JSON: tension-moisture data points
-  profileData3D         String? // JSON: 3D soil profile visualization data
   seasonalVariation     String? // JSON: seasonal adjustment factors
   soilHorizons          String? // JSON: horizon data for 3D profile
   waterMovementModel    String? // JSON: water movement characteristics
@@ -178,7 +194,6 @@ model EnhancedSoilAnalysis {
   // Relationships
   moistureTensionPoints MoistureTensionPoint[]
   comparativeAnalyses   ComparativeAnalysis[]
-  managementRecommendations SoilManagementRecommendation[]
   
   @@map("enhanced_soil_analyses")
   @@index([regionId])
@@ -234,6 +249,12 @@ model ComparativeAnalysis {
   @@index([userId, createdAt])
 }
 
+// Extend User model for comparative analyses
+model User {
+  // ... existing fields ...
+  comparativeAnalyses ComparativeAnalysis[]
+}
+
 // Soil management recommendations based on enhanced analysis
 model SoilManagementRecommendation {
   id                    String @id @default(cuid())
@@ -262,4 +283,10 @@ model SoilManagementRecommendation {
   @@map("soil_management_recommendations")
   @@index([enhancedAnalysisId, priority])
   @@index([category])
+}
+
+// Add relationship to EnhancedSoilAnalysis
+model EnhancedSoilAnalysis {
+  // ... existing fields ...
+  managementRecommendations SoilManagementRecommendation[]
 }
