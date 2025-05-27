@@ -496,6 +496,47 @@ class SoilController {
 			// Don't fail the request if logging fails
 		}
 	}
+
+	/**
+	 * Demo soil analysis endpoint - no authentication required
+	 */
+	static async analyzeSoilDemo(req, res) {
+		try {
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				return res.status(400).json({ errors: errors.array() });
+			}
+
+			const { sand, clay, organicMatter = 2.5, densityFactor = 1.0 } = req.body;
+
+			// Calculate soil characteristics using the same service
+			const result = SoilCalculationService.calculateWaterCharacteristics(
+				sand,
+				clay,
+				organicMatter,
+				densityFactor
+			);
+
+			// Add demo-specific enhancements
+			result.isDemoMode = true;
+			result.note = "Demo mode - register for full features and data storage";
+
+			res.json({
+				success: true,
+				data: result,
+				demo: true,
+				features: {
+					basicAnalysis: true,
+					advancedVisualizations: false,
+					dataStorage: false,
+					exportCapabilities: false,
+				},
+			});
+		} catch (error) {
+			console.error("Demo soil analysis error:", error);
+			res.status(500).json({ error: "Internal server error" });
+		}
+	}
 }
 
 module.exports = SoilController;

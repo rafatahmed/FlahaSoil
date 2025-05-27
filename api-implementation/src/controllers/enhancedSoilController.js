@@ -6,6 +6,7 @@
  */
 
 const SoilController = require("./soilController");
+const SoilCalculationService = require("../services/soilCalculationService");
 const EnhancedSoilCalculationService = require("../services/enhancedSoilCalculationService");
 const { validationResult } = require("express-validator");
 const { prisma } = require("../config/database");
@@ -686,8 +687,161 @@ class EnhancedSoilController extends SoilController {
 				description: "Maximum water content",
 			});
 		}
-
 		return keyPoints;
+	}
+
+	/**
+	 * Demo enhanced analysis endpoint - no authentication required
+	 */
+	static async createEnhancedAnalysisDemo(req, res) {
+		try {
+			const errors = validationResult(req);
+			if (!errors.isEmpty()) {
+				return res.status(400).json({ errors: errors.array() });
+			}
+
+			const {
+				sand,
+				clay,
+				organicMatter = 2.5,
+				densityFactor = 1.0,
+				region = "central",
+				location = null,
+			} = req.body;
+			// Calculate basic soil characteristics first
+			const basicResult = SoilCalculationService.calculateWaterCharacteristics(
+				sand,
+				clay,
+				organicMatter,
+				densityFactor
+			);
+			// Add enhanced demo features
+			const soilProfile3D =
+				EnhancedSoilCalculationService.calculateSoilProfile3D(
+					sand,
+					clay,
+					organicMatter,
+					densityFactor,
+					100 // 100cm depth for demo
+				);
+
+			const enhancedResult = {
+				...basicResult,
+				region: region,
+				location: location,
+				isDemoMode: true,
+				note: "Demo mode - enhanced features available with Professional+ plan",
+				moistureTensionCurve:
+					EnhancedSoilCalculationService.generateMoistureTensionCurve(
+						sand,
+						clay,
+						organicMatter,
+						densityFactor,
+						region
+					).slice(0, 5), // Limit to 5 points for demo
+				soilProfile3D: {
+					horizons: soilProfile3D.horizons?.slice(0, 3) || [], // Limit to 3 horizons for demo
+					summary: soilProfile3D.summary,
+					maxDepth: soilProfile3D.maxDepth,
+				},
+			};
+
+			// Add demo-specific data
+			enhancedResult.isDemoMode = true;
+			enhancedResult.note =
+				"Demo mode - register for data storage and full features";
+			enhancedResult.demoId = `demo_${Date.now()}_${Math.random()
+				.toString(36)
+				.substr(2, 9)}`;
+
+			res.json({
+				success: true,
+				data: enhancedResult,
+				demo: true,
+				features: {
+					enhancedAnalysis: true,
+					regionalAdjustments: true,
+					advancedVisualizations: "limited",
+					dataStorage: false,
+				},
+			});
+		} catch (error) {
+			console.error("Demo enhanced analysis error:", error);
+			res.status(500).json({ error: "Internal server error" });
+		}
+	}
+
+	/**
+	 * Demo moisture-tension curve endpoint
+	 */
+	static async getMoistureTensionCurveDemo(req, res) {
+		try {
+			const { demoData } = req.params;
+
+			// Parse demo data (base64 encoded soil parameters)
+			let soilParams;
+			try {
+				const decoded = Buffer.from(demoData, "base64").toString("ascii");
+				soilParams = JSON.parse(decoded);
+			} catch (parseError) {
+				return res.status(400).json({ error: "Invalid demo data format" });
+			}
+
+			// Generate moisture-tension curve for demo
+			const curveData =
+				EnhancedSoilCalculationService.generateMoistureTensionCurve(
+					soilParams.sand,
+					soilParams.clay,
+					soilParams.organicMatter || 2.5,
+					soilParams.densityFactor || 1.0,
+					soilParams.region || "central"
+				);
+
+			res.json({
+				success: true,
+				data: curveData,
+				demo: true,
+				note: "Demo visualization - register for interactive features",
+			});
+		} catch (error) {
+			console.error("Demo moisture-tension curve error:", error);
+			res.status(500).json({ error: "Internal server error" });
+		}
+	}
+
+	/**
+	 * Demo 3D soil profile endpoint
+	 */
+	static async getSoilProfile3DDemo(req, res) {
+		try {
+			const { demoData } = req.params;
+
+			// Parse demo data
+			let soilParams;
+			try {
+				const decoded = Buffer.from(demoData, "base64").toString("ascii");
+				soilParams = JSON.parse(decoded);
+			} catch (parseError) {
+				return res.status(400).json({ error: "Invalid demo data format" });
+			} // Generate 3D profile for demo
+			const profileData = EnhancedSoilCalculationService.calculateSoilProfile3D(
+				soilParams.sand,
+				soilParams.clay,
+				soilParams.organicMatter || 2.5,
+				soilParams.densityFactor || 1.0,
+				100 // depth in cm
+			);
+
+			res.json({
+				success: true,
+				data: profileData,
+				demo: true,
+				note: "Demo 3D visualization - register for full interactive features",
+			});
+		} catch (error) {
+			console.error("Demo 3D profile error:", error);
+			res.status(500).json({ error: "Internal server error" });
+		}
 	}
 }
 

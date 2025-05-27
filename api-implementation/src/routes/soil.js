@@ -33,6 +33,32 @@ const soilAnalysisValidation = [
 		.withMessage("Density factor must be between 0.9 and 1.2"),
 ];
 
+// DEMO ENDPOINTS (No authentication required for testing)
+// Basic demo analysis endpoint - for testing without authentication
+router.post(
+	"/demo/analyze",
+	soilAnalysisValidation,
+	SoilController.analyzeSoilDemo
+);
+
+// Enhanced demo analysis endpoint - for testing advanced features
+router.post(
+	"/demo/analyze/enhanced",
+	soilAnalysisValidation,
+	EnhancedSoilController.createEnhancedAnalysisDemo
+);
+
+// Demo visualization data endpoints
+router.get(
+	"/demo/moisture-tension/:demoData",
+	EnhancedSoilController.getMoistureTensionCurveDemo
+);
+
+router.get(
+	"/demo/profile-3d/:demoData",
+	EnhancedSoilController.getSoilProfile3DDemo
+);
+
 // Basic soil analysis endpoint (requires authentication and usage check)
 router.post(
 	"/analyze",

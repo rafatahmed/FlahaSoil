@@ -1,5 +1,44 @@
 /** @format */
 
+// Utility Functions
+function showLoadingState() {
+	// Show loading indicator if element exists
+	const loadingElement = document.getElementById("loading-indicator");
+	if (loadingElement) {
+		loadingElement.style.display = "block";
+	}
+
+	// Disable form inputs during loading
+	const inputs = document.querySelectorAll("input, button");
+	inputs.forEach((input) => {
+		input.disabled = true;
+	});
+}
+
+function hideLoadingState() {
+	// Hide loading indicator if element exists
+	const loadingElement = document.getElementById("loading-indicator");
+	if (loadingElement) {
+		loadingElement.style.display = "none";
+	}
+
+	// Re-enable form inputs
+	const inputs = document.querySelectorAll("input, button");
+	inputs.forEach((input) => {
+		input.disabled = false;
+	});
+}
+
+function getAdvancedParameters() {
+	// Return default advanced parameters
+	return {
+		region: "central",
+		soilSeries: "default",
+		management: "conventional",
+		organicAmendments: false,
+	};
+}
+
 // Create the USDA soil textural triangle
 function createSoilTriangle() {
 	// Set up SVG
@@ -689,6 +728,9 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 		showErrorMessage(
 			"Failed to calculate soil characteristics. Please try again."
 		);
+	} finally {
+		// Hide loading state
+		hideLoadingState();
 	}
 }
 
@@ -1279,4 +1321,41 @@ function showPlanNotification(message, type = "info", action = null) {
 	}, 10000);
 }
 
-// ...existing code...
+// Utility Functions
+function showLoadingState() {
+	// Show loading indicator if element exists
+	const loadingElement = document.getElementById("loading-indicator");
+	if (loadingElement) {
+		loadingElement.style.display = "block";
+	}
+
+	// Disable form inputs during loading
+	const inputs = document.querySelectorAll("input, button");
+	inputs.forEach((input) => {
+		input.disabled = true;
+	});
+}
+
+function hideLoadingState() {
+	// Hide loading indicator if element exists
+	const loadingElement = document.getElementById("loading-indicator");
+	if (loadingElement) {
+		loadingElement.style.display = "none";
+	}
+
+	// Re-enable form inputs
+	const inputs = document.querySelectorAll("input, button");
+	inputs.forEach((input) => {
+		input.disabled = false;
+	});
+}
+
+function getAdvancedParameters() {
+	// Return default advanced parameters
+	return {
+		region: "central",
+		soilSeries: "default",
+		management: "conventional",
+		organicAmendments: false,
+	};
+}

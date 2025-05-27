@@ -8,6 +8,35 @@
 // Global state
 let currentUser = null;
 
+// Utility Functions
+function setupSmoothScrolling() {
+	// Add smooth scrolling to all anchor links
+	document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+		anchor.addEventListener("click", function (e) {
+			e.preventDefault();
+			const target = document.querySelector(this.getAttribute("href"));
+			if (target) {
+				target.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			}
+		});
+	});
+}
+
+function setupMobileMenu() {
+	// Setup mobile menu toggle if elements exist
+	const mobileMenuButton = document.querySelector(".mobile-menu-button");
+	const mobileMenu = document.querySelector(".mobile-menu");
+
+	if (mobileMenuButton && mobileMenu) {
+		mobileMenuButton.addEventListener("click", function () {
+			mobileMenu.classList.toggle("active");
+		});
+	}
+}
+
 // Initialize landing page
 document.addEventListener("DOMContentLoaded", function () {
 	checkAuthStatus();
