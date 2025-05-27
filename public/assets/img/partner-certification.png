@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- ISO badge -->
+  <circle cx="60" cy="30" r="25" fill="#1976D2"/>
+  <circle cx="60" cy="30" r="20" fill="white"/>
+  <circle cx="60" cy="30" r="15" fill="#1976D2"/>
+  
+  <!-- ISO text -->
+  <text x="60" y="27" text-anchor="middle" font-family="Arial" font-size="8" font-weight="bold" fill="white">ISO</text>
+  <text x="60" y="35" text-anchor="middle" font-family="Arial" font-size="6" fill="white">9001</text>
+  
+  <!-- Checkmark -->
+  <path d="M 52 42 L 56 46 L 68 34" stroke="#4CAF50" stroke-width="3" fill="none"/>
+  
+  <!-- Text -->
+  <text x="60" y="55" text-anchor="middle" font-family="Arial" font-size="8" font-weight="bold" fill="#1976D2">CERTIFIED</text>
+</svg>

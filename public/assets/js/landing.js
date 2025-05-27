@@ -634,6 +634,16 @@ function contactSales() {
 }
 
 /**
+ * Schedule a demo
+ */
+function scheduleDemo() {
+	window.open(
+		"mailto:demo@flaha.com?subject=FlahaSoil%20Demo%20Request&body=Hello,%0D%0A%0D%0AI would like to schedule a demo of FlahaSoil. Please let me know your available times.%0D%0A%0D%0AThanks!",
+		"_blank"
+	);
+}
+
+/**
  * Setup smooth scrolling for navigation links
  */
 function setupSmoothScrolling() {
@@ -655,12 +665,101 @@ function setupSmoothScrolling() {
  * Setup mobile menu toggle
  */
 function setupMobileMenu() {
-	// Mobile menu functionality can be added here
+	addMobileMenuStyles();
+
+	const navToggle = document.querySelector(".nav-toggle");
+	if (navToggle) {
+		navToggle.addEventListener("click", toggleMobileMenu);
+	}
 }
 
 function toggleMobileMenu() {
-	// Mobile menu toggle implementation
-	console.log("Mobile menu toggle");
+	const navMenu = document.querySelector(".nav-menu");
+	const navToggle = document.querySelector(".nav-toggle");
+
+	if (navMenu && navToggle) {
+		navMenu.classList.toggle("active");
+		navToggle.classList.toggle("active");
+	}
+}
+
+/**
+ * Add mobile menu styles
+ */
+function addMobileMenuStyles() {
+	if (document.getElementById("mobile-menu-styles")) return;
+
+	const style = document.createElement("style");
+	style.id = "mobile-menu-styles";
+	style.textContent = `
+		@media (max-width: 768px) {
+			.nav-menu {
+				position: fixed;
+				top: 70px;
+				right: -100%;
+				width: 300px;
+				height: calc(100vh - 70px);
+				background: var(--white);
+				flex-direction: column;
+				justify-content: flex-start;
+				align-items: stretch;
+				padding: 30px 0;
+				transition: right 0.3s ease;
+				box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+				z-index: 999;
+			}
+			
+			.nav-menu.active {
+				right: 0;
+			}
+			
+			.nav-menu .nav-link {
+				display: block;
+				padding: 15px 30px;
+				border-bottom: 1px solid #f0f0f0;
+				transition: background 0.3s ease;
+			}
+			
+			.nav-menu .nav-link:hover {
+				background: var(--background-light);
+			}
+			
+			.nav-menu .btn-login,
+			.nav-menu .btn-signup {
+				margin: 10px 30px;
+				text-align: center;
+				display: block;
+			}
+			
+			.nav-toggle {
+				display: flex;
+				flex-direction: column;
+				cursor: pointer;
+				padding: 5px;
+			}
+			
+			.nav-toggle span {
+				width: 25px;
+				height: 3px;
+				background: var(--text-dark);
+				margin: 3px 0;
+				transition: all 0.3s ease;
+			}
+			
+			.nav-toggle.active span:nth-child(1) {
+				transform: rotate(45deg) translate(6px, 6px);
+			}
+			
+			.nav-toggle.active span:nth-child(2) {
+				opacity: 0;
+			}
+			
+			.nav-toggle.active span:nth-child(3) {
+				transform: rotate(-45deg) translate(6px, -6px);
+			}
+		}
+	`;
+	document.head.appendChild(style);
 }
 
 /**

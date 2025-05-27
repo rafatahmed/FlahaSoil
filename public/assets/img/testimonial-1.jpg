@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="40" cy="40" r="40" fill="#E3F2FD"/>
+  <circle cx="40" cy="30" r="12" fill="#1976D2"/>
+  <path d="M 20 65 Q 40 50 60 65" fill="#1976D2"/>
+  <text x="40" y="75" text-anchor="middle" font-family="Arial" font-size="8" fill="#666">Dr. Johnson</text>
+</svg>

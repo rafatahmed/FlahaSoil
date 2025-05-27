@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="400" height="300" fill="#f8f9fa"/>
+  
+  <!-- Triangle -->
+  <polygon points="200,50 100,250 300,250" fill="none" stroke="#2D5430" stroke-width="3"/>
+  
+  <!-- Grid lines -->
+  <line x1="150" y1="150" x2="250" y2="150" stroke="#ddd" stroke-width="1"/>
+  <line x1="125" y1="200" x2="275" y2="200" stroke="#ddd" stroke-width="1"/>
+  
+  <!-- Labels -->
+  <text x="200" y="40" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2D5430">CLAY</text>
+  <text x="80" y="270" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2D5430">SAND</text>
+  <text x="320" y="270" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2D5430">SILT</text>
+  
+  <!-- Sample point -->
+  <circle cx="180" cy="180" r="6" fill="#4CAF50"/>
+  <text x="190" y="175" font-family="Arial" font-size="12" fill="#2D5430">Sample</text>
+  
+  <!-- Title -->
+  <text x="200" y="25" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#333">Soil Texture Triangle</text>
+</svg>

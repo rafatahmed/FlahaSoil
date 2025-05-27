@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="300" height="200" viewBox="0 0 300 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="300" height="200" fill="#f8f9fa"/>
+  
+  <!-- Office building -->
+  <rect x="40" y="50" width="80" height="110" fill="#E8F5E8"/>
+  <rect x="50" y="60" width="15" height="15" fill="#4CAF50"/>
+  <rect x="70" y="60" width="15" height="15" fill="#4CAF50"/>
+  <rect x="90" y="60" width="15" height="15" fill="#4CAF50"/>
+  <rect x="50" y="80" width="15" height="15" fill="#4CAF50"/>
+  <rect x="70" y="80" width="15" height="15" fill="#4CAF50"/>
+  <rect x="90" y="80" width="15" height="15" fill="#4CAF50"/>
+  
+  <!-- Consultation area -->
+  <rect x="150" y="80" width="120" height="80" fill="#FFF3E0"/>
+  <circle cx="200" cy="110" r="15" fill="#FF9800"/>
+  <text x="200" y="115" text-anchor="middle" font-family="Arial" font-size="8" fill="white">MEET</text>
+  
+  <!-- Graphs/charts -->
+  <rect x="160" y="130" width="8" height="20" fill="#2196F3"/>
+  <rect x="170" y="125" width="8" height="25" fill="#2196F3"/>
+  <rect x="180" y="120" width="8" height="30" fill="#2196F3"/>
+  <rect x="190" y="115" width="8" height="35" fill="#2196F3"/>
+  
+  <!-- Laptop/device -->
+  <rect x="220" y="130" width="30" height="20" fill="#333"/>
+  <rect x="222" y="132" width="26" height="14" fill="#E3F2FD"/>
+  
+  <!-- Title -->
+  <text x="150" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2D5430">Consulting Services</text>
+  
+  <!-- Client representation -->
+  <circle cx="70" cy="130" r="8" fill="#1976D2"/>
+  <circle cx="90" cy="130" r="8" fill="#4CAF50"/>
+  
+  <!-- Legend -->
+  <text x="20" y="185" font-family="Arial" font-size="10" fill="#666">Agricultural Consulting Business</text>
+</svg>

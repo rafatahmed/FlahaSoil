@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- USDA shield -->
+  <path d="M 60 10 L 50 20 L 50 45 L 70 45 L 70 20 Z" fill="#1976D2"/>
+  <circle cx="60" cy="25" r="8" fill="white"/>
+  <path d="M 56 25 L 58 27 L 64 21" stroke="#1976D2" stroke-width="2" fill="none"/>
+  
+  <!-- Stars -->
+  <polygon points="40,15 42,19 46,19 43,22 44,26 40,24 36,26 37,22 34,19 38,19" fill="#FFD700"/>
+  <polygon points="80,15 82,19 86,19 83,22 84,26 80,24 76,26 77,22 74,19 78,19" fill="#FFD700"/>
+  
+  <!-- Text -->
+  <text x="60" y="52" text-anchor="middle" font-family="Arial" font-size="10" font-weight="bold" fill="#1976D2">USDA</text>
+</svg>

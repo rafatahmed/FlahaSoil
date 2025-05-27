@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="120" height="60" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+  <!-- University building -->
+  <rect x="30" y="25" width="60" height="25" fill="#4CAF50"/>
+  <polygon points="25,25 60,10 95,25" fill="#2D5430"/>
+  
+  <!-- Columns -->
+  <rect x="40" y="25" width="4" height="25" fill="white"/>
+  <rect x="50" y="25" width="4" height="25" fill="white"/>
+  <rect x="60" y="25" width="4" height="25" fill="white"/>
+  <rect x="70" y="25" width="4" height="25" fill="white"/>
+  <rect x="80" y="25" width="4" height="25" fill="white"/>
+  
+  <!-- Dome -->
+  <circle cx="60" cy="18" r="8" fill="#FFD700"/>
+  
+  <!-- Text -->
+  <text x="60" y="57" text-anchor="middle" font-family="Arial" font-size="8" font-weight="bold" fill="#2D5430">UNIVERSITY</text>
+</svg>
