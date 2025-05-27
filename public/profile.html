@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - FlahaSoil</title>
     <link rel="stylesheet" href="./assets/css/style.css">
     <link rel="stylesheet" href="./assets/css/profile.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Open+Sans:wght@300;400;600&display=swap"
+        rel="stylesheet">
     <link rel="icon" type="image/x-icon" href="./assets/images/favicon.ico">
 </head>
+
 <body>
     <!-- Navigation Header -->
     <nav class="navbar">
@@ -46,7 +50,17 @@
                     </div>
                     <div class="profile-details">
                         <h1 id="userName">Loading...</h1>
-                        <p id="userEmail">Loading...</p>
+                        <div class="email-container">
+                            <p id="userEmail">Loading...</p>
+                            <div id="emailVerificationStatus" class="verification-status hidden">
+                                <span class="verification-badge unverified">
+                                    <i class="icon">⚠</i>
+                                    Email not verified
+                                </span>
+                                <button class="btn-link" onclick="resendVerificationEmail()">Resend
+                                    verification</button>
+                            </div>
+                        </div>
                         <div class="user-tier">
                             <span class="tier-badge" id="userTier">FREE</span>
                             <span class="tier-description" id="tierDescription">50 analyses per month</span>
@@ -216,4 +230,5 @@
     <script src="./assets/js/apiClient.js"></script>
     <script src="./assets/js/profile.js"></script>
 </body>
+
 </html>

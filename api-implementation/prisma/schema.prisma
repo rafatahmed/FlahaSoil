@@ -10,13 +10,14 @@ datasource db {
 
 // User model for authentication and subscription management
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String   // In production, this will be hashed
-  tier      String   @default("FREE") // FREE, PROFESSIONAL, ENTERPRISE
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String   // In production, this will be hashed
+  tier          String   @default("FREE") // FREE, PROFESSIONAL, ENTERPRISE
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Subscription information
   subscription   Subscription?

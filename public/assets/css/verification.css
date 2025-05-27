@@ -1,0 +1,161 @@
+/**
+ * Email Verification Page Styles
+ *
+ * @format
+ */
+
+.verification-container {
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	padding: 20px;
+}
+
+.verification-card {
+	background: white;
+	border-radius: 20px;
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+	padding: 60px 40px;
+	max-width: 500px;
+	width: 100%;
+	text-align: center;
+}
+
+.logo-container h1 {
+	font-size: 2.5rem;
+	font-weight: 700;
+	color: #2d3748;
+	margin-bottom: 8px;
+}
+
+.subtitle {
+	color: #718096;
+	font-size: 1rem;
+	margin-bottom: 40px;
+}
+
+.loading-spinner {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 20px;
+}
+
+.spinner {
+	width: 40px;
+	height: 40px;
+	border: 4px solid #e2e8f0;
+	border-left-color: #667eea;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.verification-success {
+	color: #38a169;
+	text-align: center;
+}
+
+.verification-error {
+	color: #e53e3e;
+	text-align: center;
+}
+
+.success-icon {
+	width: 80px;
+	height: 80px;
+	background: #38a169;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto 20px;
+	font-size: 40px;
+	color: white;
+}
+
+.error-icon {
+	width: 80px;
+	height: 80px;
+	background: #e53e3e;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto 20px;
+	font-size: 40px;
+	color: white;
+}
+
+.verification-message {
+	font-size: 1.25rem;
+	font-weight: 600;
+	margin-bottom: 10px;
+}
+
+.verification-description {
+	color: #718096;
+	margin-bottom: 30px;
+	line-height: 1.6;
+}
+
+.btn-primary {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	border: none;
+	padding: 12px 30px;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	text-decoration: none;
+	display: inline-block;
+	transition: transform 0.2s ease;
+}
+
+.btn-primary:hover {
+	transform: translateY(-2px);
+}
+
+.btn-secondary {
+	background: transparent;
+	color: #667eea;
+	border: 2px solid #667eea;
+	padding: 10px 28px;
+	border-radius: 8px;
+	font-weight: 600;
+	cursor: pointer;
+	text-decoration: none;
+	display: inline-block;
+	margin-left: 10px;
+	transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+	background: #667eea;
+	color: white;
+}
+
+@media (max-width: 640px) {
+	.verification-card {
+		padding: 40px 30px;
+		margin: 20px;
+	}
+
+	.logo-container h1 {
+		font-size: 2rem;
+	}
+
+	.btn-primary,
+	.btn-secondary {
+		display: block;
+		margin: 10px 0;
+		text-align: center;
+	}
+}

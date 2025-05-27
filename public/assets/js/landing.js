@@ -1,38 +1,40 @@
 /**
  * FlahaSoil Landing Page JavaScript
  * Handles authentication modals, navigation, and user interactions
+ *
+ * @format
  */
 
 // Global state
 let currentUser = null;
 
 // Initialize landing page
-document.addEventListener('DOMContentLoaded', function() {
-    checkAuthStatus();
-    setupSmoothScrolling();
-    setupMobileMenu();
+document.addEventListener("DOMContentLoaded", function () {
+	checkAuthStatus();
+	setupSmoothScrolling();
+	setupMobileMenu();
 });
 
 /**
  * Check if user is already authenticated
  */
 function checkAuthStatus() {
-    const token = localStorage.getItem('flahasoil_token');
-    const userStr = localStorage.getItem('flahasoil_user');
-    
-    if (token && userStr) {
-        currentUser = JSON.parse(userStr);
-        updateNavForLoggedInUser();
-    }
+	const token = localStorage.getItem("flahasoil_token");
+	const userStr = localStorage.getItem("flahasoil_user");
+
+	if (token && userStr) {
+		currentUser = JSON.parse(userStr);
+		updateNavForLoggedInUser();
+	}
 }
 
 /**
  * Update navigation for logged-in users
  */
 function updateNavForLoggedInUser() {
-    const navMenu = document.querySelector('.nav-menu');
-    if (currentUser) {
-        navMenu.innerHTML = `
+	const navMenu = document.querySelector(".nav-menu");
+	if (currentUser) {
+		navMenu.innerHTML = `
             <a href="#features" class="nav-link">Features</a>
             <a href="#pricing" class="nav-link">Pricing</a>
             <a href="#about" class="nav-link">About</a>
@@ -48,18 +50,18 @@ function updateNavForLoggedInUser() {
                 </div>
             </div>
         `;
-        
-        // Add user menu styles
-        addUserMenuStyles();
-    }
+
+		// Add user menu styles
+		addUserMenuStyles();
+	}
 }
 
 /**
  * Add styles for user menu
  */
 function addUserMenuStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
+	const style = document.createElement("style");
+	style.textContent = `
         .user-menu {
             position: relative;
         }
@@ -128,41 +130,43 @@ function addUserMenuStyles() {
             border-radius: 0 0 8px 8px;
         }
     `;
-    document.head.appendChild(style);
+	document.head.appendChild(style);
 }
 
 /**
  * Toggle user dropdown menu
  */
 function toggleUserDropdown() {
-    const dropdown = document.getElementById('userDropdown');
-    const arrow = document.querySelector('.dropdown-arrow');
-    
-    if (dropdown) {
-        dropdown.classList.toggle('show');
-        arrow.style.transform = dropdown.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
-    }
+	const dropdown = document.getElementById("userDropdown");
+	const arrow = document.querySelector(".dropdown-arrow");
+
+	if (dropdown) {
+		dropdown.classList.toggle("show");
+		arrow.style.transform = dropdown.classList.contains("show")
+			? "rotate(180deg)"
+			: "rotate(0deg)";
+	}
 }
 
 /**
  * Close dropdown when clicking outside
  */
-document.addEventListener('click', function(event) {
-    const userMenu = document.querySelector('.user-menu');
-    const dropdown = document.getElementById('userDropdown');
-    
-    if (userMenu && dropdown && !userMenu.contains(event.target)) {
-        dropdown.classList.remove('show');
-        const arrow = document.querySelector('.dropdown-arrow');
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
-    }
+document.addEventListener("click", function (event) {
+	const userMenu = document.querySelector(".user-menu");
+	const dropdown = document.getElementById("userDropdown");
+
+	if (userMenu && dropdown && !userMenu.contains(event.target)) {
+		dropdown.classList.remove("show");
+		const arrow = document.querySelector(".dropdown-arrow");
+		if (arrow) arrow.style.transform = "rotate(0deg)";
+	}
 });
 
 /**
  * Show login modal
  */
 function showLoginModal() {
-    const modalHTML = `
+	const modalHTML = `
         <div class="auth-modal" id="loginModal">
             <div class="modal-overlay" onclick="closeModal('loginModal')"></div>
             <div class="modal-content">
@@ -182,21 +186,22 @@ function showLoginModal() {
                     <button type="submit" class="btn-submit">Login</button>
                 </form>
                 <div class="modal-footer">
+                    <p><a href="#" onclick="showForgotPasswordModal()">Forgot your password?</a></p>
                     <p>Don't have an account? <a href="#" onclick="switchToSignup()">Sign up here</a></p>
                 </div>
             </div>
         </div>
     `;
-    
-    document.getElementById('auth-modals').innerHTML = modalHTML;
-    addModalStyles();
+
+	document.getElementById("auth-modals").innerHTML = modalHTML;
+	addModalStyles();
 }
 
 /**
  * Show signup modal
  */
 function showSignupModal() {
-    const modalHTML = `
+	const modalHTML = `
         <div class="auth-modal" id="signupModal">
             <div class="modal-overlay" onclick="closeModal('signupModal')"></div>
             <div class="modal-content">
@@ -225,20 +230,20 @@ function showSignupModal() {
             </div>
         </div>
     `;
-    
-    document.getElementById('auth-modals').innerHTML = modalHTML;
-    addModalStyles();
+
+	document.getElementById("auth-modals").innerHTML = modalHTML;
+	addModalStyles();
 }
 
 /**
  * Add modal styles
  */
 function addModalStyles() {
-    if (document.getElementById('modal-styles')) return;
-    
-    const style = document.createElement('style');
-    style.id = 'modal-styles';
-    style.textContent = `
+	if (document.getElementById("modal-styles")) return;
+
+	const style = document.createElement("style");
+	style.id = "modal-styles";
+	style.textContent = `
         .auth-modal {
             position: fixed;
             top: 0;
@@ -368,146 +373,304 @@ function addModalStyles() {
             text-decoration: underline;
         }
     `;
-    document.head.appendChild(style);
+	document.head.appendChild(style);
 }
 
 /**
  * Handle login form submission
  */
 async function handleLogin(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const email = formData.get('email');
-    const password = formData.get('password');
-    
-    try {
-        const result = await window.flahaSoilAPI.login(email, password);
-        
-        if (result.success) {
-            currentUser = result.user;
-            updateNavForLoggedInUser();
-            closeModal('loginModal');
-            showSuccessMessage('Login successful! Welcome back.');
-        } else {
-            showErrorMessage(result.error || 'Login failed');
-        }
-    } catch (error) {
-        showErrorMessage('Login failed. Please try again.');
-    }
+	event.preventDefault();
+	const formData = new FormData(event.target);
+	const email = formData.get("email");
+	const password = formData.get("password");
+
+	try {
+		const result = await window.flahaSoilAPI.login(email, password);
+
+		if (result.success) {
+			currentUser = result.user;
+			updateNavForLoggedInUser();
+			closeModal("loginModal");
+			showSuccessMessage("Login successful! Welcome back.");
+		} else {
+			showErrorMessage(result.error || "Login failed");
+		}
+	} catch (error) {
+		showErrorMessage("Login failed. Please try again.");
+	}
 }
 
 /**
  * Handle signup form submission
  */
 async function handleSignup(event) {
-    event.preventDefault();
-    const formData = new FormData(event.target);
-    const userData = {
-        name: formData.get('name'),
-        email: formData.get('email'),
-        password: formData.get('password')
-    };
-    
-    try {
-        const result = await window.flahaSoilAPI.register(userData);
-        
-        if (result.success) {
-            currentUser = result.user;
-            updateNavForLoggedInUser();
-            closeModal('signupModal');
-            showSuccessMessage('Account created successfully! Welcome to FlahaSoil.');
-        } else {
-            showErrorMessage(result.error || 'Registration failed');
-        }
-    } catch (error) {
-        showErrorMessage('Registration failed. Please try again.');
-    }
+	event.preventDefault();
+	const formData = new FormData(event.target);
+	const userData = {
+		name: formData.get("name"),
+		email: formData.get("email"),
+		password: formData.get("password"),
+	};
+
+	try {
+		const result = await window.flahaSoilAPI.register(userData);
+
+		if (result.success) {
+			currentUser = result.user;
+			updateNavForLoggedInUser();
+			closeModal("signupModal");
+			showSuccessMessage("Account created successfully! Welcome to FlahaSoil.");
+		} else {
+			showErrorMessage(result.error || "Registration failed");
+		}
+	} catch (error) {
+		showErrorMessage("Registration failed. Please try again.");
+	}
+}
+
+/**
+ * Show forgot password modal
+ */
+function showForgotPasswordModal() {
+	const modalHTML = `
+        <div class="auth-modal" id="forgotPasswordModal">
+            <div class="modal-overlay" onclick="closeModal('forgotPasswordModal')"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Reset Password</h2>
+                    <button class="modal-close" onclick="closeModal('forgotPasswordModal')">&times;</button>
+                </div>
+                <form id="forgotPasswordForm" onsubmit="handleForgotPassword(event)">
+                    <div class="form-group">
+                        <label for="forgotEmail">Email Address</label>
+                        <input type="email" id="forgotEmail" name="email" required>
+                        <small>We'll send you a password reset link</small>
+                    </div>
+                    <button type="submit" class="btn-submit">Send Reset Link</button>
+                </form>
+                <div class="modal-footer">
+                    <p><a href="#" onclick="switchToLogin()">Back to Login</a></p>
+                </div>
+            </div>
+        </div>
+    `;
+
+	document.getElementById("auth-modals").innerHTML = modalHTML;
+	addModalStyles();
+}
+
+/**
+ * Show reset password modal
+ */
+function showResetPasswordModal(token) {
+	const modalHTML = `
+        <div class="auth-modal" id="resetPasswordModal">
+            <div class="modal-overlay" onclick="closeModal('resetPasswordModal')"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Set New Password</h2>
+                    <button class="modal-close" onclick="closeModal('resetPasswordModal')">&times;</button>
+                </div>
+                <form id="resetPasswordForm" onsubmit="handleResetPassword(event)">
+                    <input type="hidden" name="token" value="${token}">
+                    <div class="form-group">
+                        <label for="newPassword">New Password</label>
+                        <input type="password" id="newPassword" name="newPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmNewPassword">Confirm New Password</label>
+                        <input type="password" id="confirmNewPassword" name="confirmNewPassword" required minlength="6">
+                    </div>
+                    <button type="submit" class="btn-submit">Update Password</button>
+                </form>
+            </div>
+        </div>
+    `;
+
+	document.getElementById("auth-modals").innerHTML = modalHTML;
+	addModalStyles();
+}
+
+/**
+ * Handle forgot password form submission
+ */
+async function handleForgotPassword(event) {
+	event.preventDefault();
+	const formData = new FormData(event.target);
+	const email = formData.get("email");
+
+	try {
+		// Show loading state
+		const submitButton = event.target.querySelector('button[type="submit"]');
+		const originalText = submitButton.textContent;
+		submitButton.textContent = "Sending...";
+		submitButton.disabled = true;
+
+		const result = await window.flahaSoilAPI.forgotPassword(email);
+
+		if (result.success) {
+			showSuccessMessage("Password reset instructions sent to your email!");
+			closeModal("forgotPasswordModal");
+
+			// In development, auto-open reset modal with token
+			if (result.resetToken) {
+				setTimeout(() => {
+					showResetPasswordModal(result.resetToken);
+				}, 1000);
+			}
+		} else {
+			showErrorMessage(result.error || "Failed to send reset email");
+		}
+
+		// Reset button
+		submitButton.textContent = originalText;
+		submitButton.disabled = false;
+	} catch (error) {
+		showErrorMessage("Failed to send reset email. Please try again.");
+		const submitButton = event.target.querySelector('button[type="submit"]');
+		submitButton.textContent = "Send Reset Link";
+		submitButton.disabled = false;
+	}
+}
+
+/**
+ * Handle reset password form submission
+ */
+async function handleResetPassword(event) {
+	event.preventDefault();
+	const formData = new FormData(event.target);
+	const token = formData.get("token");
+	const newPassword = formData.get("newPassword");
+	const confirmPassword = formData.get("confirmNewPassword");
+
+	if (newPassword !== confirmPassword) {
+		showErrorMessage("Passwords do not match");
+		return;
+	}
+
+	if (newPassword.length < 6) {
+		showErrorMessage("Password must be at least 6 characters long");
+		return;
+	}
+
+	try {
+		// Show loading state
+		const submitButton = event.target.querySelector('button[type="submit"]');
+		const originalText = submitButton.textContent;
+		submitButton.textContent = "Updating...";
+		submitButton.disabled = true;
+
+		const result = await window.flahaSoilAPI.resetPassword(token, newPassword);
+
+		if (result.success) {
+			showSuccessMessage("Password updated successfully! You can now login.");
+			closeModal("resetPasswordModal");
+			setTimeout(() => {
+				showLoginModal();
+			}, 1000);
+		} else {
+			showErrorMessage(result.error || "Failed to reset password");
+		}
+
+		// Reset button
+		submitButton.textContent = originalText;
+		submitButton.disabled = false;
+	} catch (error) {
+		showErrorMessage("Failed to reset password. Please try again.");
+		const submitButton = event.target.querySelector('button[type="submit"]');
+		submitButton.textContent = "Update Password";
+		submitButton.disabled = false;
+	}
 }
 
 /**
  * Logout user
  */
 function logout() {
-    window.flahaSoilAPI.logout();
-    currentUser = null;
-    location.reload();
+	window.flahaSoilAPI.logout();
+	currentUser = null;
+	location.reload();
 }
 
 /**
  * Switch between login and signup modals
  */
 function switchToSignup() {
-    closeModal('loginModal');
-    showSignupModal();
+	closeModal("loginModal");
+	showSignupModal();
 }
 
 function switchToLogin() {
-    closeModal('signupModal');
-    showLoginModal();
+	closeModal("signupModal");
+	showLoginModal();
 }
 
 /**
  * Close modal
  */
 function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.remove();
-    }
+	const modal = document.getElementById(modalId);
+	if (modal) {
+		modal.remove();
+	}
 }
 
 /**
  * Start demo (redirect to main app)
  */
 function startDemo() {
-    window.location.href = './index.html';
+	window.location.href = "./index.html";
 }
 
 /**
  * Contact sales
  */
 function contactSales() {
-    window.open('mailto:sales@flaha.com?subject=Enterprise%20Plan%20Inquiry', '_blank');
+	window.open(
+		"mailto:sales@flaha.com?subject=Enterprise%20Plan%20Inquiry",
+		"_blank"
+	);
 }
 
 /**
  * Setup smooth scrolling for navigation links
  */
 function setupSmoothScrolling() {
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            }
-        });
-    });
+	document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+		anchor.addEventListener("click", function (e) {
+			e.preventDefault();
+			const target = document.querySelector(this.getAttribute("href"));
+			if (target) {
+				target.scrollIntoView({
+					behavior: "smooth",
+					block: "start",
+				});
+			}
+		});
+	});
 }
 
 /**
  * Setup mobile menu toggle
  */
 function setupMobileMenu() {
-    // Mobile menu functionality can be added here
+	// Mobile menu functionality can be added here
 }
 
 function toggleMobileMenu() {
-    // Mobile menu toggle implementation
-    console.log('Mobile menu toggle');
+	// Mobile menu toggle implementation
+	console.log("Mobile menu toggle");
 }
 
 /**
  * Show success message
  */
 function showSuccessMessage(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast success';
-    toast.textContent = message;
-    toast.style.cssText = `
+	const toast = document.createElement("div");
+	toast.className = "toast success";
+	toast.textContent = message;
+	toast.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
@@ -518,22 +681,22 @@ function showSuccessMessage(message) {
         z-index: 3000;
         box-shadow: var(--shadow-hover);
     `;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+
+	document.body.appendChild(toast);
+
+	setTimeout(() => {
+		toast.remove();
+	}, 3000);
 }
 
 /**
  * Show error message
  */
 function showErrorMessage(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast error';
-    toast.textContent = message;
-    toast.style.cssText = `
+	const toast = document.createElement("div");
+	toast.className = "toast error";
+	toast.textContent = message;
+	toast.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
@@ -544,10 +707,10 @@ function showErrorMessage(message) {
         z-index: 3000;
         box-shadow: var(--shadow-hover);
     `;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.remove();
-    }, 3000);
+
+	document.body.appendChild(toast);
+
+	setTimeout(() => {
+		toast.remove();
+	}, 3000);
 }

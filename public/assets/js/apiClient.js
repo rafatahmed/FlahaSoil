@@ -233,6 +233,197 @@ class FlahaSoilAPI {
 		const userStr = localStorage.getItem("flahasoil_user");
 		return userStr ? JSON.parse(userStr) : null;
 	}
+
+	/**
+	 * Forgot password
+	 * @param {string} email - User email
+	 * @returns {Promise<Object>} Forgot password result
+	 */
+	async forgotPassword(email) {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/forgot-password`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ email }),
+			});
+
+			return await response.json();
+		} catch (error) {
+			console.error("Forgot password failed:", error);
+			return {
+				success: false,
+				error: "Failed to send password reset email. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Reset password with token
+	 * @param {string} token - Reset token
+	 * @param {string} newPassword - New password
+	 * @returns {Promise<Object>} Reset password result
+	 */
+	async resetPassword(token, newPassword) {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/reset-password`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ token, newPassword }),
+			});
+
+			return await response.json();
+		} catch (error) {
+			console.error("Password reset failed:", error);
+			return {
+				success: false,
+				error: "Password reset failed. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Update user profile
+	 * @param {Object} profileData - Profile update data
+	 * @returns {Promise<Object>} Profile update result
+	 */
+	async updateProfile(profileData) {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/profile`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+				body: JSON.stringify(profileData),
+			});
+
+			const result = await response.json();
+
+			if (result.success && result.user) {
+				// Update stored user data
+				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+			}
+
+			return result;
+		} catch (error) {
+			console.error("Profile update failed:", error);
+			return {
+				success: false,
+				error: "Profile update failed. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Change password
+	 * @param {string} currentPassword - Current password
+	 * @param {string} newPassword - New password
+	 * @returns {Promise<Object>} Change password result
+	 */
+	async changePassword(currentPassword, newPassword) {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/change-password`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+				body: JSON.stringify({ currentPassword, newPassword }),
+			});
+
+			return await response.json();
+		} catch (error) {
+			console.error("Password change failed:", error);
+			return {
+				success: false,
+				error: "Password change failed. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Verify email with token
+	 * @param {string} token - Verification token
+	 * @returns {Promise<Object>} Email verification result
+	 */
+	async verifyEmail(token) {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/verify-email`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ token }),
+			});
+
+			return await response.json();
+		} catch (error) {
+			console.error("Email verification failed:", error);
+			return {
+				success: false,
+				error: "Email verification failed. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Resend email verification
+	 * @param {string} email - User email
+	 * @returns {Promise<Object>} Resend verification result
+	 */
+	async resendVerification(email) {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/resend-verification`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({ email }),
+			});
+
+			return await response.json();
+		} catch (error) {
+			console.error("Resend verification failed:", error);
+			return {
+				success: false,
+				error: "Failed to resend verification email. Please try again.",
+			};
+		}
+	}
+
+	/**
+	 * Get user profile from server
+	 * @returns {Promise<Object>} Profile fetch result
+	 */
+	async getProfile() {
+		try {
+			const response = await fetch(`${this.baseURL}/auth/profile`, {
+				method: "GET",
+				headers: {
+					Authorization: this.token ? `Bearer ${this.token}` : "",
+				},
+			});
+
+			const result = await response.json();
+
+			if (result.success && result.user) {
+				// Update stored user data
+				localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+			}
+
+			return result;
+		} catch (error) {
+			console.error("Profile fetch failed:", error);
+			return {
+				success: false,
+				error: "Failed to fetch profile. Please try again.",
+			};
+		}
+	}
 }
 
 // Create global API client instance

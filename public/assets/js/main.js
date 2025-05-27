@@ -1143,6 +1143,7 @@ function showLoginModal() {
         <input type="password" name="password" placeholder="Password" required>
         <button type="submit">Login</button>
       </form>
+      <p><a href="#" onclick="showForgotPasswordDialog()">Forgot your password?</a></p>
       <p><a href="#" onclick="showSignupModal(); closeLoginModal()">Don't have an account? Sign up</a></p>
       <button onclick="closeLoginModal()">Close</button>
     </div>
@@ -1254,4 +1255,48 @@ function retryConnection() {
 	);
 
 	updateWaterCharacteristics(clayValue, sandValue, om, densityFactor);
+}
+
+/**
+ * Show forgot password dialog
+ */
+function showForgotPasswordDialog() {
+	const email = prompt("Enter your email address to reset password:");
+	if (email && email.trim()) {
+		handleForgotPasswordRequest(email.trim());
+	}
+}
+
+/**
+ * Handle forgot password request
+ * @param {string} email - User's email address
+ */
+async function handleForgotPasswordRequest(email) {
+	try {
+		const result = await window.flahaSoilAPI.forgotPassword(email);
+		if (result.success) {
+			alert("Password reset instructions sent to your email!");
+			// In development, show the token
+			if (result.resetToken) {
+				const newPassword = prompt(
+					"Development mode: Enter new password (token received):"
+				);
+				if (newPassword) {
+					const resetResult = await window.flahaSoilAPI.resetPassword(
+						result.resetToken,
+						newPassword
+					);
+					if (resetResult.success) {
+						alert("Password reset successfully! You can now login.");
+					} else {
+						alert(resetResult.error || "Failed to reset password");
+					}
+				}
+			}
+		} else {
+			alert(result.error || "Failed to send reset email");
+		}
+	} catch (error) {
+		alert("Failed to send reset email. Please try again.");
+	}
 }
