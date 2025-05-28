@@ -1,5 +1,17 @@
 /** @format */
 
+// Initialize global API client
+let flahaSoilAPI = null;
+
+// Initialize API client when DOM is loaded
+document.addEventListener("DOMContentLoaded", function () {
+	// Initialize API client
+	flahaSoilAPI = new FlahaSoilAPI();
+
+	// Make it available globally for compatibility
+	window.flahaSoilAPI = flahaSoilAPI;
+});
+
 // Utility Functions
 function showLoadingState() {
 	// Show loading indicator if element exists
@@ -37,6 +49,104 @@ function getAdvancedParameters() {
 		management: "conventional",
 		organicAmendments: false,
 	};
+}
+
+/**
+ * Show upgrade prompt for free users
+ * @param {string} message - Error message
+ */
+function showUpgradePrompt(message) {
+	const modal = document.createElement("div");
+	modal.className = "upgrade-modal";
+	modal.innerHTML = `
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>🚀 Upgrade to Professional</h3>
+				<button class="modal-close" onclick="closeUpgradeModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p>${message || "You need a Professional account to access this feature."}</p>
+				<div class="upgrade-benefits">
+					<h4>Professional Benefits:</h4>
+					<ul>
+						<li>Unlimited soil analysis calculations</li>
+						<li>Advanced visualization features</li>
+						<li>Historical data tracking</li>
+						<li>Priority customer support</li>
+						<li>Export capabilities</li>
+					</ul>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button onclick="window.location.href='profile.html#upgrade'" class="btn btn-primary">
+					Upgrade Now
+				</button>
+				<button onclick="closeUpgradeModal()" class="btn btn-secondary">
+					Maybe Later
+				</button>
+			</div>
+		</div>
+		<div class="modal-backdrop" onclick="closeUpgradeModal()"></div>
+	`;
+	document.body.appendChild(modal);
+}
+
+/**
+ * Close upgrade modal
+ */
+function closeUpgradeModal() {
+	const modal = document.querySelector(".upgrade-modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+
+/**
+ * Show connection error prompt
+ * @param {string} message - Error message
+ */
+function showConnectionError(message) {
+	const notification = document.createElement("div");
+	notification.className = "connection-error-notification";
+	notification.innerHTML = `
+		<div class="notification-content">
+			<div class="notification-icon">🌐</div>
+			<div class="notification-text">
+				<h4>Connection Error</h4>
+				<p>${
+					message ||
+					"Unable to connect to soil analysis service. Please check your internet connection."
+				}</p>
+			</div>
+			<button onclick="this.closest('.connection-error-notification').remove()" class="notification-close">
+				&times;
+			</button>
+		</div>
+	`;
+
+	// Add styling
+	notification.style.cssText = `
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		background: #f8d7da;
+		border: 1px solid #f5c6cb;
+		border-radius: 8px;
+		padding: 15px;
+		max-width: 350px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+		z-index: 1000;
+		animation: slideIn 0.3s ease-out;
+	`;
+
+	document.body.appendChild(notification);
+
+	// Auto-remove after 10 seconds
+	setTimeout(() => {
+		if (notification.parentNode) {
+			notification.remove();
+		}
+	}, 10000);
 }
 
 // Create the USDA soil textural triangle
@@ -1358,4 +1468,102 @@ function getAdvancedParameters() {
 		management: "conventional",
 		organicAmendments: false,
 	};
+}
+
+/**
+ * Show upgrade prompt for free users
+ * @param {string} message - Error message
+ */
+function showUpgradePrompt(message) {
+	const modal = document.createElement("div");
+	modal.className = "upgrade-modal";
+	modal.innerHTML = `
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>🚀 Upgrade to Professional</h3>
+				<button class="modal-close" onclick="closeUpgradeModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p>${message || "You need a Professional account to access this feature."}</p>
+				<div class="upgrade-benefits">
+					<h4>Professional Benefits:</h4>
+					<ul>
+						<li>Unlimited soil analysis calculations</li>
+						<li>Advanced visualization features</li>
+						<li>Historical data tracking</li>
+						<li>Priority customer support</li>
+						<li>Export capabilities</li>
+					</ul>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button onclick="window.location.href='profile.html#upgrade'" class="btn btn-primary">
+					Upgrade Now
+				</button>
+				<button onclick="closeUpgradeModal()" class="btn btn-secondary">
+					Maybe Later
+				</button>
+			</div>
+		</div>
+		<div class="modal-backdrop" onclick="closeUpgradeModal()"></div>
+	`;
+	document.body.appendChild(modal);
+}
+
+/**
+ * Close upgrade modal
+ */
+function closeUpgradeModal() {
+	const modal = document.querySelector(".upgrade-modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+
+/**
+ * Show connection error prompt
+ * @param {string} message - Error message
+ */
+function showConnectionError(message) {
+	const notification = document.createElement("div");
+	notification.className = "connection-error-notification";
+	notification.innerHTML = `
+		<div class="notification-content">
+			<div class="notification-icon">🌐</div>
+			<div class="notification-text">
+				<h4>Connection Error</h4>
+				<p>${
+					message ||
+					"Unable to connect to soil analysis service. Please check your internet connection."
+				}</p>
+			</div>
+			<button onclick="this.closest('.connection-error-notification').remove()" class="notification-close">
+				&times;
+			</button>
+		</div>
+	`;
+
+	// Add styling
+	notification.style.cssText = `
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		background: #f8d7da;
+		border: 1px solid #f5c6cb;
+		border-radius: 8px;
+		padding: 15px;
+		max-width: 350px;
+		box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+		z-index: 1000;
+		animation: slideIn 0.3s ease-out;
+	`;
+
+	document.body.appendChild(notification);
+
+	// Auto-remove after 10 seconds
+	setTimeout(() => {
+		if (notification.parentNode) {
+			notification.remove();
+		}
+	}, 10000);
 }

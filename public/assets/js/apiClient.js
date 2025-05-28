@@ -946,4 +946,82 @@ class FlahaSoilAPI {
 
 		return baseFeatures;
 	}
+
+	/**
+	 * Get demo moisture-tension curve data (no authentication required)
+	 * @param {string} encodedData - Encoded soil data
+	 * @returns {Promise<Object>} Demo moisture-tension curve data
+	 */
+	async getMoistureTensionCurveDemo(encodedData) {
+		try {
+			const response = await fetch(
+				`${this.baseURL}/soil/demo/moisture-tension/${encodedData}`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const result = await response.json();
+			// Backend returns { success: true, data: [...], demo: true, note: "..." }
+			// Return the backend's data directly for consistent frontend access
+			return {
+				success: result.success,
+				data: result.data,
+				demo: result.demo,
+				note: result.note,
+			};
+		} catch (error) {
+			console.error("Demo moisture-tension curve error:", error);
+			return {
+				success: false,
+				error: "Failed to fetch demo moisture-tension curve data.",
+			};
+		}
+	}
+
+	/**
+	 * Get demo 3D soil profile data (no authentication required)
+	 * @param {string} encodedData - Encoded soil data
+	 * @returns {Promise<Object>} Demo 3D profile data
+	 */
+	async getSoilProfile3DDemo(encodedData) {
+		try {
+			const response = await fetch(
+				`${this.baseURL}/soil/demo/profile-3d/${encodedData}`,
+				{
+					method: "GET",
+					headers: {
+						"Content-Type": "application/json",
+					},
+				}
+			);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const result = await response.json();
+			// Backend returns { success: true, data: {...}, demo: true, note: "..." }
+			// Return the backend's data directly for consistent frontend access
+			return {
+				success: result.success,
+				data: result.data,
+				demo: result.demo,
+				note: result.note,
+			};
+		} catch (error) {
+			console.error("Demo 3D profile error:", error);
+			return {
+				success: false,
+				error: "Failed to fetch demo 3D soil profile data.",
+			};
+		}
+	}
 }

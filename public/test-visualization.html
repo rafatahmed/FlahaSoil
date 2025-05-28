@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlahaSoil - Visualization Test</title>
+    <!-- Load Chart.js Library - Local file for reliability -->
+    <script src="assets/js/chart.min.js"></script>
+    <script>
+        // Fallback Chart.js loading
+        window.addEventListener('load', function () {
+            if (typeof Chart === 'undefined') {
+                console.log('Chart.js not loaded, trying fallback...');
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
+                script.onload = function () {
+                    console.log('Chart.js loaded from fallback CDN');
+                    // Check again after fallback
+                    setTimeout(() => {
+                        if (typeof Chart !== 'undefined') {
+                            console.log('Chart.js successfully loaded via fallback');
+                        } else {
+                            console.error('Chart.js failed to load even with fallback');
+                        }
+                    }, 100);
+                };
+                script.onerror = function () {
+                    console.error('Chart.js fallback CDN also failed');
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log('Chart.js loaded successfully from local file');
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <div style="padding: 20px;">
+        <h1>Visualization Test</h1>
+        <button onclick="testMoistureTensionCurve()">Test Moisture-Tension Curve</button>
+        <button onclick="test3DProfile()">Test 3D Profile</button>
+
+        <div id="results" style="margin-top: 20px;">
+            <div id="chart-container" style="width: 600px; height: 400px;">
+                <canvas id="test-chart"></canvas>
+            </div>
+            <div id="data-output" style="margin-top: 20px; background: #f5f5f5; padding: 10px; border-radius: 5px;">
+                <h3>API Response:</h3>
+                <pre id="api-response"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/apiClient.js?v=3.0"></script>
+    <script>
+        let apiClient; document.addEventListener('DOMContentLoaded', function () {
+            apiClient = new FlahaSoilAPI();
+        });
+
+        // Wait for Chart.js to be loaded
+        async function waitForChartJS() {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds max wait
+
+            while (typeof Chart === 'undefined' && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+
+            if (typeof Chart === 'undefined') {
+                throw new Error('Chart.js failed to load after 5 seconds');
+            }
+
+            console.log('Chart.js is ready');
+        } async function testMoistureTensionCurve() {
+            // Wait for Chart.js to be available
+            await waitForChartJS();
+
+            try {
+                const demoData = {
+                    sand: 40,
+                    clay: 30,
+                    organicMatter: 2.5
+                };
+
+                const encodedData = btoa(JSON.stringify(demoData));
+                console.log('Encoded data:', encodedData);
+
+                const response = await apiClient.getMoistureTensionCurveDemo(encodedData);
+
+                document.getElementById('api-response').textContent = JSON.stringify(response, null, 2);
+
+                if (response && response.data) {
+                    const tensions = response.data.map(point => point.tension);
+                    const moistureContents = response.data.map(point => point.moistureContent);
+
+                    const ctx = document.getElementById('test-chart').getContext('2d');
+
+                    // Destroy existing chart if it exists
+                    if (window.testChart) {
+                        window.testChart.destroy();
+                    }
+
+                    window.testChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: tensions,
+                            datasets: [{
+                                label: 'Volumetric Water Content (%)',
+                                data: moistureContents,
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Matric Potential (kPa)'
+                                    },
+                                    type: 'logarithmic'
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Volumetric Water Content (%)'
+                                    },
+                                    min: 0,
+                                    max: 60
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Test error:', error);
+                document.getElementById('api-response').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function test3DProfile() {
+            try {
+                const demoData = {
+                    sand: 40,
+                    clay: 30,
+                    organicMatter: 2.5
+                }; const encodedData = btoa(JSON.stringify(demoData));
+                const response = await apiClient.getSoilProfile3DDemo(encodedData);
+
+                document.getElementById('api-response').textContent = JSON.stringify(response, null, 2);
+            } catch (error) {
+                console.error('Test error:', error);
+                document.getElementById('api-response').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+
+</html>

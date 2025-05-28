@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart.js Debug Test</title>
+    <!-- Try multiple Chart.js CDN sources -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <h1>Chart.js Debug Test</h1>
+    <p>Testing Chart.js loading and functionality</p>
+
+    <div id="debug-info" style="background: #f0f0f0; padding: 10px; margin: 10px 0;">
+        <h3>Debug Information:</h3>
+        <div id="chart-status">Checking Chart.js...</div>
+    </div>
+
+    <div style="width: 400px; height: 400px;">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <button onclick="testChart()">Test Chart Creation</button>
+    <button onclick="testAPI()">Test API + Chart</button>
+
+    <div id="results" style="margin-top: 20px; padding: 10px; background: #f0f0f0;"></div>
+
+    <script src="assets/js/apiClient.js?v=3.0"></script>
+    <script>
+        // Debug Chart.js loading
+        document.addEventListener('DOMContentLoaded', function () {
+            const statusDiv = document.getElementById('chart-status');
+
+            console.log('DOM loaded, checking Chart.js...');
+            console.log('typeof Chart:', typeof Chart);
+            console.log('Chart object:', window.Chart);
+
+            setTimeout(() => {
+                if (typeof Chart !== 'undefined') {
+                    statusDiv.innerHTML = '✅ Chart.js loaded successfully! Version: ' + (Chart.version || 'unknown');
+                    statusDiv.style.color = 'green';
+                } else {
+                    statusDiv.innerHTML = '❌ Chart.js not loaded - trying alternative CDN...';
+                    statusDiv.style.color = 'red';
+
+                    // Try alternative CDN
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
+                    script.onload = function () {
+                        console.log('Chart.js loaded from alternative CDN');
+                        statusDiv.innerHTML = '✅ Chart.js loaded from alternative CDN! Version: ' + (Chart.version || 'unknown');
+                        statusDiv.style.color = 'green';
+                    };
+                    script.onerror = function () {
+                        console.log('Failed to load Chart.js from alternative CDN');
+                        statusDiv.innerHTML = '❌ Failed to load Chart.js from any CDN';
+                    };
+                    document.head.appendChild(script);
+                }
+            }, 1000);
+        });
+
+        // Test basic Chart.js functionality
+        function testChart() {
+            const results = document.getElementById('results');
+
+            try {
+                if (typeof Chart === 'undefined') {
+                    throw new Error('Chart.js is not loaded');
+                }
+
+                const ctx = document.getElementById('myChart').getContext('2d');
+
+                // Destroy existing chart if any
+                const existingChart = Chart.getChart(ctx);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                        datasets: [{
+                            label: 'Test Data',
+                            data: [12, 19, 3, 5, 2],
+                            borderColor: 'rgb(75, 192, 192)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+
+                results.innerHTML = '<p style="color: green;">✅ Chart.js working correctly!</p>';
+            } catch (error) {
+                results.innerHTML = '<p style="color: red;">❌ Chart.js error: ' + error.message + '</p>';
+                console.error('Chart error:', error);
+            }
+        }
+
+        // Test API + Chart integration
+        async function testAPI() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>🔄 Testing API...</p>';
+
+            try {
+                if (typeof Chart === 'undefined') {
+                    throw new Error('Chart.js is not loaded');
+                }
+
+                const apiClient = new FlahaSoilAPI();
+
+                // Create sample data
+                const sampleData = {
+                    sand: 45,
+                    clay: 25,
+                    organicMatter: 3.2,
+                    densityFactor: 1.35
+                };
+
+                const encodedData = btoa(JSON.stringify(sampleData));
+
+                // Test moisture-tension curve API
+                const response = await apiClient.getMoistureTensionCurveDemo(encodedData);
+
+                if (response.success && response.data) {
+                    // Create chart with API data
+                    const ctx = document.getElementById('myChart').getContext('2d');
+
+                    // Clear any existing chart
+                    const existingChart = Chart.getChart(ctx);
+                    if (existingChart) {
+                        existingChart.destroy();
+                    }
+
+                    const tensions = response.data.map(point => point.tension);
+                    const moistureContents = response.data.map(point => point.moistureContent);
+
+                    const chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: tensions,
+                            datasets: [{
+                                label: 'Moisture Content (%)',
+                                data: moistureContents,
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Tension (kPa)'
+                                    },
+                                    type: 'logarithmic'
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Volumetric Water Content (%)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    results.innerHTML = '<p style="color: green;">✅ API + Chart integration working!</p>' +
+                        '<p>Data points: ' + response.data.length + '</p>' +
+                        '<p>Demo mode: ' + (response.demo ? 'Yes' : 'No') + '</p>';
+                } else {
+                    results.innerHTML = '<p style="color: red;">❌ API returned invalid data</p>';
+                }
+
+            } catch (error) {
+                results.innerHTML = '<p style="color: red;">❌ API test failed: ' + error.message + '</p>';
+                console.error('API test error:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>

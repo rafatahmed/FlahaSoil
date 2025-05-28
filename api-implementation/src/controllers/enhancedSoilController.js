@@ -778,30 +778,27 @@ class EnhancedSoilController extends SoilController {
 		try {
 			const { demoData } = req.params;
 
-			// Parse demo data (base64 encoded soil parameters)
+			// Parse demo data
 			let soilParams;
 			try {
 				const decoded = Buffer.from(demoData, "base64").toString("ascii");
 				soilParams = JSON.parse(decoded);
 			} catch (parseError) {
 				return res.status(400).json({ error: "Invalid demo data format" });
-			}
-
-			// Generate moisture-tension curve for demo
+			} // Generate moisture tension curve for demo
 			const curveData =
 				EnhancedSoilCalculationService.generateMoistureTensionCurve(
 					soilParams.sand,
 					soilParams.clay,
-					soilParams.organicMatter || 2.5,
-					soilParams.densityFactor || 1.0,
-					soilParams.region || "central"
+					soilParams.om || soilParams.organicMatter || 2.5,
+					soilParams.bulkDensity || soilParams.densityFactor || 1.35
 				);
 
 			res.json({
 				success: true,
 				data: curveData,
 				demo: true,
-				note: "Demo visualization - register for interactive features",
+				note: "Demo moisture-tension curve - register for full interactive features",
 			});
 		} catch (error) {
 			console.error("Demo moisture-tension curve error:", error);
@@ -827,9 +824,9 @@ class EnhancedSoilController extends SoilController {
 			const profileData = EnhancedSoilCalculationService.calculateSoilProfile3D(
 				soilParams.sand,
 				soilParams.clay,
-				soilParams.organicMatter || 2.5,
-				soilParams.densityFactor || 1.0,
-				100 // depth in cm
+				soilParams.om || soilParams.organicMatter || 2.5,
+				soilParams.bulkDensity || soilParams.densityFactor || 1.35,
+				soilParams.soilDepth || 100 // depth in cm
 			);
 
 			res.json({

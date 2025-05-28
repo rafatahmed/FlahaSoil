@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inline Chart.js Test</title>
+</head>
+
+<body>
+    <h1>Inline Chart.js Test</h1>
+    <div id="status" style="padding: 10px; margin: 10px 0; background: #f0f0f0;">
+        Loading Chart.js...
+    </div>
+
+    <div style="width: 400px; height: 400px;">
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <button onclick="createChart()">Create Chart</button>
+    <div id="result"></div>
+
+    <script>
+        // Load Chart.js dynamically and test
+        function loadChartJS() {
+            const status = document.getElementById('status');
+
+            // Try loading Chart.js
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+
+            script.onload = function () {
+                status.innerHTML = '✅ Chart.js loaded successfully!';
+                status.style.background = '#d4edda';
+                status.style.color = '#155724';
+                console.log('Chart.js loaded, version:', Chart.version);
+            };
+
+            script.onerror = function () {
+                status.innerHTML = '❌ Failed to load Chart.js';
+                status.style.background = '#f8d7da';
+                status.style.color = '#721c24';
+
+                // Try alternative CDN
+                const altScript = document.createElement('script');
+                altScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
+                altScript.onload = function () {
+                    status.innerHTML = '✅ Chart.js loaded from alternative CDN!';
+                    status.style.background = '#d4edda';
+                    status.style.color = '#155724';
+                };
+                altScript.onerror = function () {
+                    status.innerHTML = '❌ Failed to load Chart.js from any CDN';
+                };
+                document.head.appendChild(altScript);
+            };
+
+            document.head.appendChild(script);
+        }
+
+        function createChart() {
+            const result = document.getElementById('result');
+
+            try {
+                if (typeof Chart === 'undefined') {
+                    throw new Error('Chart.js is not available');
+                }
+
+                const ctx = document.getElementById('myChart').getContext('2d');
+
+                // Destroy existing chart
+                const existingChart = Chart.getChart(ctx);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                const myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['0.1', '1', '10', '100', '1000', '15000'],
+                        datasets: [{
+                            label: 'Moisture Content (%)',
+                            data: [45, 42, 38, 32, 28, 20],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Tension (kPa)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Volumetric Water Content (%)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                result.innerHTML = '<p style="color: green;">✅ Chart created successfully!</p>';
+
+            } catch (error) {
+                result.innerHTML = '<p style="color: red;">❌ Error: ' + error.message + '</p>';
+                console.error('Chart creation error:', error);
+            }
+        }
+
+        // Load Chart.js when page loads
+        window.addEventListener('load', loadChartJS);
+    </script>
+</body>
+
+</html>
