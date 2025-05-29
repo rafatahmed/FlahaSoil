@@ -100,12 +100,20 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/soil/analyze`, {
+			// Use demo endpoint for unauthenticated users
+			const endpoint = this.token ? "/soil/analyze" : "/soil/demo/analyze";
+			const headers = {
+				"Content-Type": "application/json",
+			};
+
+			// Only add Authorization header if token exists
+			if (this.token) {
+				headers.Authorization = `Bearer ${this.token}`;
+			}
+
+			const response = await fetch(`${this.baseURL}${endpoint}`, {
 				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: this.token ? `Bearer ${this.token}` : "",
-				},
+				headers: headers,
 				body: JSON.stringify(soilData),
 			});
 
@@ -652,7 +660,7 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/user/profile`, {
+			const response = await fetch(`${this.baseURL}/auth/profile`, {
 				method: "GET",
 				headers: {
 					Authorization: `Bearer ${this.token}`,
@@ -708,7 +716,7 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/user/profile`, {
+			const response = await fetch(`${this.baseURL}/auth/profile`, {
 				method: "PUT",
 				headers: {
 					"Content-Type": "application/json",
