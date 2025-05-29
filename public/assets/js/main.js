@@ -60,7 +60,135 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Check authentication status and update UI
 	checkAuthenticationStatus();
+
+	// Initialize tier-specific UI
+	initializeTierSpecificUI();
+
+	// Make functions available globally for debugging
+	window.initializeTierSpecificUI = initializeTierSpecificUI;
+	window.updatePlanSpecificSections = updatePlanSpecificSections;
+	window.fixProfessionalOverlays = fixProfessionalOverlays;
 });
+
+/**
+ * Fix professional overlays - manual function for debugging
+ */
+function fixProfessionalOverlays() {
+	const userStr = localStorage.getItem("flahasoil_user");
+	const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
+
+	console.log("🔧 Manually fixing professional overlays for plan:", userPlan);
+
+	// Get both professional overlays
+	const professionalUpgradeOverlay = document.getElementById(
+		"professionalUpgradeOverlay"
+	);
+	const professionalResultsUpgradeOverlay = document.getElementById(
+		"professionalResultsUpgradeOverlay"
+	);
+
+	// Force hide for professional users
+	if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+		if (professionalUpgradeOverlay) {
+			professionalUpgradeOverlay.style.display = "none";
+			console.log("🔧 ✅ Manually hiding professional features overlay");
+		}
+		if (professionalResultsUpgradeOverlay) {
+			professionalResultsUpgradeOverlay.style.display = "none";
+			console.log("🔧 ✅ Manually hiding professional results overlay");
+		}
+	} else {
+		if (professionalUpgradeOverlay) {
+			professionalUpgradeOverlay.style.display = "flex";
+			console.log("🔧 ⚠️ Manually showing professional features overlay");
+		}
+		if (professionalResultsUpgradeOverlay) {
+			professionalResultsUpgradeOverlay.style.display = "flex";
+			console.log("🔧 ⚠️ Manually showing professional results overlay");
+		}
+	}
+}
+
+/**
+ * Initialize tier-specific UI elements
+ */
+function initializeTierSpecificUI() {
+	const userStr = localStorage.getItem("flahasoil_user");
+	const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
+
+	console.log("Initializing tier-specific UI for plan:", userPlan);
+
+	// Initialize upgrade overlays based on user plan
+	const professionalUpgradeOverlay = document.getElementById(
+		"professionalUpgradeOverlay"
+	);
+	const professionalResultsUpgradeOverlay = document.getElementById(
+		"professionalResultsUpgradeOverlay"
+	);
+	const enterpriseUpgradeOverlay = document.getElementById(
+		"enterpriseResultsUpgradeOverlay"
+	);
+
+	// Handle professional tier overlays (both input section and results section)
+	if (professionalUpgradeOverlay) {
+		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+			professionalUpgradeOverlay.style.display = "none";
+			console.log(
+				"✅ Hiding professional features upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		} else {
+			professionalUpgradeOverlay.style.display = "flex";
+			console.log(
+				"⚠️ Showing professional features upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		}
+	}
+
+	if (professionalResultsUpgradeOverlay) {
+		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+			professionalResultsUpgradeOverlay.style.display = "none";
+			console.log(
+				"✅ Hiding professional results upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		} else {
+			professionalResultsUpgradeOverlay.style.display = "flex";
+			console.log(
+				"⚠️ Showing professional results upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		}
+	}
+
+	// Handle enterprise tier overlay
+	if (enterpriseUpgradeOverlay) {
+		if (userPlan === "ENTERPRISE") {
+			enterpriseUpgradeOverlay.style.display = "none";
+			console.log("Hiding enterprise upgrade overlay for", userPlan, "user");
+		} else {
+			enterpriseUpgradeOverlay.style.display = "flex";
+			console.log("Showing enterprise upgrade overlay for", userPlan, "user");
+		}
+	}
+
+	// Show/hide professional results section
+	const professionalResults = document.getElementById("professionalResults");
+	if (professionalResults) {
+		professionalResults.style.display = "block";
+	}
+
+	// Show/hide enterprise results section
+	const enterpriseResults = document.getElementById("enterpriseResults");
+	if (enterpriseResults) {
+		enterpriseResults.style.display = "block";
+	}
+}
 
 /**
  * Check authentication status and update UI
@@ -109,6 +237,11 @@ function showAuthenticatedUI(user) {
 
 	// Update plan badge
 	updatePlanStatusUI(user.tier, true);
+
+	// Update tier-specific UI after authentication
+	setTimeout(() => {
+		initializeTierSpecificUI();
+	}, 100);
 }
 
 /**
@@ -444,24 +577,94 @@ function showAuthenticationPrompt() {
  * @param {Object} waterCharacteristics - Soil analysis results
  */
 function updatePlanSpecificSections(userPlan, waterCharacteristics) {
+	console.log("Updating plan-specific sections for plan:", userPlan);
+
 	// Show/hide professional features
 	const professionalFeatures = document.getElementById("professionalFeatures");
 	const professionalResults = document.getElementById("professionalResults");
+	const professionalUpgradeOverlay = document.getElementById(
+		"professionalUpgradeOverlay"
+	);
+	const professionalResultsUpgradeOverlay = document.getElementById(
+		"professionalResultsUpgradeOverlay"
+	);
 
 	if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
 		if (professionalFeatures) professionalFeatures.style.display = "block";
 		if (professionalResults) professionalResults.style.display = "block";
+
+		// Hide both professional upgrade overlays for professional users
+		if (professionalUpgradeOverlay) {
+			professionalUpgradeOverlay.style.display = "none";
+			console.log(
+				"✅ Hiding professional features upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		}
+		if (professionalResultsUpgradeOverlay) {
+			professionalResultsUpgradeOverlay.style.display = "none";
+			console.log(
+				"✅ Hiding professional results upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		}
 	} else {
 		if (professionalFeatures) professionalFeatures.style.display = "none";
-		if (professionalResults) professionalResults.style.display = "none";
+		if (professionalResults) professionalResults.style.display = "block";
+
+		// Show both professional upgrade overlays for free users
+		if (professionalUpgradeOverlay) {
+			professionalUpgradeOverlay.style.display = "flex";
+			console.log(
+				"⚠️ Showing professional features upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		}
+		if (professionalResultsUpgradeOverlay) {
+			professionalResultsUpgradeOverlay.style.display = "flex";
+			console.log(
+				"⚠️ Showing professional results upgrade overlay for",
+				userPlan,
+				"user"
+			);
+		}
 	}
 
 	// Show/hide enterprise features
 	const enterpriseResults = document.getElementById("enterpriseResults");
+	const enterpriseUpgradeOverlay = document.getElementById(
+		"enterpriseResultsUpgradeOverlay"
+	);
+
 	if (userPlan === "ENTERPRISE") {
-		if (enterpriseResults) enterpriseResults.style.display = "block";
+		if (enterpriseResults) {
+			enterpriseResults.style.display = "block";
+			// Hide upgrade overlay for enterprise users
+			if (enterpriseUpgradeOverlay) {
+				enterpriseUpgradeOverlay.style.display = "none";
+				console.log(
+					"✅ Hiding enterprise upgrade overlay for",
+					userPlan,
+					"user"
+				);
+			}
+		}
 	} else {
-		if (enterpriseResults) enterpriseResults.style.display = "none";
+		if (enterpriseResults) {
+			enterpriseResults.style.display = "block";
+			// Show upgrade overlay for non-enterprise users
+			if (enterpriseUpgradeOverlay) {
+				enterpriseUpgradeOverlay.style.display = "flex";
+				console.log(
+					"⚠️ Showing enterprise upgrade overlay for",
+					userPlan,
+					"user"
+				);
+			}
+		}
 	}
 
 	// Update confidence intervals for expert mode
@@ -494,6 +697,229 @@ function showConfidenceIntervals(waterCharacteristics) {
 }
 
 /**
+ * Update soil analysis - main function called by update button
+ */
+async function updateSoilAnalysis() {
+	try {
+		// Show loading state
+		showLoadingState();
+
+		// Get current input values
+		const sandValue = parseFloat(
+			document.getElementById("sand-input")?.value || 33
+		);
+		const clayValue = parseFloat(
+			document.getElementById("clay-input")?.value || 33
+		);
+		const siltValue = parseFloat(
+			document.getElementById("silt-input")?.value || 34
+		);
+		const omValue = parseFloat(
+			document.getElementById("om-input")?.value || 2.5
+		);
+		const densityValue = parseFloat(
+			document.getElementById("density-input")?.value || 1.3
+		);
+
+		// Get advanced parameters if available
+		const gravelContent = parseFloat(
+			document.getElementById("gravel-content-input")?.value || 0
+		);
+		const electricalConductivity = parseFloat(
+			document.getElementById("electrical-conductivity-input")?.value || 0
+		);
+		const aggregateStability = parseFloat(
+			document.getElementById("aggregate-stability-input")?.value || 75
+		);
+		const slope = parseFloat(
+			document.getElementById("slope-input")?.value || 2
+		);
+
+		// Validate inputs
+		if (sandValue + clayValue > 100) {
+			showErrorMessage("Sand and clay percentages cannot exceed 100% combined");
+			return;
+		}
+
+		// Prepare soil data
+		const soilData = {
+			sand: sandValue,
+			clay: clayValue,
+			silt: siltValue,
+			organicMatter: omValue,
+			densityFactor: densityValue,
+			gravelContent: gravelContent,
+			electricalConductivity: electricalConductivity,
+			aggregateStability: aggregateStability,
+			slope: slope,
+		};
+
+		// Get user plan
+		const userStr = localStorage.getItem("flahasoil_user");
+		const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
+
+		// Call appropriate API endpoint based on user plan
+		let result;
+		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+			result = await window.flahaSoilAPI.analyzeSoilAdvanced(soilData);
+		} else {
+			result = await window.flahaSoilAPI.analyzeSoil(soilData);
+		}
+
+		if (result.success) {
+			// Update all UI elements
+			updateWaterCharacteristics(result.data);
+			updatePlanSpecificSections(userPlan, result.data);
+			showSuccessMessage("Soil analysis updated successfully!");
+		} else {
+			showErrorMessage(result.error || "Failed to update soil analysis");
+		}
+	} catch (error) {
+		console.error("Error updating soil analysis:", error);
+		showErrorMessage("Failed to update soil analysis. Please try again.");
+	} finally {
+		hideLoadingState();
+	}
+}
+
+/**
+ * Update plan status UI
+ * @param {string} tier - User tier
+ * @param {boolean} isAuthenticated - Whether user is authenticated
+ */
+function updatePlanStatusUI(tier, isAuthenticated) {
+	const planBadge = document.querySelector(".plan-badge");
+	const usageCounter = document.querySelector(".usage-counter");
+
+	if (planBadge) {
+		planBadge.textContent = tier;
+		planBadge.className = `plan-badge ${tier.toLowerCase()}`;
+	}
+
+	if (usageCounter && isAuthenticated) {
+		// Update usage counter based on tier
+		const usageCount = window.flahaSoilAPI?.usageCount || 0;
+		const maxUsage =
+			tier === "FREE" ? 50 : tier === "PROFESSIONAL" ? 1000 : "∞";
+		usageCounter.textContent = `${usageCount}/${maxUsage} analyses`;
+	} else if (usageCounter) {
+		usageCounter.textContent = "Demo Mode";
+	}
+}
+
+/**
+ * Update usage counter
+ */
+function updateUsageCounter() {
+	const userStr = localStorage.getItem("flahasoil_user");
+	if (userStr) {
+		const user = JSON.parse(userStr);
+		updatePlanStatusUI(user.tier, true);
+	} else {
+		updatePlanStatusUI("FREE", false);
+	}
+}
+
+/**
+ * Update water characteristics display - main function for updating UI
+ * @param {Object} waterCharacteristics - Soil analysis results from API
+ */
+function updateWaterCharacteristics(waterCharacteristics) {
+	try {
+		// Get user plan for tier-specific features
+		const userStr = localStorage.getItem("flahasoil_user");
+		const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
+
+		// Update all display elements using the ui-updates.js functions
+		updateDisplayElements(waterCharacteristics, userPlan);
+
+		// Update plan-specific sections
+		updatePlanSpecificSections(userPlan, waterCharacteristics);
+
+		// Update professional tier results if applicable
+		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+			updateProfessionalResults(waterCharacteristics);
+		}
+
+		// Update enterprise tier results if applicable
+		if (userPlan === "ENTERPRISE") {
+			updateEnterpriseResults(waterCharacteristics);
+		}
+	} catch (error) {
+		console.error("Error updating water characteristics:", error);
+		showErrorMessage("Failed to update soil analysis display");
+	}
+}
+
+/**
+ * Update professional tier results
+ * @param {Object} waterCharacteristics - Soil analysis results
+ */
+function updateProfessionalResults(waterCharacteristics) {
+	try {
+		// Update air-entry tension
+		const aetElement = document.getElementById("air-entry-tension");
+		if (aetElement && waterCharacteristics.airEntryTension) {
+			aetElement.textContent = parseFloat(
+				waterCharacteristics.airEntryTension
+			).toFixed(1);
+		}
+
+		// Update bulk density
+		const bdElement = document.getElementById("bulk-density");
+		if (bdElement && waterCharacteristics.bulkDensity) {
+			bdElement.textContent = parseFloat(
+				waterCharacteristics.bulkDensity
+			).toFixed(2);
+		}
+
+		// Update lambda value
+		const lambdaElement = document.getElementById("lambda-value");
+		if (lambdaElement && waterCharacteristics.lambda) {
+			lambdaElement.textContent = parseFloat(
+				waterCharacteristics.lambda
+			).toFixed(3);
+		}
+	} catch (error) {
+		console.error("Error updating professional results:", error);
+	}
+}
+
+/**
+ * Update enterprise tier results
+ * @param {Object} waterCharacteristics - Soil analysis results
+ */
+function updateEnterpriseResults(waterCharacteristics) {
+	try {
+		// Update bulk PAW
+		const bulkPawElement = document.getElementById("bulk-paw");
+		if (bulkPawElement && waterCharacteristics.bulkPAW) {
+			bulkPawElement.textContent = parseFloat(
+				waterCharacteristics.bulkPAW
+			).toFixed(2);
+		}
+
+		// Update bulk conductivity
+		const bulkCondElement = document.getElementById("bulk-conductivity");
+		if (bulkCondElement && waterCharacteristics.bulkConductivity) {
+			bulkCondElement.textContent = parseFloat(
+				waterCharacteristics.bulkConductivity
+			).toFixed(1);
+		}
+
+		// Update osmotic potential
+		const osmoticElement = document.getElementById("osmotic-potential");
+		if (osmoticElement && waterCharacteristics.osmoticPotential) {
+			osmoticElement.textContent = parseFloat(
+				waterCharacteristics.osmoticPotential
+			).toFixed(1);
+		}
+	} catch (error) {
+		console.error("Error updating enterprise results:", error);
+	}
+}
+
+/**
  * Show plan-specific notifications
  * @param {string} userPlan - Current user plan
  * @param {Object} response - API response
@@ -506,7 +932,105 @@ function showPlanSpecificNotifications(userPlan, response) {
 	if (userPlan === "FREE" && response.upgradePrompt) {
 		setTimeout(() => {
 			showUpgradePrompt(response.upgradePrompt);
-		}, 3000);
+		}, 2000);
+	}
+}
+
+/**
+ * Show plan upgrade prompt modal
+ * @param {string} message - Upgrade message
+ * @param {string} targetPlan - Target plan (PROFESSIONAL/ENTERPRISE)
+ * @param {string} currentPlan - Current plan
+ */
+function showPlanUpgradePrompt(
+	message,
+	targetPlan = "PROFESSIONAL",
+	currentPlan = "FREE"
+) {
+	const modal = document.getElementById("planUpgradeModal");
+	if (!modal) return;
+
+	// Update modal content
+	const title = document.getElementById("upgradeModalTitle");
+	const upgradeMessage = document.getElementById("upgradeMessage");
+	const currentPlanCard = document.getElementById("currentPlanCard");
+	const recommendedPlanCard = document.getElementById("recommendedPlanCard");
+
+	if (title) {
+		title.textContent = `Upgrade to ${targetPlan}`;
+	}
+
+	if (upgradeMessage) {
+		upgradeMessage.innerHTML = `<p>${
+			message || "Unlock advanced features with a plan upgrade!"
+		}</p>`;
+	}
+
+	// Update current plan card
+	if (currentPlanCard) {
+		currentPlanCard.querySelector("h3").textContent = currentPlan;
+	}
+
+	// Update recommended plan card
+	if (recommendedPlanCard) {
+		recommendedPlanCard.querySelector("h3").textContent = targetPlan;
+		const upgradeBtn = recommendedPlanCard.querySelector(".btn-upgrade");
+		if (upgradeBtn) {
+			upgradeBtn.onclick = () => handlePlanUpgrade(targetPlan);
+		}
+	}
+
+	// Show modal
+	modal.style.display = "flex";
+}
+
+/**
+ * Hide plan upgrade modal
+ */
+function hidePlanUpgradeModal() {
+	const modal = document.getElementById("planUpgradeModal");
+	if (modal) {
+		modal.style.display = "none";
+	}
+}
+
+/**
+ * Handle plan upgrade
+ * @param {string} targetPlan - Target plan to upgrade to
+ */
+function handlePlanUpgrade(targetPlan) {
+	// Redirect to profile page with upgrade section
+	window.location.href = `./profile.html#upgrade-${targetPlan.toLowerCase()}`;
+}
+
+/**
+ * Show notification banner
+ * @param {string} message - Notification message
+ * @param {string} type - Notification type (info, warning, success)
+ */
+function showNotificationBanner(message, type = "info") {
+	const banner = document.getElementById("notificationBanner");
+	const messageElement = document.getElementById("notificationMessage");
+
+	if (banner && messageElement) {
+		messageElement.textContent = message;
+		banner.className = `notification-banner ${type}`;
+		banner.style.display = "block";
+
+		// Auto-hide after 5 seconds
+		setTimeout(() => {
+			hideNotificationBanner();
+		}, 5000);
+	}
+}
+
+/**
+ * Hide notification banner
+ */
+function hideNotificationBanner() {
+	const banner = document.getElementById("notificationBanner");
+	if (banner) {
+		banner.style.display = "none";
 	}
 }
 
