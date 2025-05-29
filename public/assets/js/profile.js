@@ -25,6 +25,147 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 /**
+ * Load subscription details
+ */
+async function loadSubscriptionDetails() {
+	try {
+		// Get subscription info from API
+		const response = await window.flahaSoilAPI.getUserProfile();
+
+		if (response.success && response.data) {
+			subscriptionData = {
+				tier: response.data.tier,
+				status: response.data.subscriptionStatus || "active",
+				nextBilling: response.data.nextBilling,
+				features: getFeaturesByTier(response.data.tier),
+			};
+
+			updateSubscriptionUI();
+		}
+	} catch (error) {
+		console.error("Error loading subscription details:", error);
+	}
+}
+
+/**
+ * Load usage analytics
+ */
+async function loadUsageAnalytics() {
+	try {
+		// This would typically come from API
+		usageAnalytics = {
+			dailyUsage: [5, 8, 12, 6, 15, 9, 11],
+			monthlyTrend: [45, 52, 38, 61, 73, 67],
+			topFeatures: [
+				{ name: "Basic Analysis", usage: 85 },
+				{ name: "Advanced Parameters", usage: 42 },
+				{ name: "Export Reports", usage: 23 },
+			],
+		};
+
+		updateAnalyticsUI();
+	} catch (error) {
+		console.error("Error loading usage analytics:", error);
+	}
+}
+
+/**
+ * Setup real-time updates
+ */
+function setupRealTimeUpdates() {
+	// Refresh usage statistics every 5 minutes
+	setInterval(loadUserStatistics, 5 * 60 * 1000);
+}
+
+/**
+ * Get features by tier
+ */
+function getFeaturesByTier(tier) {
+	const features = {
+		FREE: [
+			"50 analyses per month",
+			"Basic soil calculations",
+			"Texture classification",
+		],
+		PROFESSIONAL: [
+			"1,000 analyses per month",
+			"Advanced soil calculations",
+			"Analysis history",
+			"Export capabilities",
+			"Priority support",
+		],
+		ENTERPRISE: [
+			"Unlimited analyses",
+			"Full API access",
+			"Bulk analysis",
+			"Custom integrations",
+			"Dedicated support",
+		],
+	};
+
+	return features[tier] || features.FREE;
+}
+
+/**
+ * Update subscription UI
+ */
+function updateSubscriptionUI() {
+	if (!subscriptionData) return;
+
+	// Update plan badge
+	const planBadge = document.getElementById("planBadge");
+	if (planBadge) {
+		planBadge.textContent = subscriptionData.tier;
+		planBadge.className = `plan-badge plan-${subscriptionData.tier.toLowerCase()}`;
+	}
+
+	// Update features list
+	const featuresList = document.getElementById("featuresList");
+	if (featuresList && subscriptionData.features) {
+		featuresList.innerHTML = subscriptionData.features
+			.map(
+				(feature) => `<li><span class="feature-check">✓</span> ${feature}</li>`
+			)
+			.join("");
+	}
+
+	// Update billing info
+	if (subscriptionData.nextBilling) {
+		const billingDate = document.getElementById("nextBilling");
+		if (billingDate) {
+			billingDate.textContent = new Date(
+				subscriptionData.nextBilling
+			).toLocaleDateString();
+		}
+	}
+}
+
+/**
+ * Update analytics UI
+ */
+function updateAnalyticsUI() {
+	if (!usageAnalytics) return;
+
+	// Update top features
+	const topFeatures = document.getElementById("topFeatures");
+	if (topFeatures && usageAnalytics.topFeatures) {
+		topFeatures.innerHTML = usageAnalytics.topFeatures
+			.map(
+				(feature) => `
+				<div class="feature-usage">
+					<span class="feature-name">${feature.name}</span>
+					<div class="usage-bar">
+						<div class="usage-fill" style="width: ${feature.usage}%"></div>
+					</div>
+					<span class="usage-count">${feature.usage}</span>
+				</div>
+			`
+			)
+			.join("");
+	}
+}
+
+/**
  * Initialize API client
  */
 function initializeAPIClient() {
@@ -116,17 +257,33 @@ function updateEmailVerificationStatus() {
 }
 
 /**
- * Load user statistics
+ * Load user statistics from API
  */
 async function loadUserStatistics() {
 	try {
-		// Get usage count from API client
-		const usageCount = window.flahaSoilAPI.usageCount || 0;
-		const maxUsage = window.flahaSoilAPI.maxFreeUsage || 50;
-		const remaining =
-			currentUser.tier === "FREE"
-				? Math.max(0, maxUsage - usageCount)
-				: "Unlimited";
+		// Try to get usage statistics from API
+		const response = await window.flahaSoilAPI.getUserUsageStats();
+
+		let usageCount, maxUsage, remaining;
+
+		if (response.success) {
+			// Use API data
+			userStats = response.data;
+			usageCount = userStats.current || 0;
+			maxUsage = userStats.limit || 50;
+			remaining =
+				currentUser.tier === "FREE"
+					? Math.max(0, maxUsage - usageCount)
+					: "Unlimited";
+		} else {
+			// Fallback to local data
+			usageCount = window.flahaSoilAPI.usageCount || 0;
+			maxUsage = window.flahaSoilAPI.maxFreeUsage || 50;
+			remaining =
+				currentUser.tier === "FREE"
+					? Math.max(0, maxUsage - usageCount)
+					: "Unlimited";
+		}
 
 		// Update statistics display
 		document.getElementById("totalAnalyses").textContent = usageCount;
@@ -147,6 +304,7 @@ async function loadUserStatistics() {
 		}
 	} catch (error) {
 		console.error("Error loading user statistics:", error);
+		showErrorMessage("Failed to load usage statistics");
 	}
 }
 

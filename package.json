@@ -1,5 +1,34 @@
 {
-  "dependencies": {
-    "node-fetch": "^3.3.2"
-  }
+	"name": "flahasoil",
+	"version": "2.0.0",
+	"description": "Advanced soil texture analysis tool with interactive USDA Soil Triangle visualization",
+	"main": "public/index.html",
+	"scripts": {
+		"start": "cd public && python -m http.server 3000 || npx live-server --port=3000",
+		"dev": "npx live-server public --port=3000",
+		"backend": "cd api-implementation && npm start",
+		"test": "cd tests && node test-enhanced-features.js"
+	},
+	"keywords": [
+		"soil",
+		"agriculture",
+		"precision-agriculture",
+		"soil-analysis",
+		"usda-triangle",
+		"flaha"
+	],
+	"author": "Flaha Agri Tech - Precision Agriculture Division",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/rafatahmed/FlahaSoil.git"
+	},
+	"homepage": "https://github.com/rafatahmed/FlahaSoil#readme",
+	"dependencies": {
+		"node-fetch": "^3.3.2"
+	},
+	"devDependencies": {},
+	"engines": {
+		"node": ">=14.0.0"
+	}
 }

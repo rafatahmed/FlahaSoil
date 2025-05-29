@@ -10,7 +10,303 @@ document.addEventListener("DOMContentLoaded", function () {
 
 	// Make it available globally for compatibility
 	window.flahaSoilAPI = flahaSoilAPI;
+
+	// Check authentication status and update UI
+	checkAuthenticationStatus();
 });
+
+/**
+ * Check authentication status and update UI
+ */
+function checkAuthenticationStatus() {
+	const token = localStorage.getItem("flahasoil_token");
+	const userStr = localStorage.getItem("flahasoil_user");
+
+	if (token && userStr) {
+		try {
+			const user = JSON.parse(userStr);
+			// Update API client with user data
+			if (window.flahaSoilAPI) {
+				window.flahaSoilAPI.setAuth(
+					token,
+					user.tier,
+					window.flahaSoilAPI.usageCount
+				);
+			}
+			showAuthenticatedUI(user);
+		} catch (error) {
+			console.error("Error parsing user data:", error);
+			showUnauthenticatedUI();
+		}
+	} else {
+		showUnauthenticatedUI();
+	}
+}
+
+/**
+ * Show UI for authenticated users
+ */
+function showAuthenticatedUI(user) {
+	// Hide auth section, show user section
+	const authSection = document.getElementById("authSection");
+	const userSection = document.getElementById("userSection");
+	const profileLink = document.getElementById("profileLink");
+	const headerUserName = document.getElementById("headerUserName");
+
+	if (authSection) authSection.style.display = "none";
+	if (userSection) userSection.style.display = "block";
+	if (profileLink) profileLink.style.display = "block";
+	if (headerUserName) headerUserName.textContent = user.name;
+
+	// Update plan badge
+	updatePlanStatusUI(user.tier, true);
+}
+
+/**
+ * Show UI for unauthenticated users
+ */
+function showUnauthenticatedUI() {
+	// Show auth section, hide user section
+	const authSection = document.getElementById("authSection");
+	const userSection = document.getElementById("userSection");
+	const profileLink = document.getElementById("profileLink");
+
+	if (authSection) authSection.style.display = "block";
+	if (userSection) userSection.style.display = "none";
+	if (profileLink) profileLink.style.display = "none";
+
+	// Update usage counter for free users
+	updateUsageCounter();
+}
+
+/**
+ * Logout user
+ */
+function logout() {
+	if (window.flahaSoilAPI) {
+		window.flahaSoilAPI.logout();
+	}
+
+	// Clear local storage
+	localStorage.removeItem("flahasoil_token");
+	localStorage.removeItem("flahasoil_user");
+	localStorage.removeItem("flahasoil_user_plan");
+
+	// Update UI
+	showUnauthenticatedUI();
+
+	// Redirect to landing page
+	window.location.href = "./landing.html";
+}
+
+/**
+ * Show login modal
+ */
+function showLoginModal() {
+	// Create login modal
+	const modal = document.createElement("div");
+	modal.className = "login-modal";
+	modal.innerHTML = `
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>Login to FlahaSoil</h3>
+				<button class="modal-close" onclick="closeLoginModal()">&times;</button>
+			</div>
+			<form id="login-form">
+				<div class="form-group">
+					<input type="email" name="email" placeholder="Email" required>
+				</div>
+				<div class="form-group">
+					<input type="password" name="password" placeholder="Password" required>
+				</div>
+				<button type="submit" class="btn-primary">Login</button>
+			</form>
+			<div class="modal-footer">
+				<p><a href="#" onclick="showSignupModal(); closeLoginModal()">Don't have an account? Sign up</a></p>
+			</div>
+		</div>
+		<div class="modal-backdrop" onclick="closeLoginModal()"></div>
+	`;
+
+	document.body.appendChild(modal);
+
+	// Handle form submission
+	document
+		.getElementById("login-form")
+		.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const formData = new FormData(e.target);
+
+			try {
+				const result = await window.flahaSoilAPI.login(
+					formData.get("email"),
+					formData.get("password")
+				);
+
+				if (result.success) {
+					// Store user data
+					localStorage.setItem("flahasoil_token", result.token);
+					localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+
+					// Update API client
+					window.flahaSoilAPI.setAuth(result.token, result.user.tier, 0);
+
+					closeLoginModal();
+					checkAuthenticationStatus(); // Refresh UI
+
+					showSuccessMessage("Login successful! Welcome back.");
+				} else {
+					showErrorMessage(result.error || "Login failed");
+				}
+			} catch (error) {
+				console.error("Login error:", error);
+				showErrorMessage("Login failed. Please try again.");
+			}
+		});
+}
+
+/**
+ * Close login modal
+ */
+function closeLoginModal() {
+	const modal = document.querySelector(".login-modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+
+/**
+ * Show signup modal
+ */
+function showSignupModal() {
+	// Create signup modal
+	const modal = document.createElement("div");
+	modal.className = "signup-modal";
+	modal.innerHTML = `
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>Sign Up for FlahaSoil</h3>
+				<button class="modal-close" onclick="closeSignupModal()">&times;</button>
+			</div>
+			<form id="signup-form">
+				<div class="form-group">
+					<input type="text" name="name" placeholder="Full Name" required>
+				</div>
+				<div class="form-group">
+					<input type="email" name="email" placeholder="Email" required>
+				</div>
+				<div class="form-group">
+					<input type="password" name="password" placeholder="Password" required minlength="6">
+				</div>
+				<button type="submit" class="btn-primary">Sign Up</button>
+			</form>
+			<div class="modal-footer">
+				<p><a href="#" onclick="showLoginModal(); closeSignupModal()">Already have an account? Login</a></p>
+			</div>
+		</div>
+		<div class="modal-backdrop" onclick="closeSignupModal()"></div>
+	`;
+
+	document.body.appendChild(modal);
+
+	// Handle form submission
+	document
+		.getElementById("signup-form")
+		.addEventListener("submit", async (e) => {
+			e.preventDefault();
+			const formData = new FormData(e.target);
+			const userData = {
+				email: formData.get("email"),
+				password: formData.get("password"),
+				name: formData.get("name"),
+			};
+
+			try {
+				const result = await window.flahaSoilAPI.register(userData);
+				if (result.success) {
+					// Store user data
+					localStorage.setItem("flahasoil_token", result.token);
+					localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+
+					// Update API client
+					window.flahaSoilAPI.setAuth(result.token, result.user.tier, 0);
+
+					closeSignupModal();
+					checkAuthenticationStatus(); // Refresh UI
+
+					showSuccessMessage(
+						"Account created successfully! Welcome to FlahaSoil."
+					);
+				} else {
+					showErrorMessage(result.error || "Registration failed");
+				}
+			} catch (error) {
+				console.error("Registration error:", error);
+				showErrorMessage("Registration failed. Please try again.");
+			}
+		});
+}
+
+/**
+ * Close signup modal
+ */
+function closeSignupModal() {
+	const modal = document.querySelector(".signup-modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+
+/**
+ * Show success message
+ */
+function showSuccessMessage(message) {
+	showToast(message, "success");
+}
+
+/**
+ * Show error message
+ */
+function showErrorMessage(message) {
+	showToast(message, "error");
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = "info") {
+	const toast = document.createElement("div");
+	toast.className = `toast ${type}`;
+	toast.textContent = message;
+
+	const colors = {
+		success: "#4CAF50",
+		error: "#f44336",
+		info: "#2196F3",
+		warning: "#ff9800",
+	};
+
+	toast.style.cssText = `
+		position: fixed;
+		top: 20px;
+		right: 20px;
+		background: ${colors[type]};
+		color: white;
+		padding: 15px 20px;
+		border-radius: 8px;
+		z-index: 3000;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		font-weight: 500;
+		max-width: 300px;
+		animation: slideInRight 0.3s ease-out;
+	`;
+
+	document.body.appendChild(toast);
+
+	setTimeout(() => {
+		toast.remove();
+	}, 4000);
+}
 
 // Utility Functions
 function showLoadingState() {
@@ -781,10 +1077,25 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 			electricalConductivity: advancedParams.electricalConductivity,
 		};
 
+		// Initialize API client if not already done
+		if (!window.flahaSoilAPI) {
+			window.flahaSoilAPI = new FlahaSoilAPI();
+		}
+
 		// Use API for all calculations
 		const response = await window.flahaSoilAPI.analyzeSoil(calculationParams);
 
 		if (!response.success) {
+			// Handle authentication errors first
+			if (
+				(response.error && response.error.includes("Access denied")) ||
+				(response.error && response.error.includes("No token provided"))
+			) {
+				// User not authenticated - show login prompt
+				showAuthenticationPrompt();
+				return;
+			}
+
 			// Handle different types of errors
 			if (response.upgradeRequired) {
 				showPlanUpgradePrompt(
@@ -835,9 +1146,21 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 		showPlanSpecificNotifications(userPlan, response);
 	} catch (error) {
 		console.error("Error updating water characteristics:", error);
-		showErrorMessage(
-			"Failed to calculate soil characteristics. Please try again."
-		);
+
+		// Check if error is authentication related
+		if (
+			error.message &&
+			(error.message.includes("Access denied") ||
+				error.message.includes("No token provided"))
+		) {
+			showAuthenticationPrompt();
+		} else {
+			// Use the toast function directly since showErrorMessage might not be in scope
+			showToast(
+				"Failed to calculate soil characteristics. Please try again.",
+				"error"
+			);
+		}
 	} finally {
 		// Hide loading state
 		hideLoadingState();
@@ -1515,6 +1838,57 @@ function showUpgradePrompt(message) {
  */
 function closeUpgradeModal() {
 	const modal = document.querySelector(".upgrade-modal");
+	if (modal) {
+		modal.remove();
+	}
+}
+
+/**
+ * Show authentication prompt for unauthenticated users
+ */
+function showAuthenticationPrompt() {
+	const modal = document.createElement("div");
+	modal.className = "auth-prompt-modal";
+	modal.innerHTML = `
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>🔐 Login Required</h3>
+				<button class="modal-close" onclick="closeAuthPrompt()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p>You need to be logged in to perform soil analysis calculations.</p>
+				<div class="auth-benefits">
+					<h4>With a FlahaSoil account you get:</h4>
+					<ul>
+						<li>✓ Professional soil analysis calculations</li>
+						<li>✓ Save and track your analysis history</li>
+						<li>✓ Export detailed reports</li>
+						<li>✓ Access to advanced features</li>
+					</ul>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button onclick="showLoginModal(); closeAuthPrompt();" class="btn btn-primary">
+					Login
+				</button>
+				<button onclick="showSignupModal(); closeAuthPrompt();" class="btn btn-secondary">
+					Create Account
+				</button>
+				<button onclick="closeAuthPrompt()" class="btn btn-outline">
+					Maybe Later
+				</button>
+			</div>
+		</div>
+		<div class="modal-backdrop" onclick="closeAuthPrompt()"></div>
+	`;
+	document.body.appendChild(modal);
+}
+
+/**
+ * Close authentication prompt
+ */
+function closeAuthPrompt() {
+	const modal = document.querySelector(".auth-prompt-modal");
 	if (modal) {
 		modal.remove();
 	}

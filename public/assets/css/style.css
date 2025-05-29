@@ -1381,6 +1381,156 @@ input:checked + .slider:before {
 	background: #1976d2;
 }
 
+/* Authentication Prompt Modal */
+.auth-prompt-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 2000;
+}
+
+.auth-prompt-modal .modal-content {
+	background: white;
+	border-radius: 12px;
+	padding: 0;
+	max-width: 500px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+	animation: modalSlideIn 0.3s ease-out;
+}
+
+.auth-prompt-modal .modal-header {
+	padding: 24px 24px 0 24px;
+	border-bottom: 1px solid #eee;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.auth-prompt-modal .modal-header h3 {
+	margin: 0;
+	color: var(--pa-accent);
+	font-size: 1.5em;
+}
+
+.auth-prompt-modal .modal-close {
+	background: none;
+	border: none;
+	font-size: 24px;
+	cursor: pointer;
+	color: #666;
+	padding: 0;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.auth-prompt-modal .modal-body {
+	padding: 24px;
+}
+
+.auth-prompt-modal .modal-body p {
+	margin-bottom: 20px;
+	color: #555;
+	font-size: 1.1em;
+}
+
+.auth-benefits {
+	background: #f8f9fa;
+	padding: 20px;
+	border-radius: 8px;
+	margin: 20px 0;
+}
+
+.auth-benefits h4 {
+	margin: 0 0 15px 0;
+	color: var(--pa-accent);
+	font-size: 1.1em;
+}
+
+.auth-benefits ul {
+	margin: 0;
+	padding-left: 0;
+	list-style: none;
+}
+
+.auth-benefits li {
+	padding: 8px 0;
+	color: #555;
+	font-size: 0.95em;
+}
+
+.auth-prompt-modal .modal-footer {
+	padding: 0 24px 24px 24px;
+	display: flex;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.auth-prompt-modal .btn {
+	flex: 1;
+	min-width: 120px;
+	padding: 12px 20px;
+	border: none;
+	border-radius: 6px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	text-align: center;
+}
+
+.auth-prompt-modal .btn-primary {
+	background: var(--pa-accent);
+	color: white;
+}
+
+.auth-prompt-modal .btn-primary:hover {
+	background: #1976d2;
+	transform: translateY(-1px);
+}
+
+.auth-prompt-modal .btn-secondary {
+	background: #6c757d;
+	color: white;
+}
+
+.auth-prompt-modal .btn-secondary:hover {
+	background: #5a6268;
+	transform: translateY(-1px);
+}
+
+.auth-prompt-modal .btn-outline {
+	background: transparent;
+	color: #6c757d;
+	border: 1px solid #dee2e6;
+}
+
+.auth-prompt-modal .btn-outline:hover {
+	background: #f8f9fa;
+	border-color: #adb5bd;
+}
+
+@keyframes modalSlideIn {
+	from {
+		opacity: 0;
+		transform: translateY(-50px) scale(0.9);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
 /* Plan-Based UI Styles */
 
 /* Plan badges */

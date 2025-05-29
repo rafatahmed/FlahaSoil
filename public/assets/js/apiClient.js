@@ -192,7 +192,7 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/soil/analyze-advanced`, {
+			const response = await fetch(`${this.baseURL}/soil/analyze/advanced`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -257,7 +257,7 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/soil/batch-analyze`, {
+			const response = await fetch(`${this.baseURL}/soil/analyze/batch`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -323,7 +323,7 @@ class FlahaSoilAPI {
 			}
 
 			const response = await fetch(
-				`${this.baseURL}/soil/history?page=${page}&limit=${limit}`,
+				`${this.baseURL}/soil/analyze/history?page=${page}&limit=${limit}`,
 				{
 					method: "GET",
 					headers: {
@@ -389,7 +389,7 @@ class FlahaSoilAPI {
 			}
 
 			const response = await fetch(
-				`${this.baseURL}/soil/export/${analysisId}?format=${format}`,
+				`${this.baseURL}/soil/analyze/export/${analysisId}?format=${format}`,
 				{
 					method: "GET",
 					headers: {
@@ -422,6 +422,61 @@ class FlahaSoilAPI {
 			}
 		} catch (error) {
 			console.error("Export failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
+	 * Get visualization data for charts and graphs
+	 * @param {string} analysisId - Analysis ID
+	 * @param {string} type - Visualization type (moisture-tension, conductivity, etc.)
+	 * @returns {Promise<Object>} Visualization data
+	 */
+	async getVisualizationData(analysisId, type) {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required.",
+					upgradeRequired: true,
+					requiredPlan: "PROFESSIONAL",
+				};
+			}
+
+			const response = await fetch(
+				`${this.baseURL}/soil/visualize/${analysisId}?type=${type}`,
+				{
+					method: "GET",
+					headers: {
+						Authorization: `Bearer ${this.token}`,
+					},
+				}
+			);
+
+			if (response.ok) {
+				return await response.json();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Failed to get visualization data",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Get visualization data failed:", error);
 			return {
 				success: false,
 				error: "Failed to connect to FlahaSoil servers.",
@@ -574,6 +629,165 @@ class FlahaSoilAPI {
 	logout() {
 		this.clearAuth();
 		return { success: true };
+	}
+
+	/**
+	 * Get user profile information
+	 * @returns {Promise<Object>} User profile data
+	 */
+	async getUserProfile() {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required.",
+				};
+			}
+
+			const response = await fetch(`${this.baseURL}/user/profile`, {
+				method: "GET",
+				headers: {
+					Authorization: `Bearer ${this.token}`,
+				},
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				// Update local user data
+				if (result.success && result.data) {
+					localStorage.setItem("flahasoil_user", JSON.stringify(result.data));
+					this.userPlan = result.data.tier || "FREE";
+					localStorage.setItem("flahasoil_user_plan", this.userPlan);
+				}
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Failed to get profile",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Get profile failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
+	 * Update user profile information
+	 * @param {Object} profileData - Profile data to update
+	 * @returns {Promise<Object>} Update result
+	 */
+	async updateUserProfile(profileData) {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required.",
+				};
+			}
+
+			const response = await fetch(`${this.baseURL}/user/profile`, {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${this.token}`,
+				},
+				body: JSON.stringify(profileData),
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				// Update local user data
+				if (result.success && result.data) {
+					localStorage.setItem("flahasoil_user", JSON.stringify(result.data));
+				}
+				return result;
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Failed to update profile",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Update profile failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
+	}
+
+	/**
+	 * Get user usage statistics
+	 * @returns {Promise<Object>} Usage statistics
+	 */
+	async getUserUsageStats() {
+		try {
+			if (!this.isOnline) {
+				return {
+					success: false,
+					error: "Internet connection required.",
+					requiresConnection: true,
+				};
+			}
+
+			if (!this.token) {
+				return {
+					success: false,
+					error: "Authentication required.",
+				};
+			}
+
+			const response = await fetch(`${this.baseURL}/user/usage`, {
+				method: "GET",
+				headers: {
+					Authorization: `Bearer ${this.token}`,
+				},
+			});
+
+			if (response.ok) {
+				return await response.json();
+			} else {
+				const errorData = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: errorData.error || "Failed to get usage statistics",
+					status: response.status,
+				};
+			}
+		} catch (error) {
+			console.error("Get usage stats failed:", error);
+			return {
+				success: false,
+				error: "Failed to connect to FlahaSoil servers.",
+				networkError: true,
+			};
+		}
 	}
 
 	/**

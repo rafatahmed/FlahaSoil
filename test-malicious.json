@@ -1,5 +1,0 @@
-{
-	"email": "malicious@example.com",
-	"password": "password123",
-	"name": "<script>alert('xss')</script>Malicious User"
-}
