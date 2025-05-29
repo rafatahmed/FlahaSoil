@@ -481,6 +481,52 @@ router.put("/profile", async (req, res) => {
 });
 
 /**
+ * Logout user (invalidate token)
+ */
+router.post("/logout", async (req, res) => {
+	try {
+		// Verify JWT token
+		const authHeader = req.headers.authorization;
+		if (!authHeader || !authHeader.startsWith("Bearer ")) {
+			return res.status(401).json({
+				success: false,
+				error: "No token provided",
+			});
+		}
+
+		const token = authHeader.substring(7);
+
+		// Verify JWT token
+		let decoded;
+		try {
+			decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret");
+		} catch (error) {
+			return res.status(401).json({
+				success: false,
+				error: "Invalid token",
+			});
+		}
+
+		// For JWT tokens, we can't really "invalidate" them server-side without a blacklist
+		// But we can log the logout event and return success
+		console.log(
+			`User ${decoded.email} logged out at ${new Date().toISOString()}`
+		);
+
+		res.json({
+			success: true,
+			message: "Logout successful",
+		});
+	} catch (error) {
+		console.error("Logout error:", error);
+		res.status(500).json({
+			success: false,
+			error: "Internal server error",
+		});
+	}
+});
+
+/**
  * Change password for authenticated users
  */
 router.post("/change-password", async (req, res) => {

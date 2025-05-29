@@ -8,6 +8,67 @@
 // Global state
 let currentUser = null;
 
+/**
+ * Show success message
+ */
+function showSuccessMessage(message) {
+	showToast(message, "success");
+}
+
+/**
+ * Show error message
+ */
+function showErrorMessage(message) {
+	showToast(message, "error");
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(message, type = "info") {
+	// Remove existing toasts
+	const existingToasts = document.querySelectorAll(".toast");
+	existingToasts.forEach((toast) => toast.remove());
+
+	// Create toast element
+	const toast = document.createElement("div");
+	toast.className = `toast toast-${type}`;
+	toast.textContent = message;
+
+	// Add toast styles
+	const style = document.createElement("style");
+	style.textContent = `
+		.toast {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 15px 20px;
+			border-radius: 8px;
+			color: white;
+			font-weight: 600;
+			z-index: 10000;
+			animation: slideIn 0.3s ease;
+		}
+		.toast-success { background: #4CAF50; }
+		.toast-error { background: #f44336; }
+		.toast-info { background: #2196F3; }
+		@keyframes slideIn {
+			from { transform: translateX(100%); opacity: 0; }
+			to { transform: translateX(0); opacity: 1; }
+		}
+	`;
+	document.head.appendChild(style);
+
+	// Add toast to page
+	document.body.appendChild(toast);
+
+	// Remove toast after 3 seconds
+	setTimeout(() => {
+		toast.style.animation = "slideIn 0.3s ease reverse";
+		setTimeout(() => toast.remove(), 300);
+	}, 3000);
+}
+
 // Utility Functions
 function setupSmoothScrolling() {
 	// Add smooth scrolling to all anchor links
@@ -39,6 +100,11 @@ function setupMobileMenu() {
 
 // Initialize landing page
 document.addEventListener("DOMContentLoaded", function () {
+	// Initialize API client
+	if (!window.flahaSoilAPI) {
+		window.flahaSoilAPI = new FlahaSoilAPI();
+	}
+
 	checkAuthStatus();
 	setupSmoothScrolling();
 	setupMobileMenu();
@@ -94,7 +160,7 @@ function addUserMenuStyles() {
         .user-menu {
             position: relative;
         }
-        
+
         .btn-user {
             background: var(--primary-color);
             color: var(--white);
@@ -108,16 +174,16 @@ function addUserMenuStyles() {
             gap: 8px;
             transition: all 0.3s ease;
         }
-        
+
         .btn-user:hover {
             background: #1B5E20;
         }
-        
+
         .dropdown-arrow {
             font-size: 0.8rem;
             transition: transform 0.3s ease;
         }
-        
+
         .user-dropdown {
             position: absolute;
             top: 100%;
@@ -132,13 +198,13 @@ function addUserMenuStyles() {
             transition: all 0.3s ease;
             z-index: 1000;
         }
-        
+
         .user-dropdown.show {
             opacity: 1;
             visibility: visible;
             transform: translateY(0);
         }
-        
+
         .dropdown-item {
             display: block;
             padding: 12px 20px;
@@ -146,15 +212,15 @@ function addUserMenuStyles() {
             text-decoration: none;
             transition: background 0.3s ease;
         }
-        
+
         .dropdown-item:hover {
             background: var(--background-light);
         }
-        
+
         .dropdown-item:first-child {
             border-radius: 8px 8px 0 0;
         }
-        
+
         .dropdown-item:last-child {
             border-radius: 0 0 8px 8px;
         }
@@ -284,7 +350,7 @@ function addModalStyles() {
             align-items: center;
             justify-content: center;
         }
-        
+
         .modal-overlay {
             position: absolute;
             top: 0;
@@ -294,7 +360,7 @@ function addModalStyles() {
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(5px);
         }
-        
+
         .modal-content {
             background: var(--white);
             border-radius: 15px;
@@ -306,7 +372,7 @@ function addModalStyles() {
             position: relative;
             box-shadow: var(--shadow-hover);
         }
-        
+
         .modal-header {
             padding: 30px 30px 20px;
             border-bottom: 1px solid #E9ECEF;
@@ -314,14 +380,14 @@ function addModalStyles() {
             justify-content: space-between;
             align-items: center;
         }
-        
+
         .modal-header h2 {
             font-family: 'Montserrat', sans-serif;
             font-weight: 700;
             color: var(--text-dark);
             margin: 0;
         }
-        
+
         .modal-close {
             background: none;
             border: none;
@@ -335,26 +401,26 @@ function addModalStyles() {
             align-items: center;
             justify-content: center;
         }
-        
+
         .modal-close:hover {
             color: var(--text-dark);
         }
-        
+
         .modal-content form {
             padding: 20px 30px;
         }
-        
+
         .form-group {
             margin-bottom: 20px;
         }
-        
+
         .form-group label {
             display: block;
             margin-bottom: 8px;
             font-weight: 600;
             color: var(--text-dark);
         }
-        
+
         .form-group input {
             width: 100%;
             padding: 12px;
@@ -363,12 +429,12 @@ function addModalStyles() {
             font-size: 16px;
             transition: border-color 0.3s ease;
         }
-        
+
         .form-group input:focus {
             outline: none;
             border-color: var(--primary-color);
         }
-        
+
         .btn-submit {
             width: 100%;
             background: var(--primary-color);
@@ -381,23 +447,23 @@ function addModalStyles() {
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        
+
         .btn-submit:hover {
             background: #1B5E20;
         }
-        
+
         .modal-footer {
             padding: 20px 30px 30px;
             text-align: center;
             border-top: 1px solid #E9ECEF;
         }
-        
+
         .modal-footer a {
             color: var(--primary-color);
             text-decoration: none;
             font-weight: 600;
         }
-        
+
         .modal-footer a:hover {
             text-decoration: underline;
         }
@@ -418,10 +484,26 @@ async function handleLogin(event) {
 		const result = await window.flahaSoilAPI.login(email, password);
 
 		if (result.success) {
+			// Store user data properly
 			currentUser = result.user;
+			localStorage.setItem("flahasoil_token", result.token);
+			localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+
+			// Update API client authentication
+			window.flahaSoilAPI.setAuth(
+				result.token,
+				result.user.tier,
+				result.user.usageCount || 0
+			);
+
 			updateNavForLoggedInUser();
 			closeModal("loginModal");
 			showSuccessMessage("Login successful! Welcome back.");
+
+			// Redirect to main app after successful login
+			setTimeout(() => {
+				window.location.href = "./index.html";
+			}, 1500);
 		} else {
 			showErrorMessage(result.error || "Login failed");
 		}
@@ -446,10 +528,26 @@ async function handleSignup(event) {
 		const result = await window.flahaSoilAPI.register(userData);
 
 		if (result.success) {
+			// Store user data properly
 			currentUser = result.user;
+			localStorage.setItem("flahasoil_token", result.token);
+			localStorage.setItem("flahasoil_user", JSON.stringify(result.user));
+
+			// Update API client authentication
+			window.flahaSoilAPI.setAuth(
+				result.token,
+				result.user.tier,
+				result.user.usageCount || 0
+			);
+
 			updateNavForLoggedInUser();
 			closeModal("signupModal");
 			showSuccessMessage("Account created successfully! Welcome to FlahaSoil.");
+
+			// Redirect to main app after successful registration
+			setTimeout(() => {
+				window.location.href = "./index.html";
+			}, 1500);
 		} else {
 			showErrorMessage(result.error || "Registration failed");
 		}
@@ -616,10 +714,39 @@ async function handleResetPassword(event) {
 /**
  * Logout user
  */
-function logout() {
-	window.flahaSoilAPI.logout();
-	currentUser = null;
-	location.reload();
+async function logout() {
+	try {
+		// Call API logout
+		if (window.flahaSoilAPI) {
+			const result = await window.flahaSoilAPI.logout();
+			if (result.success) {
+				console.log("Logout successful");
+			}
+		}
+
+		// Clear current user
+		currentUser = null;
+
+		// Clear all local storage
+		localStorage.removeItem("flahasoil_token");
+		localStorage.removeItem("flahasoil_user");
+		localStorage.removeItem("flahasoil_user_plan");
+		localStorage.removeItem("flahasoil_usage_count");
+
+		// Show success message
+		showSuccessMessage("Logout successful!");
+
+		// Reload page to reset UI
+		setTimeout(() => {
+			location.reload();
+		}, 1000);
+	} catch (error) {
+		console.error("Logout error:", error);
+		// Even if there's an error, still clear local data and reload
+		currentUser = null;
+		localStorage.clear();
+		location.reload();
+	}
 }
 
 /**
@@ -646,10 +773,52 @@ function closeModal(modalId) {
 }
 
 /**
- * Start demo (redirect to main app)
+ * Start demo (redirect to demo page)
  */
 function startDemo() {
 	window.location.href = "./demo.html";
+}
+
+/**
+ * Navigate to main soil analysis app (only for authenticated users)
+ */
+function goToSoilAnalysis() {
+	const token = localStorage.getItem("flahasoil_token");
+	const userStr = localStorage.getItem("flahasoil_user");
+
+	if (token && userStr) {
+		// User is authenticated, redirect to main app
+		window.location.href = "./index.html";
+	} else {
+		// User not authenticated, show login modal
+		showLoginModal();
+	}
+}
+
+/**
+ * Select a plan and proceed to registration
+ */
+function selectPlan(planType) {
+	// Store selected plan for registration
+	sessionStorage.setItem("selected_plan", planType);
+
+	if (planType === "FREE") {
+		// For free plan, show signup modal
+		showSignupModal();
+	} else {
+		// For paid plans, show signup modal with plan pre-selected
+		showSignupWithPlan(planType);
+	}
+}
+
+/**
+ * Show plan selection modal
+ */
+function showPlanModal() {
+	// Scroll to pricing section
+	document.getElementById("pricing").scrollIntoView({
+		behavior: "smooth",
+	});
 }
 
 /**
@@ -782,14 +951,14 @@ function addPlanModalStyles() {
 			max-height: 90vh;
 			overflow-y: auto;
 		}
-		
+
 		.plans-container {
 			display: grid;
 			grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 			gap: 20px;
 			margin: 20px 0;
 		}
-		
+
 		.plan-option {
 			border: 2px solid #E0E0E0;
 			border-radius: 12px;
@@ -800,18 +969,18 @@ function addPlanModalStyles() {
 			position: relative;
 			background: white;
 		}
-		
+
 		.plan-option:hover {
 			border-color: var(--primary-color);
 			transform: translateY(-5px);
 			box-shadow: 0 8px 25px rgba(0,0,0,0.15);
 		}
-		
+
 		.plan-option.featured {
 			border-color: var(--primary-color);
 			background: linear-gradient(135deg, #F8F9FA 0%, #E8F5E8 100%);
 		}
-		
+
 		.plan-badge {
 			position: absolute;
 			top: -10px;
@@ -824,37 +993,37 @@ function addPlanModalStyles() {
 			font-size: 12px;
 			font-weight: 600;
 		}
-		
+
 		.plan-header h3 {
 			color: var(--text-dark);
 			margin-bottom: 10px;
 			font-size: 1.5rem;
 		}
-		
+
 		.plan-price {
 			font-size: 2rem;
 			font-weight: 700;
 			color: var(--primary-color);
 			margin-bottom: 20px;
 		}
-		
+
 		.plan-price span {
 			font-size: 0.9rem;
 			color: var(--text-light);
 		}
-		
+
 		.plan-features {
 			text-align: left;
 			margin: 20px 0;
 		}
-		
+
 		.plan-features p {
 			margin: 8px 0;
 			padding: 5px 0;
 			border-bottom: 1px solid #F0F0F0;
 			color: var(--text-dark);
 		}
-		
+
 		.btn-select-plan {
 			background: var(--secondary-color);
 			color: white;
@@ -866,36 +1035,36 @@ function addPlanModalStyles() {
 			width: 100%;
 			transition: all 0.3s ease;
 		}
-		
+
 		.btn-select-plan:hover {
 			background: #1565C0;
 		}
-		
+
 		.btn-select-plan.btn-primary {
 			background: var(--primary-color);
 		}
-		
+
 		.btn-select-plan.btn-primary:hover {
 			background: #1B5E20;
 		}
-		
+
 		.demo-option {
 			text-align: center;
 			margin-top: 20px;
 			padding-top: 20px;
 			border-top: 1px solid #E0E0E0;
 		}
-		
+
 		.demo-option a {
 			color: var(--accent-color);
 			text-decoration: none;
 			font-weight: 600;
 		}
-		
+
 		.demo-option a:hover {
 			text-decoration: underline;
 		}
-		
+
 		@media (max-width: 768px) {
 			.plans-container {
 				grid-template-columns: 1fr;

@@ -782,11 +782,40 @@ function handleSignIn() {
 /**
  * Handle sign out button click
  */
-function handleSignOut() {
-	localStorage.removeItem("flahasoil_token");
-	localStorage.removeItem("flahasoil_user");
-	currentUser = null;
-	updateUserInterface(false);
+async function handleSignOut() {
+	try {
+		// Call API logout if available
+		if (window.flahaSoilAPI) {
+			const result = await window.flahaSoilAPI.logout();
+			if (result.success) {
+				console.log("Logout successful");
+			}
+		}
+
+		// Clear all local storage
+		localStorage.removeItem("flahasoil_token");
+		localStorage.removeItem("flahasoil_user");
+		localStorage.removeItem("flahasoil_user_plan");
+		localStorage.removeItem("flahasoil_usage_count");
+
+		// Clear current user
+		currentUser = null;
+
+		// Update UI
+		updateUserInterface(false);
+
+		// Redirect to landing page
+		setTimeout(() => {
+			window.location.href = "landing.html";
+		}, 1000);
+	} catch (error) {
+		console.error("Logout error:", error);
+		// Even if there's an error, still clear local data
+		localStorage.clear();
+		currentUser = null;
+		updateUserInterface(false);
+		window.location.href = "landing.html";
+	}
 }
 
 /**

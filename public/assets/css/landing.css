@@ -14,6 +14,11 @@
 	--white: #ffffff;
 	--shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 	--shadow-hover: 0 8px 25px rgba(0, 0, 0, 0.15);
+
+	/* Flaha PA Brand Colors */
+	--flaha-green: #2e7d32;
+	--tech-blue: #1976d2;
+	--dark-bg: #2c3e50;
 }
 
 * {
@@ -61,16 +66,52 @@ body {
 	gap: 12px;
 }
 
+.nav-brand .logo-link {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	text-decoration: none;
+	transition: all 0.3s ease;
+}
+
+.nav-brand .logo-link:hover {
+	transform: translateY(-1px);
+}
+
 .nav-logo {
 	height: 40px;
 	width: auto;
 }
 
-.brand-text {
+.nav-brand .brand-text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1;
+}
+
+.nav-brand .flaha-text {
 	font-family: "Montserrat", sans-serif;
 	font-weight: 700;
-	font-size: 24px;
-	color: var(--primary-color);
+	font-size: 18px;
+	color: var(--flaha-green);
+	letter-spacing: 1px;
+}
+
+.nav-brand .pa-text {
+	font-family: "Montserrat", sans-serif;
+	font-weight: 600;
+	font-size: 14px;
+	color: var(--tech-blue);
+	letter-spacing: 0.5px;
+}
+
+.nav-brand .app-name {
+	font-family: "Open Sans", sans-serif;
+	font-weight: 600;
+	font-size: 12px;
+	color: var(--text-dark);
+	margin-top: 2px;
+	opacity: 0.8;
 }
 
 .nav-menu {
@@ -515,9 +556,38 @@ body {
 }
 
 .footer-logo {
-	height: 30px;
+	height: 36px;
 	width: auto;
-	filter: brightness(0) invert(1);
+}
+
+.footer-brand .brand-text {
+	display: flex;
+	flex-direction: column;
+	line-height: 1;
+}
+
+.footer-brand .flaha-text {
+	font-family: "Montserrat", sans-serif;
+	font-weight: 700;
+	font-size: 16px;
+	color: var(--white);
+	letter-spacing: 1px;
+}
+
+.footer-brand .pa-text {
+	font-family: "Montserrat", sans-serif;
+	font-weight: 600;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.8);
+	letter-spacing: 0.5px;
+}
+
+.footer-brand .app-name {
+	font-family: "Open Sans", sans-serif;
+	font-weight: 600;
+	font-size: 10px;
+	color: rgba(255, 255, 255, 0.7);
+	margin-top: 2px;
 }
 
 .footer-section h4 {
@@ -1029,6 +1099,39 @@ body {
 	.btn-secondary.large {
 		width: 100%;
 		max-width: 300px;
+	}
+
+	/* Mobile Flaha PA Branding */
+	.nav-brand .nav-logo {
+		height: 32px;
+	}
+
+	.nav-brand .flaha-text {
+		font-size: 16px;
+	}
+
+	.nav-brand .pa-text {
+		font-size: 12px;
+	}
+
+	.nav-brand .app-name {
+		font-size: 10px;
+	}
+
+	.footer-brand .footer-logo {
+		height: 28px;
+	}
+
+	.footer-brand .flaha-text {
+		font-size: 14px;
+	}
+
+	.footer-brand .pa-text {
+		font-size: 10px;
+	}
+
+	.footer-brand .app-name {
+		font-size: 8px;
 	}
 }
 
