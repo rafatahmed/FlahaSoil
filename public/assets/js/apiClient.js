@@ -120,16 +120,18 @@ class FlahaSoilAPI {
 			if (response.ok) {
 				const result = await response.json();
 
-				// Update usage count if provided in response
-				if (result.usage && result.usage.current !== undefined) {
+				// Only update usage count for authenticated users, not demo mode
+				if (this.token && result.usage && result.usage.current !== undefined) {
 					this.usageCount = result.usage.current;
 					localStorage.setItem(
 						"flahasoil_usage_count",
 						this.usageCount.toString()
 					);
-				} else {
+				} else if (this.token && !result.demo) {
+					// Only increment usage for authenticated non-demo calls
 					this.incrementUsage();
 				}
+				// Demo mode: no usage tracking at all
 
 				return result;
 			} else {
@@ -341,7 +343,7 @@ class FlahaSoilAPI {
 			}
 
 			const response = await fetch(
-				`${this.baseURL}/soil/analyze/history?page=${page}&limit=${limit}`,
+				`${this.baseURL}/soil/history?page=${page}&limit=${limit}`,
 				{
 					method: "GET",
 					headers: {
@@ -408,15 +410,12 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(
-				`${this.baseURL}/soil/analyze/export/${analysisId}?format=${format}`,
-				{
-					method: "GET",
-					headers: {
-						Authorization: `Bearer ${this.token}`,
-					},
-				}
-			);
+			const response = await fetch(`${this.baseURL}/soil/export/${format}`, {
+				method: "GET",
+				headers: {
+					Authorization: `Bearer ${this.token}`,
+				},
+			});
 
 			if (response.ok) {
 				const result = await response.json();
@@ -478,7 +477,7 @@ class FlahaSoilAPI {
 			}
 
 			const response = await fetch(
-				`${this.baseURL}/soil/visualize/${analysisId}?type=${type}`,
+				`${this.baseURL}/soil/moisture-tension/${analysisId}`,
 				{
 					method: "GET",
 					headers: {
@@ -528,14 +527,17 @@ class FlahaSoilAPI {
 				};
 			}
 
-			const response = await fetch(`${this.baseURL}/crop/recommendations`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: this.token ? `Bearer ${this.token}` : "",
-				},
-				body: JSON.stringify(soilData),
-			});
+			const response = await fetch(
+				`${this.baseURL}/api/v1/soil/recommendations`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: this.token ? `Bearer ${this.token}` : "",
+					},
+					body: JSON.stringify(soilData),
+				}
+			);
 
 			if (response.ok) {
 				return await response.json();

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlahaSoil - Authentication Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-test {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .user-test h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 FlahaSoil Authentication Test</h1>
+    
+    <div class="test-container">
+        <h2>Test User Authentication</h2>
+        <p>Test login functionality for all user tiers:</p>
+        
+        <div class="user-test">
+            <h3>🆓 Demo User (FREE Tier)</h3>
+            <p><strong>Email:</strong> demo@flahasoil.com</p>
+            <p><strong>Password:</strong> demo123</p>
+            <button onclick="testLogin('demo@flahasoil.com', 'demo123', 'demo-result')">Test Login</button>
+            <button onclick="testProfile('demo-result')">Test Profile</button>
+            <div id="demo-result" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="user-test">
+            <h3>💼 Professional User (PRO Tier)</h3>
+            <p><strong>Email:</strong> pro@flahasoil.com</p>
+            <p><strong>Password:</strong> pro123</p>
+            <button onclick="testLogin('pro@flahasoil.com', 'pro123', 'pro-result')">Test Login</button>
+            <button onclick="testProfile('pro-result')">Test Profile</button>
+            <div id="pro-result" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="user-test">
+            <h3>🏢 Enterprise User (ENTERPRISE Tier)</h3>
+            <p><strong>Email:</strong> enterprise@flahasoil.com</p>
+            <p><strong>Password:</strong> enterprise123</p>
+            <button onclick="testLogin('enterprise@flahasoil.com', 'enterprise123', 'enterprise-result')">Test Login</button>
+            <button onclick="testProfile('enterprise-result')">Test Profile</button>
+            <div id="enterprise-result" class="result" style="display: none;"></div>
+        </div>
+        
+        <div class="user-test">
+            <h3>🧪 Test All Users</h3>
+            <button onclick="testAllUsers()">Test All Users</button>
+            <div id="all-result" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentTokens = {};
+        
+        async function testLogin(email, password, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '🔄 Testing login...';
+            
+            try {
+                const response = await fetch('/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    currentTokens[resultId] = result.token;
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        ✅ Login successful!<br>
+                        - Token: ${result.token ? 'Received' : 'Missing'}<br>
+                        - User: ${result.user?.name || 'Unknown'}<br>
+                        - Tier: ${result.user?.tier || 'Unknown'}<br>
+                        - Usage: ${result.user?.usageCount || 0}<br>
+                        - Email Verified: ${result.user?.emailVerified || false}
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        ❌ Login failed!<br>
+                        - Status: ${response.status}<br>
+                        - Error: ${result.error || 'Unknown error'}<br>
+                        - Success: ${result.success}
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testProfile(resultId) {
+            const resultDiv = document.getElementById(resultId);
+            const token = currentTokens[resultId];
+            
+            if (!token) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = '❌ No token available. Please login first.';
+                return;
+            }
+            
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '🔄 Testing profile access...';
+            
+            try {
+                const response = await fetch('/api/v1/auth/profile', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        ✅ Profile access successful!<br>
+                        - User: ${result.user?.name || 'Unknown'}<br>
+                        - Email: ${result.user?.email || 'Unknown'}<br>
+                        - Tier: ${result.user?.tier || 'Unknown'}<br>
+                        - Usage: ${result.user?.usageCount || 0}
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        ❌ Profile access failed!<br>
+                        - Status: ${response.status}<br>
+                        - Error: ${result.error || 'Unknown error'}
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ Network error: ${error.message}`;
+            }
+        }
+        
+        async function testAllUsers() {
+            const users = [
+                { email: 'demo@flahasoil.com', password: 'demo123', name: 'Demo' },
+                { email: 'pro@flahasoil.com', password: 'pro123', name: 'Pro' },
+                { email: 'enterprise@flahasoil.com', password: 'enterprise123', name: 'Enterprise' }
+            ];
+            
+            const resultDiv = document.getElementById('all-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = '🔄 Testing all users...';
+            
+            let results = [];
+            
+            for (const user of users) {
+                try {
+                    const response = await fetch('/api/v1/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ 
+                            email: user.email, 
+                            password: user.password 
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok && result.success) {
+                        results.push(`✅ ${user.name}: Login successful (${result.user?.tier})`);
+                    } else {
+                        results.push(`❌ ${user.name}: Login failed - ${result.error}`);
+                    }
+                } catch (error) {
+                    results.push(`❌ ${user.name}: Network error - ${error.message}`);
+                }
+            }
+            
+            resultDiv.className = 'result info';
+            resultDiv.innerHTML = results.join('<br>');
+        }
+    </script>
+</body>
+</html>

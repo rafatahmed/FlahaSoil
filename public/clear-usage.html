@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Usage Count</title>
+</head>
+<body>
+    <h1>Clear Frontend Usage Count</h1>
+    <button onclick="clearUsage()">Clear Usage Count</button>
+    <div id="result"></div>
+
+    <script>
+        function clearUsage() {
+            // Clear usage count from localStorage
+            localStorage.removeItem('flahasoil_usage_count');
+            localStorage.setItem('flahasoil_usage_count', '0');
+            
+            // Also clear any cached user data
+            const user = localStorage.getItem('flahasoil_user');
+            if (user) {
+                try {
+                    const userData = JSON.parse(user);
+                    userData.usageCount = 0;
+                    localStorage.setItem('flahasoil_user', JSON.stringify(userData));
+                } catch (e) {
+                    console.error('Error updating user data:', e);
+                }
+            }
+            
+            document.getElementById('result').innerHTML = 
+                '<p style="color: green;">✅ Frontend usage count cleared! Refresh your FlahaSoil pages.</p>';
+        }
+    </script>
+</body>
+</html>

@@ -618,15 +618,15 @@
 
   <!-- Entry Point Control Script -->
   <script>
-    // Strict authentication check - no bypasses allowed
+    // Enhanced authentication check with proper UI handling
     document.addEventListener('DOMContentLoaded', function () {
       const token = localStorage.getItem('flahasoil_token');
       const userStr = localStorage.getItem('flahasoil_user');
 
-      // If no valid authentication, redirect to landing page immediately
+      // Allow demo access for unauthenticated users but show proper UI
       if (!token || !userStr) {
-        /* eslint-disable */console.log(...oo_oo(`33607293_616_8_616_75_4`, 'No authentication found, redirecting to landing page'));
-        window.location.href = './landing.html';
+        /* eslint-disable */console.log(...oo_oo(`33607293_616_8_616_75_4`, 'No authentication found, showing demo mode'));
+        // Don't redirect - let the main.js handle the UI state
         return;
       }
 
@@ -636,15 +636,14 @@
         if (!user.id || !user.email) {
           throw new Error('Invalid user data');
         }
+        /* eslint-disable */console.log(...oo_oo(`33607293_635_6_635_71_4`, 'User authenticated, proceeding to main application'));
       } catch (error) {
-        /* eslint-disable */console.log(...oo_oo(`33607293_628_8_628_69_4`, 'Invalid user data, redirecting to landing page'));
+        /* eslint-disable */console.log(...oo_oo(`33607293_628_8_628_69_4`, 'Invalid user data, clearing auth and showing demo mode'));
         localStorage.removeItem('flahasoil_token');
         localStorage.removeItem('flahasoil_user');
-        window.location.href = './landing.html';
+        // Don't redirect - let the main.js handle the UI state
         return;
       }
-
-      /* eslint-disable */console.log(...oo_oo(`33607293_635_6_635_71_4`, 'User authenticated, proceeding to main application'));
     });
   </script>
 </body>

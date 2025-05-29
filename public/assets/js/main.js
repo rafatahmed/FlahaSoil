@@ -5,11 +5,58 @@ let flahaSoilAPI = null;
 
 // Initialize API client when DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
-	// Initialize API client
-	flahaSoilAPI = new FlahaSoilAPI();
-
-	// Make it available globally for compatibility
-	window.flahaSoilAPI = flahaSoilAPI;
+	// Initialize API client - try both class names for compatibility
+	try {
+		if (typeof FlahaSoilAPI !== "undefined") {
+			window.flahaSoilAPI = new FlahaSoilAPI();
+		} else if (typeof flahaSoilAPI !== "undefined") {
+			window.flahaSoilAPI = new flahaSoilAPI();
+		} else {
+			console.warn("FlahaSoilAPI class not found, creating fallback");
+			// Create a basic fallback API client
+			window.flahaSoilAPI = {
+				token: localStorage.getItem("flahasoil_token"),
+				userPlan: localStorage.getItem("flahasoil_user")
+					? JSON.parse(localStorage.getItem("flahasoil_user")).tier
+					: "FREE",
+				baseURL: "http://localhost:3001",
+				analyzeSoil: async function (data) {
+					const endpoint = this.token
+						? "/api/v1/soil/analyze"
+						: "/api/v1/soil/demo/analyze";
+					const response = await fetch(`${this.baseURL}${endpoint}`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							...(this.token && { Authorization: `Bearer ${this.token}` }),
+						},
+						body: JSON.stringify(data),
+					});
+					const result = await response.json();
+					if (!response.ok) {
+						return {
+							success: false,
+							error: result.error || "API request failed",
+						};
+					}
+					return result;
+				},
+				setAuth: function (token, tier, usageCount) {
+					this.token = token;
+					this.userPlan = tier;
+					this.usageCount = usageCount;
+				},
+			};
+		}
+	} catch (error) {
+		/* eslint-disable */ console.error(
+			...oo_tx(
+				`1837270240_6_3_6_51_11`,
+				"Error initializing API client:",
+				error
+			)
+		);
+	}
 
 	// Check authentication status and update UI
 	checkAuthenticationStatus();
@@ -68,14 +115,19 @@ function showAuthenticatedUI(user) {
  * Show UI for unauthenticated users
  */
 function showUnauthenticatedUI() {
-	// Show auth section, hide user section
+	// Show user section with demo mode, hide auth section
 	const authSection = document.getElementById("authSection");
 	const userSection = document.getElementById("userSection");
 	const profileLink = document.getElementById("profileLink");
+	const headerUserName = document.getElementById("headerUserName");
 
-	if (authSection) authSection.style.display = "block";
-	if (userSection) userSection.style.display = "none";
+	if (authSection) authSection.style.display = "none";
+	if (userSection) userSection.style.display = "block";
 	if (profileLink) profileLink.style.display = "none";
+	if (headerUserName) headerUserName.textContent = "Demo User";
+
+	// Update plan badge for demo mode
+	updatePlanStatusUI("FREE", false);
 
 	// Update usage counter for free users
 	updateUsageCounter();
@@ -278,16 +330,6 @@ function hideLoadingState() {
 	});
 }
 
-function getAdvancedParameters() {
-	// Return default advanced parameters
-	return {
-		region: "central",
-		soilSeries: "default",
-		management: "conventional",
-		organicAmendments: false,
-	};
-}
-
 /**
  * Show upgrade prompt for free users
  * @param {string} message - Error message
@@ -384,6 +426,129 @@ function showConnectionError(message) {
 			notification.remove();
 		}
 	}, 10000);
+}
+
+/**
+ * Show authentication prompt for unauthenticated users
+ */
+function showAuthenticationPrompt() {
+	showInfoMessage("Please login to access advanced soil analysis features");
+	setTimeout(() => {
+		window.location.href = "./landing.html";
+	}, 2000);
+}
+
+/**
+ * Update plan-specific sections based on user plan
+ * @param {string} userPlan - Current user plan
+ * @param {Object} waterCharacteristics - Soil analysis results
+ */
+function updatePlanSpecificSections(userPlan, waterCharacteristics) {
+	// Show/hide professional features
+	const professionalFeatures = document.getElementById("professionalFeatures");
+	const professionalResults = document.getElementById("professionalResults");
+
+	if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+		if (professionalFeatures) professionalFeatures.style.display = "block";
+		if (professionalResults) professionalResults.style.display = "block";
+	} else {
+		if (professionalFeatures) professionalFeatures.style.display = "none";
+		if (professionalResults) professionalResults.style.display = "none";
+	}
+
+	// Show/hide enterprise features
+	const enterpriseResults = document.getElementById("enterpriseResults");
+	if (userPlan === "ENTERPRISE") {
+		if (enterpriseResults) enterpriseResults.style.display = "block";
+	} else {
+		if (enterpriseResults) enterpriseResults.style.display = "none";
+	}
+
+	// Update confidence intervals for expert mode
+	const expertMode = document.getElementById("expertMode");
+	if (expertMode && expertMode.checked && userPlan !== "FREE") {
+		showConfidenceIntervals(waterCharacteristics);
+	}
+}
+
+/**
+ * Show confidence intervals for professional users
+ * @param {Object} waterCharacteristics - Soil analysis results
+ */
+function showConfidenceIntervals(waterCharacteristics) {
+	if (!waterCharacteristics.confidenceIntervals) return;
+
+	const confidenceElements = [
+		{ id: "fc-confidence", show: true },
+		{ id: "wp-confidence", show: true },
+		{ id: "sat-confidence", show: true },
+		{ id: "aet-confidence", show: true },
+	];
+
+	confidenceElements.forEach(({ id, show }) => {
+		const element = document.getElementById(id);
+		if (element) {
+			element.style.display = show ? "block" : "none";
+		}
+	});
+}
+
+/**
+ * Show plan-specific notifications
+ * @param {string} userPlan - Current user plan
+ * @param {Object} response - API response
+ */
+function showPlanSpecificNotifications(userPlan, response) {
+	if (response.tierMessage) {
+		showInfoMessage(response.tierMessage);
+	}
+
+	if (userPlan === "FREE" && response.upgradePrompt) {
+		setTimeout(() => {
+			showUpgradePrompt(response.upgradePrompt);
+		}, 3000);
+	}
+}
+
+/**
+ * Show usage information
+ * @param {string} message - Usage message
+ * @param {string} source - Source of calculation
+ */
+function showUsageInfo(message, source) {
+	if (message) {
+		const usageInfo = document.createElement("div");
+		usageInfo.className = "usage-info-banner";
+		usageInfo.innerHTML = `
+			<div class="usage-info-content">
+				<span class="usage-icon">ℹ️</span>
+				<span class="usage-message">${message}</span>
+				${source ? `<span class="usage-source">(${source})</span>` : ""}
+			</div>
+		`;
+
+		usageInfo.style.cssText = `
+			position: fixed;
+			bottom: 20px;
+			right: 20px;
+			background: #e3f2fd;
+			border: 1px solid #2196f3;
+			border-radius: 8px;
+			padding: 10px 15px;
+			max-width: 300px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+			z-index: 1000;
+			animation: slideInUp 0.3s ease-out;
+		`;
+
+		document.body.appendChild(usageInfo);
+
+		setTimeout(() => {
+			if (usageInfo.parentNode) {
+				usageInfo.remove();
+			}
+		}, 5000);
+	}
 }
 
 // Create the USDA soil textural triangle
@@ -855,12 +1020,32 @@ function createSoilTriangle() {
 		);
 	}
 
-	// Update soil texture display
-	function updateSoilTextureDisplay(clay, sand, silt) {
-		const texture = getSoilTexture(clay, sand, silt);
-		d3.select("#soil-texture-display").text(
-			`Soil Texture: ${texture.toUpperCase()}`
-		);
+	// Update soil texture display and trigger full analysis
+	async function updateSoilTextureDisplay(
+		clay,
+		sand,
+		silt,
+		om = 2.5,
+		densityFactor = 1.3
+	) {
+		try {
+			const texture = getSoilTexture(clay, sand, silt);
+			d3.select("#soil-texture-display").text(
+				`Soil Texture: ${texture.toUpperCase()}`
+			);
+
+			// Trigger full soil analysis with enhanced parameters
+			await updateWaterCharacteristics(clay, sand, om, densityFactor);
+		} catch (error) {
+			/* eslint-disable */ console.error(
+				...oo_tx(
+					`1837270240_863_4_863_51_11`,
+					"Error in updateSoilTextureDisplay:",
+					error
+				)
+			);
+			showErrorMessage("Failed to update soil analysis. Please try again.");
+		}
 	}
 
 	// Initialize coordinates display
@@ -926,40 +1111,68 @@ function createSoilTriangle() {
 		// Update point from input fields
 		document
 			.getElementById("update-point")
-			.addEventListener("click", function () {
-				const clayValue = parseFloat(
-					document.getElementById("clay-input").value
-				);
-				const sandValue = parseFloat(
-					document.getElementById("sand-input").value
-				);
-
-				// Calculate silt as the remainder
-				const siltValue = 100 - clayValue - sandValue;
-
-				// Validate inputs
-				if (
-					clayValue < 0 ||
-					clayValue > 100 ||
-					sandValue < 0 ||
-					sandValue > 100 ||
-					siltValue < 0
-				) {
-					alert(
-						"Invalid values. Clay and sand must be between 0-100, and their sum must not exceed 100."
+			.addEventListener("click", async function () {
+				try {
+					const clayValue = parseFloat(
+						document.getElementById("clay-input").value
 					);
-					return;
+					const sandValue = parseFloat(
+						document.getElementById("sand-input").value
+					);
+					const omValue = parseFloat(
+						document.getElementById("om-input").value || 2.5
+					);
+					const densityValue = parseFloat(
+						document.getElementById("density-input").value || 1.3
+					);
+
+					// Calculate silt as the remainder
+					const siltValue = 100 - clayValue - sandValue;
+
+					// Validate inputs
+					if (
+						clayValue < 0 ||
+						clayValue > 100 ||
+						sandValue < 0 ||
+						sandValue > 100 ||
+						siltValue < 0
+					) {
+						showErrorMessage(
+							"Invalid values. Clay and sand must be between 0-100, and their sum must not exceed 100."
+						);
+						return;
+					}
+
+					// Update silt input
+					document.getElementById("silt-input").value = Math.round(siltValue);
+
+					// Update point position
+					const [x, y] = percentToPoint(clayValue, sandValue, siltValue);
+					point.attr("cx", x).attr("cy", y);
+
+					// Update coordinates display
+					updateCoordinates(clayValue, sandValue, siltValue);
+
+					// Trigger soil analysis calculation
+					await updateSoilTextureDisplay(
+						clayValue,
+						sandValue,
+						siltValue,
+						omValue,
+						densityValue
+					);
+				} catch (error) {
+					/* eslint-disable */ console.error(
+						...oo_tx(
+							`1837270240_963_4_963_51_11`,
+							"Error in update-point:",
+							error
+						)
+					);
+					showErrorMessage(
+						"Failed to calculate soil characteristics. Please try again."
+					);
 				}
-
-				// Update silt input
-				document.getElementById("silt-input").value = Math.round(siltValue);
-
-				// Update point position
-				const [x, y] = percentToPoint(clayValue, sandValue, siltValue);
-				point.attr("cx", x).attr("cy", y);
-
-				// Update coordinates display
-				updateCoordinates(clayValue, sandValue, siltValue);
 			});
 
 		// Auto-calculate silt when clay or sand changes
@@ -1014,23 +1227,41 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 		// Update plan status in UI
 		updatePlanStatusUI(userPlan, token);
 
-		// Prepare calculation parameters
+		// Prepare calculation parameters with enhanced inputs
 		const calculationParams = {
 			sand: sand,
 			clay: clay,
-			organicMatter: om,
-			densityFactor: densityFactor,
-			gravelContent: advancedParams.gravelContent,
-			electricalConductivity: advancedParams.electricalConductivity,
+			organicMatter: om || 2.5,
+			densityFactor: densityFactor || 1.3,
+			gravelContent: advancedParams.gravelContent || 0,
+			electricalConductivity: advancedParams.electricalConductivity || 0.5,
 		};
 
 		// Initialize API client if not already done
 		if (!window.flahaSoilAPI) {
-			window.flahaSoilAPI = new FlahaSoilAPI();
+			try {
+				if (typeof FlahaSoilAPI !== "undefined") {
+					window.flahaSoilAPI = new FlahaSoilAPI();
+				} else {
+					throw new Error("FlahaSoilAPI not available");
+				}
+			} catch (error) {
+				/* eslint-disable */ console.error(
+					...oo_tx(
+						`1837270240_1066_3_1066_51_11`,
+						"Error initializing API client:",
+						error
+					)
+				);
+				throw new Error("API client initialization failed");
+			}
 		}
 
 		// Use API for all calculations
+		console.log("Calling API with params:", calculationParams);
+		console.log("API client available:", !!window.flahaSoilAPI);
 		const response = await window.flahaSoilAPI.analyzeSoil(calculationParams);
+		console.log("API response received:", response);
 
 		if (!response.success) {
 			// Handle authentication errors first
@@ -1709,45 +1940,6 @@ function showPlanNotification(message, type = "info", action = null) {
 	}, 10000);
 }
 
-// Utility Functions
-function showLoadingState() {
-	// Show loading indicator if element exists
-	const loadingElement = document.getElementById("loading-indicator");
-	if (loadingElement) {
-		loadingElement.style.display = "block";
-	}
-
-	// Disable form inputs during loading
-	const inputs = document.querySelectorAll("input, button");
-	inputs.forEach((input) => {
-		input.disabled = true;
-	});
-}
-
-function hideLoadingState() {
-	// Hide loading indicator if element exists
-	const loadingElement = document.getElementById("loading-indicator");
-	if (loadingElement) {
-		loadingElement.style.display = "none";
-	}
-
-	// Re-enable form inputs
-	const inputs = document.querySelectorAll("input, button");
-	inputs.forEach((input) => {
-		input.disabled = false;
-	});
-}
-
-function getAdvancedParameters() {
-	// Return default advanced parameters
-	return {
-		region: "central",
-		soilSeries: "default",
-		management: "conventional",
-		organicAmendments: false,
-	};
-}
-
 /**
  * Show upgrade prompt for free users
  * @param {string} message - Error message
@@ -1948,3 +2140,40 @@ function showConnectionError(message) {
 	} catch (e) {}
 	return v;
 } /*eslint unicorn/no-abusive-eslint-disable:,eslint-comments/disable-enable-pair:,eslint-comments/no-unlimited-disable:,eslint-comments/no-aggregating-enable:,eslint-comments/no-duplicate-disable:,eslint-comments/no-unused-disable:,eslint-comments/no-unused-enable:,*/
+
+/**
+ * Initialize user section display
+ */
+function initializeUserSection() {
+	const token = localStorage.getItem("flahasoil_token");
+	const userStr = localStorage.getItem("flahasoil_user");
+	const userSection = document.getElementById("userSection");
+	const headerUserName = document.getElementById("headerUserName");
+	const planBadge = document.getElementById("planBadge");
+
+	if (token && userStr) {
+		try {
+			const user = JSON.parse(userStr);
+			if (userSection) userSection.style.display = "flex";
+			if (headerUserName)
+				headerUserName.textContent = user.name || user.email || "User";
+			if (planBadge) {
+				planBadge.textContent = user.tier || "FREE";
+				planBadge.className = `plan-badge ${(
+					user.tier || "free"
+				).toLowerCase()}`;
+			}
+		} catch (error) {
+			console.error("Error parsing user data:", error);
+			if (userSection) userSection.style.display = "none";
+		}
+	} else {
+		// Show demo mode
+		if (userSection) userSection.style.display = "flex";
+		if (headerUserName) headerUserName.textContent = "Demo User";
+		if (planBadge) {
+			planBadge.textContent = "FREE";
+			planBadge.className = "plan-badge free";
+		}
+	}
+}

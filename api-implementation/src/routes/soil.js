@@ -15,22 +15,41 @@ const {
 
 const router = express.Router();
 
-// Validation rules
+// Enhanced validation rules for Saxton & Rawls (2006) 24-equation system
 const soilAnalysisValidation = [
 	body("sand")
 		.isFloat({ min: 0, max: 100 })
 		.withMessage("Sand must be between 0 and 100"),
 	body("clay")
-		.isFloat({ min: 0, max: 100 })
-		.withMessage("Clay must be between 0 and 100"),
+		.isFloat({ min: 0, max: 60 })
+		.withMessage(
+			"Clay must be between 0 and 60 (>60% excluded per Saxton & Rawls methodology)"
+		),
 	body("organicMatter")
 		.optional()
-		.isFloat({ min: 0, max: 10 })
-		.withMessage("Organic matter must be between 0 and 10"),
+		.isFloat({ min: 0, max: 8 })
+		.withMessage("Organic matter must be between 0 and 8%"),
 	body("densityFactor")
 		.optional()
-		.isFloat({ min: 0.9, max: 1.2 })
-		.withMessage("Density factor must be between 0.9 and 1.2"),
+		.isFloat({ min: 0.9, max: 1.8 })
+		.withMessage("Bulk density must be between 0.9 and 1.8 g/cm³"),
+	body("gravelContent")
+		.optional()
+		.isFloat({ min: 0, max: 80 })
+		.withMessage("Gravel content must be between 0 and 80%"),
+	body("electricalConductivity")
+		.optional()
+		.isFloat({ min: 0, max: 20 })
+		.withMessage("Electrical conductivity must be between 0 and 20 dS/m"),
+	// Custom validation to ensure sand + clay <= 100
+	body().custom((value) => {
+		const sand = parseFloat(value.sand) || 0;
+		const clay = parseFloat(value.clay) || 0;
+		if (sand + clay > 100) {
+			throw new Error("Sand + Clay cannot exceed 100%");
+		}
+		return true;
+	}),
 ];
 
 // DEMO ENDPOINTS (No authentication required for testing)

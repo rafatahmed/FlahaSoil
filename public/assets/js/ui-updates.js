@@ -33,6 +33,12 @@ function updateQualityOverview(waterCharacteristics) {
 			"erosion-risk",
 			getErosionRisk(waterCharacteristics)
 		);
+
+		// Make quality overview visible
+		const qualityOverview = document.querySelector(".quality-overview");
+		if (qualityOverview) {
+			qualityOverview.style.display = "block";
+		}
 	} catch (error) {
 		console.error("Error updating quality overview:", error);
 	}
