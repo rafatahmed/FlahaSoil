@@ -33,11 +33,8 @@ class SoilCalculationService {
 		if (om < 0 || om > 8) {
 			throw new Error("Organic matter must be between 0-8%");
 		}
-		if (clay > 60) {
-			throw new Error(
-				"Clay content >60% excluded per Saxton & Rawls methodology"
-			);
-		}
+		// Note: Allow clay > 60% but with reduced accuracy warning
+		// Original Saxton & Rawls methodology was calibrated for clay <= 60%
 
 		// Calculate silt percentage
 		const silt = 100 - sand - clay;
@@ -313,6 +310,40 @@ class SoilCalculationService {
 			electricalConductivity = 0.5,
 			userPlan = "FREE",
 		} = params;
+
+		// Use the main calculation method
+		return this.calculateWaterCharacteristics(
+			sand,
+			clay,
+			organicMatter,
+			densityFactor,
+			gravelContent,
+			electricalConductivity,
+			userPlan
+		);
+	}
+
+	/**
+	 * Advanced calculation method (alias for calculateEnhanced for backward compatibility)
+	 * @param {number} sand - Sand percentage (0-100)
+	 * @param {number} clay - Clay percentage (0-100)
+	 * @param {number} organicMatter - Organic matter percentage (0-8)
+	 * @param {number} densityFactor - Density factor (0.9-1.8)
+	 * @param {Object} additionalParameters - Additional parameters object
+	 * @returns {Object} Complete analysis results
+	 */
+	static calculateAdvanced(
+		sand,
+		clay,
+		organicMatter = 2.5,
+		densityFactor = 1.3,
+		additionalParameters = {}
+	) {
+		const {
+			gravelContent = 0,
+			electricalConductivity = 0.5,
+			userPlan = "PROFESSIONAL",
+		} = additionalParameters;
 
 		// Use the main calculation method
 		return this.calculateWaterCharacteristics(

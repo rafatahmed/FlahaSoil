@@ -237,6 +237,20 @@
       <button id="update-point-btn" class="btn-update-point" onclick="updateSoilAnalysis()">
         🔄 Update Analysis
       </button>
+
+      <!-- Report and Print Controls (Professional+ only) -->
+      <div class="report-controls" id="reportControls" style="display: none;">
+        <button id="print-btn" class="btn-print" onclick="printReport()">
+          🖨️ Print Report
+        </button>
+        <button id="generate-report-btn" class="btn-generate-report" onclick="generateReport()">
+          📄 Generate PDF
+        </button>
+        <button id="custom-report-btn" class="btn-custom-report" onclick="generateCustomReport()"
+          style="display: none;">
+          🎨 Custom Report
+        </button>
+      </div>
     </div>
 
     <div class="results-container">
@@ -621,6 +635,7 @@
   <script type="text/javascript" src="./assets/js/soilCalculations.js"></script>
   <script type="text/javascript" src="./assets/js/apiClient.js"></script>
   <script type="text/javascript" src="./assets/js/ui-updates.js"></script>
+  <script type="text/javascript" src="./assets/js/reportManager.js"></script>
   <script type="text/javascript" src="./assets/js/main.js"></script>
 
   <!-- Entry Point Control Script -->
@@ -652,6 +667,34 @@
         return;
       }
     });
+
+    // Test function to simulate Professional user (for testing report functionality)
+    function testProfessionalUser() {
+      const testUser = {
+        id: 'test-user-123',
+        name: 'Test Professional User',
+        email: 'test@professional.com',
+        tier: 'PROFESSIONAL'
+      };
+      const testToken = 'test-token-professional-123';
+
+      localStorage.setItem('flahasoil_user', JSON.stringify(testUser));
+      localStorage.setItem('flahasoil_token', testToken);
+
+      console.log('Test Professional user set:', testUser);
+
+      // Refresh the report manager
+      if (window.reportManager) {
+        window.reportManager.refreshReportCapabilities();
+      }
+
+      // Update UI
+      location.reload();
+    }
+
+    // Add test button to console for easy testing
+    console.log('To test Professional user features, run: testProfessionalUser()');
+    window.testProfessionalUser = testProfessionalUser;
   </script>
 </body>
 

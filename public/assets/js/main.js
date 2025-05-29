@@ -980,19 +980,46 @@ async function updateSoilAnalysis() {
 		const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
 
 		// Call appropriate API endpoint based on user plan
+		console.log("🔧 Calling API with user plan:", userPlan);
+		console.log("🔧 Soil data:", soilData);
+
 		let result;
 		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+			console.log("🔧 Using advanced API endpoint");
 			result = await window.flahaSoilAPI.analyzeSoilAdvanced(soilData);
 		} else {
+			console.log("🔧 Using basic API endpoint");
 			result = await window.flahaSoilAPI.analyzeSoil(soilData);
 		}
 
+		console.log("🔧 API result:", result);
+
 		if (result.success) {
+			console.log("✅ API call successful, updating UI and report manager");
+
 			// Update all UI elements
 			updateWaterCharacteristics(result.data);
 			updatePlanSpecificSections(userPlan, result.data);
+
+			// Update report manager with current soil data
+			if (window.reportManager) {
+				const completeData = {
+					...soilData,
+					...result.data,
+				};
+				console.log(
+					"🎯 Calling reportManager.updateSoilData with:",
+					completeData
+				);
+				window.reportManager.updateSoilData(completeData);
+				console.log("✅ Report manager updated with soil data");
+			} else {
+				console.warn("❌ Report manager not available");
+			}
+
 			showSuccessMessage("Soil analysis updated successfully!");
 		} else {
+			console.log("❌ API call failed:", result.error);
 			showErrorMessage(result.error || "Failed to update soil analysis");
 		}
 	} catch (error) {
@@ -1804,10 +1831,10 @@ function createSoilTriangle() {
 			document.getElementById("density-input").value
 		);
 
-		// Update water characteristics
-		updateWaterCharacteristics(
-			Math.round(clay),
+		// Update water characteristics - fix parameter order: sand, clay, om, densityFactor
+		calculateAndUpdateWaterCharacteristics(
 			Math.round(sand),
+			Math.round(clay),
 			om,
 			densityFactor
 		);
@@ -1833,8 +1860,13 @@ function createSoilTriangle() {
 				`Soil Texture: ${texture.toUpperCase()}`
 			);
 
-			// Trigger full soil analysis with enhanced parameters
-			await updateWaterCharacteristics(clay, sand, om, densityFactor);
+			// Trigger full soil analysis with enhanced parameters - fix parameter order: sand, clay, om, densityFactor
+			await calculateAndUpdateWaterCharacteristics(
+				sand,
+				clay,
+				om,
+				densityFactor
+			);
 		} catch (error) {
 			/* eslint-disable */ console.error(
 				...oo_tx(
@@ -2007,10 +2039,15 @@ if (document.readyState === "loading") {
 	createSoilTriangle();
 }
 
-// Enhanced function to update water characteristics with advanced parameters
-async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
+// Enhanced function to calculate and update water characteristics with advanced parameters
+async function calculateAndUpdateWaterCharacteristics(
+	sand,
+	clay,
+	om,
+	densityFactor
+) {
 	// Calculate silt
-	const silt = 100 - clay - sand;
+	const silt = 100 - sand - clay;
 
 	// Show loading state
 	showLoadingState();
@@ -2118,6 +2155,19 @@ async function updateWaterCharacteristics(clay, sand, om, densityFactor) {
 
 		// Update plan-specific sections
 		updatePlanSpecificSections(userPlan, waterCharacteristics);
+
+		// Update report manager with current soil data
+		if (window.reportManager) {
+			const completeData = {
+				sand: sand,
+				clay: clay,
+				silt: silt,
+				organicMatter: om,
+				densityFactor: densityFactor,
+				...waterCharacteristics,
+			};
+			window.reportManager.updateSoilData(completeData);
+		}
 
 		// Show plan-specific notifications
 		showPlanSpecificNotifications(userPlan, response);

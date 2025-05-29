@@ -4,9 +4,40 @@
 
 ## Overview
 
-The FlahaSoil API provides endpoints for user authentication, soil analysis calculations, and data management. The API follows RESTful principles and returns JSON responses.
+The FlahaSoil API provides endpoints for user authentication, soil analysis calculations, data management, and comprehensive reporting features. The API follows RESTful principles and returns JSON responses with tier-based access control.
 
 **Base URL:** `http://localhost:3001/api/v1`
+
+## API Features by Tier
+
+### 🆓 **Free Tier**
+
+- Basic soil analysis (50 analyses/month)
+- Demo analysis access
+- Web interface access
+- ❌ No report generation
+- ❌ No print functionality
+
+### 💼 **Professional Tier**
+
+- Unlimited soil analyses
+- Advanced calculations with enhanced parameters
+- Analysis history and export
+- **📄 PDF Report Generation**
+- **🖨️ Print Functionality**
+- **📊 Standard Report Templates**
+- Priority support
+
+### 🏢 **Enterprise Tier**
+
+- All Professional features
+- **🎨 Custom Branded Reports**
+- **📈 Advanced Report Templates**
+- **💡 Management Recommendations**
+- **🏢 Company Branding Options**
+- API access with higher limits
+- White-label solutions
+- Custom integrations
 
 ## Authentication
 
@@ -324,6 +355,192 @@ GET /soil/analyze/export/{analysisId}?format=csv
 Authorization: Bearer <token>
 ```
 
+## Report Generation Endpoints
+
+### Get Report Capabilities
+
+```http
+GET /reports/capabilities
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+	"success": true,
+	"plan": "PROFESSIONAL",
+	"capabilities": {
+		"reportGeneration": true,
+		"printFunctionality": true,
+		"pdfExport": true,
+		"customReports": false,
+		"brandedReports": false,
+		"message": "Standard PDF reports and print functionality available"
+	}
+}
+```
+
+### Generate Standard PDF Report (Professional+)
+
+```http
+POST /reports/generate/standard
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "soilData": {
+    "sand": 40,
+    "clay": 30,
+    "silt": 30,
+    "organicMatter": 2.5,
+    "densityFactor": 1.0,
+    "textureClass": "clay loam",
+    "fieldCapacity": 0.32,
+    "wiltingPoint": 0.18,
+    "plantAvailableWater": 0.14,
+    "saturation": 0.45,
+    "saturatedConductivity": 2.5
+  }
+}
+```
+
+**Response:** PDF file download with headers:
+
+```
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="FlahaSoil-Report-{timestamp}.pdf"
+```
+
+### Generate Custom Branded Report (Enterprise Only)
+
+```http
+POST /reports/generate/custom
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "soilData": {
+    "sand": 40,
+    "clay": 30,
+    "silt": 30,
+    "organicMatter": 2.5,
+    "densityFactor": 1.0,
+    "textureClass": "clay loam",
+    "fieldCapacity": 0.32,
+    "wiltingPoint": 0.18,
+    "plantAvailableWater": 0.14,
+    "saturation": 0.45,
+    "saturatedConductivity": 2.5
+  },
+  "customOptions": {
+    "companyName": "Your Company Name",
+    "companyLogo": "https://example.com/logo.png",
+    "primaryColor": "#2E8B57",
+    "secondaryColor": "#4682B4",
+    "fontFamily": "Arial",
+    "pageFormat": "A4",
+    "includeRecommendations": true,
+    "margins": {
+      "top": "20mm",
+      "right": "15mm",
+      "bottom": "20mm",
+      "left": "15mm"
+    }
+  }
+}
+```
+
+**Response:** Custom branded PDF file download
+
+### Preview Standard Report (Professional+)
+
+```http
+POST /reports/preview/standard
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "soilData": {
+    "sand": 40,
+    "clay": 30,
+    "silt": 30,
+    "organicMatter": 2.5,
+    "densityFactor": 1.0,
+    "textureClass": "clay loam",
+    "fieldCapacity": 0.32,
+    "wiltingPoint": 0.18,
+    "plantAvailableWater": 0.14,
+    "saturation": 0.45,
+    "saturatedConductivity": 2.5
+  }
+}
+```
+
+**Response:** HTML content for preview
+
+### Preview Custom Report (Enterprise Only)
+
+```http
+POST /reports/preview/custom
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "soilData": { /* soil data object */ },
+  "customOptions": { /* custom options object */ }
+}
+```
+
+### Get Report Templates (Enterprise Only)
+
+```http
+GET /reports/templates
+Authorization: Bearer <token>
+```
+
+**Response:**
+
+```json
+{
+	"success": true,
+	"templates": [
+		{
+			"id": "standard",
+			"name": "Standard Report",
+			"description": "Basic soil analysis report with all essential data",
+			"features": [
+				"Soil composition",
+				"Water characteristics",
+				"Physical properties"
+			]
+		},
+		{
+			"id": "detailed",
+			"name": "Detailed Analysis",
+			"description": "Comprehensive report with recommendations",
+			"features": [
+				"Executive summary",
+				"Detailed analysis",
+				"Management recommendations",
+				"Custom branding"
+			]
+		},
+		{
+			"id": "executive",
+			"name": "Executive Summary",
+			"description": "High-level overview for decision makers",
+			"features": [
+				"Key metrics",
+				"Assessment summary",
+				"Recommendations",
+				"Custom branding"
+			]
+		}
+	]
+}
+```
+
 ## Crop Recommendations
 
 ### Get Crop Recommendations
@@ -359,6 +576,9 @@ Content-Type: application/json
   - All FREE features
   - Advanced soil calculations
   - Analysis history and export (PDF, CSV)
+  - **📄 PDF Report Generation**
+  - **🖨️ Print Functionality**
+  - **📊 Standard Report Templates**
   - Batch processing (up to 100 samples)
   - Priority email support
   - Moisture-tension curves
@@ -370,6 +590,10 @@ Content-Type: application/json
 - **Usage Limit**: Unlimited analyses
 - **Features**:
   - All PROFESSIONAL features
+  - **🎨 Custom Branded Reports**
+  - **📈 Advanced Report Templates**
+  - **💡 Management Recommendations**
+  - **🏢 Company Branding Options**
   - Full API access with higher rate limits
   - White-label options
   - Custom integrations

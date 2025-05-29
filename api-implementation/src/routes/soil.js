@@ -21,10 +21,8 @@ const soilAnalysisValidation = [
 		.isFloat({ min: 0, max: 100 })
 		.withMessage("Sand must be between 0 and 100"),
 	body("clay")
-		.isFloat({ min: 0, max: 60 })
-		.withMessage(
-			"Clay must be between 0 and 60 (>60% excluded per Saxton & Rawls methodology)"
-		),
+		.isFloat({ min: 0, max: 100 })
+		.withMessage("Clay must be between 0 and 100"),
 	body("organicMatter")
 		.optional()
 		.isFloat({ min: 0, max: 8 })

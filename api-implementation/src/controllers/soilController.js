@@ -344,11 +344,11 @@ class SoilController {
 					silt,
 					organicMatter: inputData.organicMatter || 2.5,
 					densityFactor: inputData.densityFactor || 1.0,
-					fieldCapacity: result.fieldCapacity,
-					wiltingPoint: result.wiltingPoint,
-					plantAvailableWater: result.plantAvailableWater,
-					saturation: result.saturation,
-					saturatedConductivity: result.saturatedConductivity,
+					fieldCapacity: parseFloat(result.fieldCapacity),
+					wiltingPoint: parseFloat(result.wiltingPoint),
+					plantAvailableWater: parseFloat(result.plantAvailableWater),
+					saturation: parseFloat(result.saturation),
+					saturatedConductivity: parseFloat(result.saturatedConductivity),
 					textureClass: result.textureClass,
 					calculationSource: "web",
 				},
@@ -558,14 +558,24 @@ class SoilController {
 				electricalConductivity = 0.5,
 			} = req.body;
 
+			// Convert string inputs to numbers
+			const numericInputs = {
+				sand: parseFloat(sand),
+				clay: parseFloat(clay),
+				organicMatter: parseFloat(organicMatter),
+				densityFactor: parseFloat(densityFactor),
+				gravelContent: parseFloat(gravelContent),
+				electricalConductivity: parseFloat(electricalConductivity),
+			};
+
 			// Calculate soil characteristics using enhanced system (FREE tier for demo)
 			const result = SoilCalculationService.calculateWaterCharacteristics(
-				sand,
-				clay,
-				organicMatter,
-				densityFactor,
-				gravelContent,
-				electricalConductivity,
+				numericInputs.sand,
+				numericInputs.clay,
+				numericInputs.organicMatter,
+				numericInputs.densityFactor,
+				numericInputs.gravelContent,
+				numericInputs.electricalConductivity,
 				"FREE"
 			);
 

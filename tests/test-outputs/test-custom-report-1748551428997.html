@@ -1,0 +1,208 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Test Company - Soil Analysis Report</title>
+            <style>
+                body {
+                    font-family: 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    margin: 0;
+                    padding: 0;
+                }
+                .header {
+                    background: linear-gradient(135deg, #1e3a8a 0%, #059669 100%);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                    position: relative;
+                }
+                
+                .header h1 {
+                    margin: 0;
+                    font-size: 28px;
+                    font-weight: bold;
+                }
+                .header p {
+                    margin: 10px 0 0 0;
+                    font-size: 16px;
+                    opacity: 0.9;
+                }
+                .content {
+                    padding: 30px;
+                }
+                .section {
+                    margin-bottom: 30px;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 20px;
+                }
+                .section:last-child {
+                    border-bottom: none;
+                }
+                .section h2 {
+                    color: #1e3a8a;
+                    font-size: 20px;
+                    margin-bottom: 15px;
+                    border-left: 4px solid #1e3a8a;
+                    padding-left: 15px;
+                }
+                .data-grid {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 20px;
+                    margin-bottom: 20px;
+                }
+                .data-item {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 8px;
+                    border-left: 3px solid #059669;
+                }
+                .data-item label {
+                    font-weight: bold;
+                    color: #555;
+                    display: block;
+                    margin-bottom: 5px;
+                }
+                .data-item .value {
+                    font-size: 18px;
+                    color: #1e3a8a;
+                    font-weight: bold;
+                }
+                .footer {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #666;
+                    border-top: 1px solid #eee;
+                }
+                .metadata {
+                    background: #e8f4f8;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                }
+                .metadata p {
+                    margin: 5px 0;
+                    font-size: 14px;
+                }
+                .custom-section {
+                    background: linear-gradient(45deg, #1e3a8a15, #05966915);
+                    padding: 20px;
+                    border-radius: 10px;
+                    margin: 20px 0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                
+                <h1>Test Company - Soil Analysis Report</h1>
+                <p>Professional Soil Water Characteristics Analysis</p>
+            </div>
+
+            <div class="content">
+                <div class="metadata">
+                    <p><strong>Generated for:</strong> Test User (test@example.com)</p>
+                    <p><strong>Company:</strong> Test Company</p>
+                    <p><strong>Report Date:</strong> 5/29/2025</p>
+                    <p><strong>Analysis Type:</strong> undefined Plan - Custom Report</p>
+                </div>
+
+                <div class="section">
+                    <h2>Executive Summary</h2>
+                    <div class="custom-section">
+                        <p><strong>Soil Classification:</strong> clay loam</p>
+                        <p><strong>Water Holding Capacity:</strong> 0.14% Plant Available Water</p>
+                        <p><strong>Drainage Characteristics:</strong> 2.5 mm/hr saturated conductivity</p>
+                        <p><strong>Overall Assessment:</strong> Limited water holding capacity - may require irrigation management.</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Detailed Soil Composition</h2>
+                    <div class="data-grid">
+                        <div class="data-item">
+                            <label>Sand Content</label>
+                            <span class="value">40%</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Clay Content</label>
+                            <span class="value">30%</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Silt Content</label>
+                            <span class="value">30%</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Organic Matter</label>
+                            <span class="value">2.5%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Hydrological Properties</h2>
+                    <div class="data-grid">
+                        <div class="data-item">
+                            <label>Field Capacity (θFC)</label>
+                            <span class="value">0.32%</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Permanent Wilting Point (θPWP)</label>
+                            <span class="value">0.18%</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Plant Available Water (PAW)</label>
+                            <span class="value">0.14%</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Saturation Point (θS)</label>
+                            <span class="value">0.45%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Physical and Chemical Properties</h2>
+                    <div class="data-grid">
+                        <div class="data-item">
+                            <label>USDA Texture Classification</label>
+                            <span class="value">clay loam</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Saturated Hydraulic Conductivity</label>
+                            <span class="value">2.5 mm/hr</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Bulk Density Factor</label>
+                            <span class="value">1 g/cm³</span>
+                        </div>
+                        <div class="data-item">
+                            <label>Gravel Content</label>
+                            <span class="value">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                
+                <div class="section">
+                    <h2>Management Recommendations</h2>
+                    <div class="custom-section">
+                        • Implement water conservation practices<br>• Consider drought-tolerant crop varieties<br>• Install drainage systems if waterlogging is a concern<br>• Consider raised bed cultivation
+                    </div>
+                </div>
+                
+            </div>
+
+            <div class="footer">
+                <p>Generated by Test Company using FlahaSoil Enterprise Analysis System</p>
+                <p>Based on Saxton & Rawls (2006) Soil Water Characteristics methodology</p>
+                <p>© 2025 Test Company. All rights reserved.</p>
+            </div>
+        </body>
+        </html>
+        
