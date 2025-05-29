@@ -68,7 +68,127 @@ document.addEventListener("DOMContentLoaded", function () {
 	window.initializeTierSpecificUI = initializeTierSpecificUI;
 	window.updatePlanSpecificSections = updatePlanSpecificSections;
 	window.fixProfessionalOverlays = fixProfessionalOverlays;
+	window.debugTierState = debugTierState;
+
+	// Simple debug function
+	window.checkUser = function () {
+		const userStr = localStorage.getItem("flahasoil_user");
+		console.log("User data:", userStr);
+		if (userStr) {
+			const user = JSON.parse(userStr);
+			console.log("User tier:", user.tier);
+		}
+		return userStr;
+	};
+
+	// Force show overlays for testing
+	window.forceShowOverlays = function () {
+		const overlays = [
+			"professionalUpgradeOverlay",
+			"professionalResultsUpgradeOverlay",
+			"enterpriseResultsUpgradeOverlay",
+		];
+
+		overlays.forEach((id) => {
+			const element = document.getElementById(id);
+			if (element) {
+				element.style.display = "flex";
+				console.log(`✅ Forced ${id} to show`);
+			} else {
+				console.log(`❌ ${id} not found`);
+			}
+		});
+	};
+
+	// Check overlay CSS styles
+	window.checkOverlayStyles = function () {
+		const overlays = [
+			"professionalUpgradeOverlay",
+			"professionalResultsUpgradeOverlay",
+			"enterpriseResultsUpgradeOverlay",
+		];
+
+		overlays.forEach((id) => {
+			const element = document.getElementById(id);
+			if (element) {
+				const computed = window.getComputedStyle(element);
+				const rect = element.getBoundingClientRect();
+
+				console.log(`🎨 ${id} styles:`);
+				console.log(`  display: ${computed.display}`);
+				console.log(`  visibility: ${computed.visibility}`);
+				console.log(`  opacity: ${computed.opacity}`);
+				console.log(`  z-index: ${computed.zIndex}`);
+				console.log(`  position: ${computed.position}`);
+				console.log(`  top: ${computed.top}`);
+				console.log(`  left: ${computed.left}`);
+				console.log(`  width: ${computed.width}`);
+				console.log(`  height: ${computed.height}`);
+				console.log(`  rect:`, rect);
+				console.log(
+					`  parent:`,
+					element.parentElement?.tagName,
+					element.parentElement?.className
+				);
+				console.log("---");
+			}
+		});
+	};
 });
+
+/**
+ * Debug tier state - show current user tier and overlay states
+ */
+function debugTierState() {
+	const userStr = localStorage.getItem("flahasoil_user");
+	const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
+
+	console.log("🔍 TIER DEBUG STATE:");
+	console.log("  User data:", userStr);
+	console.log("  User plan:", userPlan);
+
+	// Check overlay elements
+	const overlays = {
+		professionalUpgradeOverlay: document.getElementById(
+			"professionalUpgradeOverlay"
+		),
+		professionalResultsUpgradeOverlay: document.getElementById(
+			"professionalResultsUpgradeOverlay"
+		),
+		enterpriseResultsUpgradeOverlay: document.getElementById(
+			"enterpriseResultsUpgradeOverlay"
+		),
+	};
+
+	console.log("  Overlay elements found:");
+	Object.entries(overlays).forEach(([name, element]) => {
+		if (element) {
+			console.log(
+				`    ${name}: display = ${element.style.display || "default"}`
+			);
+		} else {
+			console.log(`    ${name}: NOT FOUND`);
+		}
+	});
+
+	// Check sections
+	const sections = {
+		professionalFeatures: document.getElementById("professionalFeatures"),
+		professionalResults: document.getElementById("professionalResults"),
+		expertFeatures: document.getElementById("expertFeatures"),
+	};
+
+	console.log("  Section elements:");
+	Object.entries(sections).forEach(([name, element]) => {
+		if (element) {
+			console.log(
+				`    ${name}: display = ${element.style.display || "default"}`
+			);
+		} else {
+			console.log(`    ${name}: NOT FOUND`);
+		}
+	});
+}
 
 /**
  * Fix professional overlays - manual function for debugging
@@ -116,7 +236,17 @@ function initializeTierSpecificUI() {
 	const userStr = localStorage.getItem("flahasoil_user");
 	const userPlan = userStr ? JSON.parse(userStr).tier : "FREE";
 
-	console.log("Initializing tier-specific UI for plan:", userPlan);
+	console.log("🔍 DEBUG: Initializing tier-specific UI for plan:", userPlan);
+	console.log("🔍 DEBUG: User data from localStorage:", userStr);
+
+	if (userStr) {
+		try {
+			const userData = JSON.parse(userStr);
+			console.log("🔍 DEBUG: Parsed user data:", userData);
+		} catch (e) {
+			console.error("🔍 DEBUG: Error parsing user data:", e);
+		}
+	}
 
 	// Initialize upgrade overlays based on user plan
 	const professionalUpgradeOverlay = document.getElementById(
@@ -128,6 +258,14 @@ function initializeTierSpecificUI() {
 	const enterpriseUpgradeOverlay = document.getElementById(
 		"enterpriseResultsUpgradeOverlay"
 	);
+
+	console.log("🔍 DEBUG: Found overlay elements:");
+	console.log("  - professionalUpgradeOverlay:", !!professionalUpgradeOverlay);
+	console.log(
+		"  - professionalResultsUpgradeOverlay:",
+		!!professionalResultsUpgradeOverlay
+	);
+	console.log("  - enterpriseUpgradeOverlay:", !!enterpriseUpgradeOverlay);
 
 	// Handle professional tier overlays (both input section and results section)
 	if (professionalUpgradeOverlay) {
@@ -146,6 +284,8 @@ function initializeTierSpecificUI() {
 				"user"
 			);
 		}
+	} else {
+		console.log("❌ professionalUpgradeOverlay element not found!");
 	}
 
 	if (professionalResultsUpgradeOverlay) {
@@ -164,6 +304,8 @@ function initializeTierSpecificUI() {
 				"user"
 			);
 		}
+	} else {
+		console.log("❌ professionalResultsUpgradeOverlay element not found!");
 	}
 
 	// Handle enterprise tier overlay
@@ -177,16 +319,44 @@ function initializeTierSpecificUI() {
 		}
 	}
 
-	// Show/hide professional results section
+	// Show/hide professional features section
+	const professionalFeatures = document.getElementById("professionalFeatures");
+	if (professionalFeatures) {
+		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
+			professionalFeatures.style.display = "block";
+		} else {
+			professionalFeatures.style.display = "none";
+		}
+	}
+
+	// Show/hide professional results section - ALWAYS show for all users so overlays can be seen
 	const professionalResults = document.getElementById("professionalResults");
 	if (professionalResults) {
 		professionalResults.style.display = "block";
+		console.log(
+			"✅ Showing professionalResults container for overlay visibility"
+		);
 	}
 
-	// Show/hide enterprise results section
+	// Show/hide enterprise results section - ALWAYS show for all users so overlays can be seen
 	const enterpriseResults = document.getElementById("enterpriseResults");
 	if (enterpriseResults) {
 		enterpriseResults.style.display = "block";
+		console.log(
+			"✅ Showing enterpriseResults container for overlay visibility"
+		);
+	}
+
+	// Handle expert features section - should be hidden by default
+	const expertFeatures = document.getElementById("expertFeatures");
+	if (expertFeatures) {
+		expertFeatures.style.display = "none";
+	}
+
+	// Reset expert mode checkbox
+	const expertMode = document.getElementById("expertMode");
+	if (expertMode) {
+		expertMode.checked = false;
 	}
 }
 
@@ -264,6 +434,11 @@ function showUnauthenticatedUI() {
 
 	// Update usage counter for free users
 	updateUsageCounter();
+
+	// Initialize tier-specific UI for demo users (FREE tier)
+	setTimeout(() => {
+		initializeTierSpecificUI();
+	}, 100);
 }
 
 /**
@@ -354,6 +529,52 @@ function toggleMobileNav() {
 			spans[0].style.transform = "none";
 			spans[1].style.opacity = "1";
 			spans[2].style.transform = "none";
+		}
+	}
+}
+
+/**
+ * Toggle collapsible sections
+ * @param {string} sectionId - ID of the section to toggle
+ */
+function toggleSection(sectionId) {
+	const section = document.getElementById(sectionId);
+	const toggleButton = document.querySelector(
+		`[onclick="toggleSection('${sectionId}')"]`
+	);
+
+	if (section && toggleButton) {
+		const isHidden = section.style.display === "none";
+
+		// Toggle visibility
+		section.style.display = isHidden ? "block" : "none";
+
+		// Update toggle button icon
+		const icon = toggleButton.querySelector("span");
+		if (icon) {
+			icon.textContent = isHidden ? "▲" : "▼";
+		}
+
+		console.log(
+			`Toggled section ${sectionId}: ${isHidden ? "shown" : "hidden"}`
+		);
+	}
+}
+
+/**
+ * Toggle expert mode
+ */
+function toggleExpertMode() {
+	const expertMode = document.getElementById("expertMode");
+	const expertFeatures = document.getElementById("expertFeatures");
+
+	if (expertMode && expertFeatures) {
+		if (expertMode.checked) {
+			expertFeatures.style.display = "block";
+			console.log("Expert mode enabled");
+		} else {
+			expertFeatures.style.display = "none";
+			console.log("Expert mode disabled");
 		}
 	}
 }
@@ -1032,6 +1253,60 @@ function hideNotificationBanner() {
 	if (banner) {
 		banner.style.display = "none";
 	}
+}
+
+/**
+ * Show loading state
+ */
+function showLoadingState() {
+	const updateBtn = document.getElementById("update-point-btn");
+	if (updateBtn) {
+		updateBtn.disabled = true;
+		updateBtn.innerHTML = "⏳ Analyzing...";
+	}
+
+	// Show loading in result values
+	const resultElements = document.querySelectorAll(".result-value");
+	resultElements.forEach((element) => {
+		if (element.textContent === "-") {
+			element.textContent = "...";
+		}
+	});
+}
+
+/**
+ * Hide loading state
+ */
+function hideLoadingState() {
+	const updateBtn = document.getElementById("update-point-btn");
+	if (updateBtn) {
+		updateBtn.disabled = false;
+		updateBtn.innerHTML = "🔄 Update Analysis";
+	}
+}
+
+/**
+ * Show success message
+ * @param {string} message - Success message
+ */
+function showSuccessMessage(message) {
+	showNotificationBanner(message, "success");
+}
+
+/**
+ * Show error message
+ * @param {string} message - Error message
+ */
+function showErrorMessage(message) {
+	showNotificationBanner(message, "warning");
+}
+
+/**
+ * Show info message
+ * @param {string} message - Info message
+ */
+function showInfoMessage(message) {
+	showNotificationBanner(message, "info");
 }
 
 /**
