@@ -1,0 +1,653 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>FlahaSoil Analysis Report - Dr. Test User</title>
+            <style>
+                * {
+                    margin: 0;
+                    padding: 0;
+                    box-sizing: border-box;
+                }
+
+                body {
+                    font-family: 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    background: white;
+                }
+
+                /* Page Layout */
+                .page {
+                    min-height: 100vh;
+                    padding: 20px;
+                    page-break-after: always;
+                    position: relative;
+                }
+
+                .page:last-child {
+                    page-break-after: auto;
+                }
+
+                /* Header Styles */
+                .report-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 20px 0;
+                    border-bottom: 3px solid #2E8B57;
+                    margin-bottom: 30px;
+                }
+
+                .header-logos {
+                    display: flex;
+                    align-items: center;
+                    gap: 20px;
+                }
+
+                .logo-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                }
+
+                .logo-placeholder {
+                    width: 80px;
+                    height: 60px;
+                    background: linear-gradient(135deg, #2E8B57 0%, #4682B4 100%);
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                    font-size: 12px;
+                    margin-bottom: 5px;
+                }
+
+                .logo-text {
+                    font-size: 11px;
+                    color: #666;
+                    font-weight: 600;
+                }
+
+                .header-title {
+                    flex: 1;
+                    text-align: center;
+                    margin: 0 20px;
+                }
+
+                .header-title h1 {
+                    color: #2E8B57;
+                    font-size: 28px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                }
+
+                .header-title p {
+                    color: #4682B4;
+                    font-size: 14px;
+                    font-weight: 500;
+                }
+
+                /* User Info Section */
+                .user-info {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 30px;
+                    margin-bottom: 30px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    border-left: 4px solid #2E8B57;
+                }
+
+                .user-column h3 {
+                    color: #2E8B57;
+                    font-size: 16px;
+                    margin-bottom: 10px;
+                    font-weight: 600;
+                }
+
+                .user-column p {
+                    margin: 5px 0;
+                    font-size: 14px;
+                }
+
+                .user-column .highlight {
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                /* Report Title Section */
+                .report-title {
+                    text-align: center;
+                    margin: 40px 0;
+                    padding: 30px;
+                    background: linear-gradient(135deg, #2E8B57 0%, #4682B4 100%);
+                    color: white;
+                    border-radius: 12px;
+                }
+
+                .report-title h2 {
+                    font-size: 24px;
+                    margin-bottom: 15px;
+                    font-weight: bold;
+                }
+
+                .report-title p {
+                    font-size: 16px;
+                    opacity: 0.9;
+                    line-height: 1.8;
+                }
+
+                /* Section Styles */
+                .section {
+                    margin-bottom: 40px;
+                }
+
+                .section h3 {
+                    color: #2E8B57;
+                    font-size: 20px;
+                    margin-bottom: 20px;
+                    border-left: 4px solid #2E8B57;
+                    padding-left: 15px;
+                    font-weight: 600;
+                }
+
+                .subsection {
+                    margin-bottom: 25px;
+                }
+
+                .subsection h4 {
+                    color: #4682B4;
+                    font-size: 16px;
+                    margin-bottom: 15px;
+                    font-weight: 600;
+                }
+
+                /* Data Grid */
+                .data-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                    gap: 15px;
+                    margin-bottom: 20px;
+                }
+
+                .data-item {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 8px;
+                    border-left: 3px solid #4682B4;
+                    transition: all 0.3s ease;
+                }
+
+                .data-item:hover {
+                    background: #e3f2fd;
+                    border-left-color: #2E8B57;
+                }
+
+                .data-item label {
+                    font-weight: 600;
+                    color: #555;
+                    display: block;
+                    margin-bottom: 8px;
+                    font-size: 13px;
+                }
+
+                .data-item .value {
+                    font-size: 18px;
+                    color: #2E8B57;
+                    font-weight: bold;
+                }
+
+                .data-item .unit {
+                    font-size: 14px;
+                    color: #666;
+                    font-weight: normal;
+                }
+
+                /* Chart Container */
+                .chart-container {
+                    background: white;
+                    border: 2px solid #e0e0e0;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin: 20px 0;
+                    text-align: center;
+                    min-height: 400px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .chart-placeholder {
+                    color: #666;
+                    font-size: 16px;
+                    font-style: italic;
+                }
+
+                /* Quality Score */
+                .quality-score {
+                    background: linear-gradient(135deg, #e8f5e8 0%, #e3f2fd 100%);
+                    border: 2px solid #2E8B57;
+                    border-radius: 12px;
+                    padding: 25px;
+                    text-align: center;
+                    margin: 20px 0;
+                }
+
+                .quality-score h4 {
+                    color: #2E8B57;
+                    font-size: 18px;
+                    margin-bottom: 15px;
+                }
+
+                .score-value {
+                    font-size: 36px;
+                    font-weight: bold;
+                    color: #2E8B57;
+                    margin: 10px 0;
+                }
+
+                .score-description {
+                    color: #666;
+                    font-size: 14px;
+                }
+
+                /* Visualization Container */
+                .visualization-container {
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin: 20px 0;
+                }
+
+                .visualization-container h4 {
+                    color: #2E8B57;
+                    margin-bottom: 15px;
+                    text-align: center;
+                }
+
+                /* Recommendations */
+                .recommendations-container {
+                    background: #fff3e0;
+                    border-left: 4px solid #ff9800;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                }
+
+                .recommendations-container h4 {
+                    color: #e65100;
+                    margin-bottom: 15px;
+                }
+
+                .recommendation-item {
+                    margin: 10px 0;
+                    padding: 10px;
+                    background: white;
+                    border-radius: 6px;
+                    border-left: 3px solid #ff9800;
+                }
+
+                /* Page Number */
+                .page-number {
+                    position: absolute;
+                    bottom: 20px;
+                    right: 20px;
+                    font-size: 12px;
+                    color: #666;
+                }
+
+                /* Print Styles */
+                @media print {
+                    body {
+                        font-size: 12pt;
+                        line-height: 1.4;
+                        margin: 0;
+                        padding: 15px;
+                        background: white !important;
+                        color: black !important;
+                    }
+
+                    .page {
+                        page-break-after: always;
+                        min-height: auto;
+                    }
+
+                    .page:last-child {
+                        page-break-after: auto;
+                    }
+
+                    .report-header {
+                        border-bottom: 3px solid #2E8B57 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        page-break-inside: avoid;
+                    }
+
+                    .logo-placeholder {
+                        background: linear-gradient(135deg, #2E8B57 0%, #4682B4 100%) !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+
+                    .section h3 {
+                        color: #2E8B57 !important;
+                        border-left: 4px solid #2E8B57 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        page-break-after: avoid;
+                    }
+
+                    .data-grid {
+                        page-break-inside: avoid;
+                    }
+
+                    .data-item {
+                        background: #f8f9fa !important;
+                        border-left: 3px solid #4682B4 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        break-inside: avoid;
+                    }
+
+                    .quality-score {
+                        background: linear-gradient(135deg, #e8f5e8 0%, #e3f2fd 100%) !important;
+                        border: 2px solid #2E8B57 !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+
+                    @page {
+                        margin: 2cm;
+                        size: A4;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <!-- PAGE 1: Cover Page and Soil Properties -->
+            <div class="page">
+                <div class="report-header">
+                    <div class="header-logos">
+                        <div class="logo-container">
+                            <div class="logo-placeholder">FLAHA PA</div>
+                            <div class="logo-text">Flaha PA</div>
+                        </div>
+                        <div class="logo-container">
+                            <div class="logo-placeholder">FLAHA SOIL</div>
+                            <div class="logo-text">FlahaSoil</div>
+                        </div>
+                    </div>
+                    <div class="header-title">
+                        <h1>Soil Analysis Report</h1>
+                        <p>Professional Soil Water Characteristics Analysis</p>
+                    </div>
+                </div>
+
+                <div class="user-info">
+                    <div class="user-column">
+                        <h3>Professional User</h3>
+                        <p><span class="highlight">Generated for:</span> Dr. Test User</p>
+                        <p><span class="highlight">Email:</span> test@example.com</p>
+                    </div>
+                    <div class="user-column">
+                        <h3>Report Information</h3>
+                        <p><span class="highlight">Date:</span> 30/05/2025</p>
+                        <p><span class="highlight">Report ID:</span> FLH-699-30052025</p>
+                    </div>
+                </div>
+
+                <div class="report-title">
+                    <h2>Comprehensive Soil Water Characteristics Analysis</h2>
+                    <p>This report provides a detailed analysis of soil water characteristics based on the Saxton & Rawls (2006) methodology. The analysis includes soil composition, water retention properties, and physical characteristics essential for agricultural and engineering applications.</p>
+                </div>
+
+                <div class="section">
+                    <h3>Soil Properties</h3>
+
+                    <div class="subsection">
+                        <h4>Basic Properties</h4>
+                        <div class="data-grid">
+                            <div class="data-item">
+                                <label>Sand Content</label>
+                                <span class="value">42.5<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Clay Content</label>
+                                <span class="value">28.3<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Silt Content</label>
+                                <span class="value">29.2<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Organic Matter</label>
+                                <span class="value">3.2<span class="unit">%</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Professional Features</h4>
+                        <div class="data-grid">
+                            <div class="data-item">
+                                <label>Texture Classification</label>
+                                <span class="value">loam</span>
+                            </div>
+                            <div class="data-item">
+                                <label>Bulk Density Factor</label>
+                                <span class="value">1.35<span class="unit"> g/cm³</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Saturated Conductivity</label>
+                                <span class="value">15.6<span class="unit"> mm/hr</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Gravel Content</label>
+                                <span class="value">0<span class="unit">%</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Expert Parameters</h4>
+                        <div class="data-grid">
+                            <div class="data-item">
+                                <label>Porosity</label>
+                                <span class="value">N/A<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Bulk Density</label>
+                                <span class="value">1.35<span class="unit"> g/cm³</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Particle Density</label>
+                                <span class="value">2.65<span class="unit"> g/cm³</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Void Ratio</label>
+                                <span class="value">0.96</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-number">Page 1 of 3</div>
+            </div>
+
+            <!-- PAGE 2: Soil Texture Classification -->
+            <div class="page">
+                <div class="report-header">
+                    <div class="header-logos">
+                        <div class="logo-container">
+                            <div class="logo-placeholder">FLAHA PA</div>
+                            <div class="logo-text">Flaha PA</div>
+                        </div>
+                        <div class="logo-container">
+                            <div class="logo-placeholder">FLAHA SOIL</div>
+                            <div class="logo-text">FlahaSoil</div>
+                        </div>
+                    </div>
+                    <div class="header-title">
+                        <h1>Soil Analysis Report</h1>
+                        <p>Professional Soil Water Characteristics Analysis</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Soil Texture Classification</h3>
+                    <p>The soil texture triangle is a fundamental tool in soil science that classifies soils based on their sand, silt, and clay content. This classification helps predict soil behavior, water retention, drainage characteristics, and agricultural suitability.</p>
+
+                    <div class="chart-container" id="chart-container">
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <h4 style="color: #2E8B57; margin-bottom: 10px;">Soil Texture Triangle Chart</h4>
+                            <p style="margin-bottom: 5px;">Sand: 42.5% | Clay: 28.3% | Silt: 29.2%</p>
+                            <p style="font-weight: bold; color: #4682B4; margin-bottom: 15px;">Classification: loam</p>
+                        </div>
+                        <div style="display: flex; justify-content: center; align-items: center;">
+                            <svg width="500" height="450" viewBox="0 0 500 450" xmlns="http://www.w3.org/2000/svg"><defs><style>.triangle-text { font-family: Arial, sans-serif; }.triangle-grid { stroke-dasharray: 2,2; }</style></defs><rect width="500" height="450" fill="transparent"/><polygon points="250,50 50,400 450,400" fill="none" stroke="#333333" stroke-width="2"/><line x1="70" y1="85" x2="430" y2="85" stroke="#cccccc" stroke-width="1"/><line x1="90" y1="120" x2="410" y2="120" stroke="#cccccc" stroke-width="1"/><line x1="110" y1="155" x2="390" y2="155" stroke="#cccccc" stroke-width="1"/><line x1="130" y1="190" x2="370" y2="190" stroke="#cccccc" stroke-width="1"/><line x1="150" y1="225" x2="350" y2="225" stroke="#cccccc" stroke-width="1"/><line x1="170" y1="260" x2="330" y2="260" stroke="#cccccc" stroke-width="1"/><line x1="190" y1="295" x2="310" y2="295" stroke="#cccccc" stroke-width="1"/><line x1="210" y1="330" x2="290" y2="330" stroke="#cccccc" stroke-width="1"/><line x1="230" y1="365" x2="270" y2="365" stroke="#cccccc" stroke-width="1"/><line x1="90" y1="400" x2="270" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="130" y1="400" x2="290" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="170" y1="400" x2="310" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="210" y1="400" x2="330" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="250" y1="400" x2="350" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="290" y1="400" x2="370" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="330" y1="400" x2="390" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="370" y1="400" x2="410" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="410" y1="400" x2="430" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="410" y1="400" x2="230" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="370" y1="400" x2="210" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="330" y1="400" x2="190" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="290" y1="400" x2="170" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="250" y1="400" x2="150" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="210" y1="400" x2="130" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="170" y1="400" x2="110" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="130" y1="400" x2="90" y2="50" stroke="#cccccc" stroke-width="1"/><line x1="90" y1="400" x2="70" y2="50" stroke="#cccccc" stroke-width="1"/><text x="30" y="405" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">0</text><text x="30" y="335" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">20</text><text x="30" y="265" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">40</text><text x="30" y="195" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">60</text><text x="30" y="125" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">80</text><text x="30" y="55" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">100</text><text x="50" y="425" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">0</text><text x="130" y="425" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">20</text><text x="210" y="425" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">40</text><text x="290" y="425" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">60</text><text x="370" y="425" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">80</text><text x="450" y="425" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">100</text><text x="470" y="405" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">0</text><text x="470" y="335" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">20</text><text x="470" y="265" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">40</text><text x="470" y="195" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">60</text><text x="470" y="125" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">80</text><text x="470" y="55" fill="#000000" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">100</text><text x="250" y="35" fill="#000000" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Clay %</text><text x="10" y="440" fill="#000000" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Sand %</text><text x="490" y="440" fill="#000000" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Silt %</text><circle cx="223.4" cy="301" r="6" fill="#ff0000" stroke="#ffffff" stroke-width="2"/><text x="223.4" y="286" fill="#000000" font-size="13" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Clay loam</text><g id="legend"><text x="20" y="20" fill="#000000" font-size="12" font-family="Arial, sans-serif" font-weight="bold">Soil Texture Triangle</text><circle cx="30" cy="40" r="6" fill="#ff0000" stroke="#ffffff" stroke-width="2"/><text x="45" y="45" fill="#000000" font-size="11" font-family="Arial, sans-serif">Sample Point</text></g><g id="chart-ready-marker" style="display: none;">READY</g></svg>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Texture Analysis</h4>
+                        <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p><strong>Primary Texture:</strong> loam</p>
+                            <p><strong>Dominant Particle:</strong> Sand</p>
+                            <p><strong>Texture Description:</strong> Medium texture, ideal balance of drainage, water retention, and nutrients</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="page-number">Page 2 of 3</div>
+            </div>
+
+            <!-- PAGE 3: Soil Analysis Results -->
+            <div class="page">
+                <div class="report-header">
+                    <div class="header-logos">
+                        <div class="logo-container">
+                            <div class="logo-placeholder">FLAHA PA</div>
+                            <div class="logo-text">Flaha PA</div>
+                        </div>
+                        <div class="logo-container">
+                            <div class="logo-placeholder">FLAHA SOIL</div>
+                            <div class="logo-text">FlahaSoil</div>
+                        </div>
+                    </div>
+                    <div class="header-title">
+                        <h1>Soil Analysis Report</h1>
+                        <p>Professional Soil Water Characteristics Analysis</p>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Soil Analysis Results</h3>
+
+                    <div class="quality-score">
+                        <h4>Overall Soil Quality Score</h4>
+                        <div class="score-value">83/100</div>
+                        <div class="score-description">Good soil quality - suitable for diverse agriculture</div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Water Characteristics</h4>
+                        <div class="data-grid">
+                            <div class="data-item">
+                                <label>Field Capacity (θFC)</label>
+                                <span class="value">24.8<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Wilting Point (θWP)</label>
+                                <span class="value">12.4<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Plant Available Water</label>
+                                <span class="value">12.4<span class="unit">%</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Saturation Point</label>
+                                <span class="value">49.1<span class="unit">%</span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="subsection">
+                        <h4>Advanced Parameters</h4>
+                        <div class="data-grid">
+                            <div class="data-item">
+                                <label>Hydraulic Conductivity</label>
+                                <span class="value">15.6<span class="unit"> mm/hr</span></span>
+                            </div>
+                            <div class="data-item">
+                                <label>Water Retention</label>
+                                <span class="value">Moderate</span>
+                            </div>
+                            <div class="data-item">
+                                <label>Drainage Class</label>
+                                <span class="value">Well Drained</span>
+                            </div>
+                            <div class="data-item">
+                                <label>Infiltration Rate</label>
+                                <span class="value">High</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="visualization-container">
+                        <h4>Soil Water Content Visualization</h4>
+                        <div style="background: white; padding: 20px; border-radius: 8px; text-align: center;">
+                            <p><strong>Water Content Distribution</strong></p>
+                            <div style="display: flex; justify-content: space-around; margin: 20px 0;">
+                                <div style="text-align: center;">
+                                    <div style="width: 60px; height: 60px; background: #e3f2fd; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #1976d2;">49.1%</div>
+                                    <p style="font-size: 12px;">Saturation</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="width: 60px; height: 60px; background: #e8f5e8; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #2e7d32;">24.8%</div>
+                                    <p style="font-size: 12px;">Field Capacity</p>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="width: 60px; height: 60px; background: #fff3e0; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #f57c00;">12.4%</div>
+                                    <p style="font-size: 12px;">Wilting Point</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #e8f4f8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h4 style="color: #2E8B57; margin-bottom: 15px;">Understanding Soil Water Characteristics</h4>
+                        <p style="margin-bottom: 10px;"><strong>Field Capacity:</strong> The maximum amount of water soil can hold against gravity.</p>
+                        <p style="margin-bottom: 10px;"><strong>Wilting Point:</strong> The minimum water content at which plants can extract water.</p>
+                        <p style="margin-bottom: 10px;"><strong>Plant Available Water:</strong> The difference between field capacity and wilting point.</p>
+                        <p><strong>Saturation:</strong> The maximum water content when all pore spaces are filled.</p>
+                    </div>
+
+                    <div class="recommendations-container">
+                        <h4>Crop Recommendations</h4>
+                        
+				<div class="recommendation-item">
+					<h5 style="color: #e65100; margin-bottom: 8px;">Loamy Soils</h5>
+					<p style="margin-bottom: 5px;"><strong>Recommended crops:</strong> Corn, Tomatoes, Lettuce, Beans, Most vegetables</p>
+					<p style="margin: 0; font-size: 13px; color: #666;">Ideal for most crops due to balanced properties</p>
+				</div>
+			
+                    </div>
+                </div>
+
+                <div style="margin-top: 40px; padding: 20px; background: #f8f9fa; border-top: 2px solid #e0e0e0; text-align: center; font-size: 12px; color: #666;">
+                    <p><strong>Generated by FlahaSoil Professional Analysis System</strong></p>
+                    <p>Based on Saxton & Rawls (2006) Soil Water Characteristics methodology</p>
+                    <p>© 2025 Flaha PA. All rights reserved. | Report ID: FLH-699-30052025</p>
+                </div>
+
+                <div class="page-number">Page 3 of 3</div>
+            </div>
+        </body>
+        </html>
+        

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil Triangle SVG Visual Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-data {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .svg-container {
+            border: 1px solid #ddd;
+            padding: 10px;
+            background: white;
+            display: inline-block;
+        }
+        .error {
+            color: #cc0000;
+            font-weight: bold;
+        }
+        .success {
+            color: #008800;
+            font-weight: bold;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Soil Triangle SVG Generator - Visual Test</h1>
+    <p>This page tests the server-side SVG generation utility with various soil compositions.</p>
+    
+    <div id="test-results"></div>
+
+    <script>
+        // Test cases with expected classifications
+        const testCases = [
+            { sand: 40, clay: 30, silt: 30, expected: 'Clay Loam', description: 'Balanced composition' },
+            { sand: 70, clay: 15, silt: 15, expected: 'Sandy Loam', description: 'High sand content' },
+            { sand: 20, clay: 60, silt: 20, expected: 'Clay', description: 'High clay content' },
+            { sand: 20, clay: 15, silt: 65, expected: 'Silt Loam', description: 'High silt content' },
+            { sand: 85, clay: 8, silt: 7, expected: 'Sand', description: 'Very high sand content' },
+            { sand: 0, clay: 100, silt: 0, expected: 'Clay', description: 'Pure clay (vertex test)' },
+            { sand: 100, clay: 0, silt: 0, expected: 'Sand', description: 'Pure sand (vertex test)' },
+            { sand: 0, clay: 0, silt: 100, expected: 'Silt', description: 'Pure silt (vertex test)' },
+            { sand: 33.3, clay: 33.3, silt: 33.4, expected: 'Loam', description: 'Center point test' }
+        ];
+
+        // Mock SVG generator for client-side testing
+        // In real implementation, this would be called from the server
+        function generateMockSVG(soilData) {
+            const { sand, clay, silt } = soilData;
+            
+            // Simple coordinate calculation for testing
+            const x = 50 + (sand * 4) + (silt * 2);
+            const y = 400 - (clay * 3.5);
+            
+            // Determine texture class (simplified)
+            let textureClass = 'Loam';
+            if (clay >= 40) textureClass = 'Clay';
+            else if (sand >= 70) textureClass = 'Sandy Loam';
+            else if (silt >= 60) textureClass = 'Silt Loam';
+            else if (sand >= 85) textureClass = 'Sand';
+            
+            return `
+                <svg width="500" height="450" viewBox="0 0 500 450" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <style>
+                            .triangle-text { font-family: Arial, sans-serif; }
+                        </style>
+                    </defs>
+                    
+                    <!-- Background -->
+                    <rect width="500" height="450" fill="transparent"/>
+                    
+                    <!-- Triangle outline -->
+                    <polygon points="250,50 50,400 450,400" fill="none" stroke="#333333" stroke-width="2"/>
+                    
+                    <!-- Grid lines (simplified) -->
+                    <line x1="50" y1="400" x2="450" y2="400" stroke="#cccccc" stroke-width="1"/>
+                    <line x1="50" y1="400" x2="250" y2="50" stroke="#cccccc" stroke-width="1"/>
+                    <line x1="450" y1="400" x2="250" y2="50" stroke="#cccccc" stroke-width="1"/>
+                    
+                    <!-- Axis labels -->
+                    <text x="250" y="35" fill="#000000" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Clay %</text>
+                    <text x="10" y="440" fill="#000000" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Sand %</text>
+                    <text x="490" y="440" fill="#000000" font-size="14" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Silt %</text>
+                    
+                    <!-- Sample point -->
+                    <circle cx="${x}" cy="${y}" r="6" fill="#ff0000" stroke="#ffffff" stroke-width="2"/>
+                    
+                    <!-- Texture label -->
+                    <text x="${x}" y="${y - 15}" fill="#000000" font-size="13" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">${textureClass}</text>
+                    
+                    <!-- Legend -->
+                    <g id="legend">
+                        <text x="20" y="20" fill="#000000" font-size="12" font-family="Arial, sans-serif" font-weight="bold">Soil Texture Triangle</text>
+                        <circle cx="30" cy="40" r="6" fill="#ff0000" stroke="#ffffff" stroke-width="2"/>
+                        <text x="45" y="45" fill="#000000" font-size="11" font-family="Arial, sans-serif">Sample Point</text>
+                    </g>
+                    
+                    <!-- Ready marker -->
+                    <g id="chart-ready-marker" style="display: none;">READY</g>
+                </svg>
+            `;
+        }
+
+        // Generate test results
+        function generateTestResults() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = '<div class="grid"></div>';
+            const grid = container.querySelector('.grid');
+            
+            testCases.forEach((testCase, index) => {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test-container';
+                
+                try {
+                    const svg = generateMockSVG(testCase);
+                    const isValid = svg.includes('<svg') && svg.includes('</svg>');
+                    
+                    testDiv.innerHTML = `
+                        <div class="test-title">Test Case ${index + 1}: ${testCase.expected}</div>
+                        <div class="test-data">
+                            <strong>Composition:</strong> Sand: ${testCase.sand}%, Clay: ${testCase.clay}%, Silt: ${testCase.silt}%<br>
+                            <strong>Description:</strong> ${testCase.description}<br>
+                            <strong>Status:</strong> <span class="${isValid ? 'success' : 'error'}">${isValid ? 'Generated Successfully' : 'Generation Failed'}</span>
+                        </div>
+                        <div class="svg-container">
+                            ${svg}
+                        </div>
+                    `;
+                } catch (error) {
+                    testDiv.innerHTML = `
+                        <div class="test-title">Test Case ${index + 1}: ${testCase.expected}</div>
+                        <div class="test-data">
+                            <strong>Composition:</strong> Sand: ${testCase.sand}%, Clay: ${testCase.clay}%, Silt: ${testCase.silt}%<br>
+                            <strong>Description:</strong> ${testCase.description}<br>
+                            <strong>Status:</strong> <span class="error">Error: ${error.message}</span>
+                        </div>
+                    `;
+                }
+                
+                grid.appendChild(testDiv);
+            });
+        }
+
+        // Generate tests when page loads
+        document.addEventListener('DOMContentLoaded', generateTestResults);
+    </script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FlahaSoil Report Integration Test Results</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .summary { background: #e8f5e8; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        .test-list { list-style: none; padding: 0; }
+        .test-item { margin: 10px 0; padding: 15px; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #2E8B57; }
+        .success { border-left-color: #4CAF50; }
+        .failed { border-left-color: #f44336; }
+        .debug-section { background: #fff3e0; padding: 15px; border-radius: 6px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FlahaSoil Report Integration Test Results</h1>
+        <div class="summary">
+            <h3>Test Summary</h3>
+            <p><strong>Total Tests:</strong> 3</p>
+            <p><strong>Successful:</strong> 3</p>
+            <p><strong>Failed:</strong> 0</p>
+            <p><strong>Success Rate:</strong> 100%</p>
+        </div>
+        
+        <h3>Generated Reports</h3>
+        <ul class="test-list">
+            
+                <li class="test-item success">
+                    <strong>Agricultural Loam</strong><br>
+                    <small>Soil Type: loam | User: PROFESSIONAL</small><br>
+                    <small>Composition: Sand 42.5%, Clay 28.3%, Silt 29.2%</small><br>
+                    <small>Files: report-1-agricultural-loam.pdf</small>
+                </li>
+            
+                <li class="test-item success">
+                    <strong>Sandy Clay Loam</strong><br>
+                    <small>Soil Type: sandy clay loam | User: ENTERPRISE</small><br>
+                    <small>Composition: Sand 58.7%, Clay 22.1%, Silt 19.2%</small><br>
+                    <small>Files: report-2-sandy-clay-loam.pdf, custom-report-2-sandy-clay-loam.pdf</small>
+                </li>
+            
+                <li class="test-item success">
+                    <strong>Heavy Clay</strong><br>
+                    <small>Soil Type: clay | User: PROFESSIONAL</small><br>
+                    <small>Composition: Sand 15.3%, Clay 68.2%, Silt 16.5%</small><br>
+                    <small>Files: report-3-heavy-clay.pdf</small>
+                </li>
+            
+        </ul>
+        
+        <div class="debug-section">
+            <h3>Debug Information</h3>
+            <p><strong>HTML Debug File:</strong> debug-report.html</p>
+            <p><strong>SVG Triangle Integration:</strong> ✅ Successfully embedded</p>
+            <p><strong>Chart Ready Markers:</strong> ✅ Implemented</p>
+            <p><strong>Puppeteer Compatibility:</strong> ✅ Working</p>
+        </div>
+    </div>
+</body>
+</html>

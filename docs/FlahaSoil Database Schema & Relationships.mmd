@@ -1,0 +1,184 @@
+graph LR
+    %% Frontend Applications
+    subgraph "Frontend Applications"
+        Landing[🏠 Landing Page]
+        MainApp[🌱 Main Webapp]
+        Demo[🧪 Demo Page]
+        AdvDemo[⚡ Advanced Demo]
+        Profile[👤 Profile Page]
+    end
+    
+    %% API Gateway
+    subgraph "API Gateway (Port 3001)"
+        Gateway[🚪 Express Server<br/>server.js]
+    end
+    
+    %% Authentication Routes
+    subgraph "Authentication API (/api/v1/auth)"
+        AuthRegister[📝 POST /register<br/>User Registration]
+        AuthLogin[🔐 POST /login<br/>User Login]
+        AuthVerify[✅ GET /verify-email<br/>Email Verification]
+        AuthReset[🔄 POST /reset-password<br/>Password Reset]
+        AuthProfile[👤 GET /profile<br/>User Profile]
+    end
+    
+    %% Soil Analysis Routes
+    subgraph "Soil Analysis API (/api/v1/soil)"
+        %% Demo Endpoints
+        DemoAnalyze[🧪 POST /demo/analyze<br/>Basic Demo Analysis]
+        DemoEnhanced[⚡ POST /demo/analyze/enhanced<br/>Enhanced Demo Analysis]
+        DemoMoisture[📈 GET /demo/moisture-tension/:data<br/>Demo Moisture Curve]
+        DemoProfile3D[🏔️ GET /demo/profile-3d/:data<br/>Demo 3D Profile]
+        
+        %% Authenticated Endpoints
+        BasicAnalyze[🧮 POST /analyze<br/>Basic Analysis<br/>🔐 Auth Required]
+        AdvAnalyze[⚡ POST /analyze/advanced<br/>Advanced Analysis<br/>💼 Professional+]
+        BatchAnalyze[📊 POST /analyze/batch<br/>Batch Analysis<br/>💼 Professional+]
+        
+        %% Data & History
+        AnalysisHistory[📚 GET /history<br/>Analysis History<br/>💼 Professional+]
+        ExportData[📤 GET /export/:format<br/>Export Data<br/>💼 Professional+]
+        Recommendations[🌾 POST /recommendations<br/>Crop Recommendations<br/>🔐 Auth Required]
+        
+        %% Advanced Features
+        MoistureCurve[📈 GET /moisture-tension/:id<br/>Moisture-Tension Curve<br/>💼 Professional+]
+        Profile3D[🏔️ GET /profile-3d/:id<br/>3D Soil Profile<br/>💼 Professional+]
+        CompareAnalyses[⚖️ POST /compare<br/>Comparative Analysis<br/>💼 Professional+]
+        RealtimeAdjust[⚡ POST /adjust-realtime<br/>Real-time Adjustment<br/>💼 Professional+]
+        
+        %% Regional Data
+        RegionalData[🌍 GET /regional-data/:id<br/>Regional Soil Data<br/>🔐 Auth Required]
+        AvailableRegions[🗺️ GET /regions<br/>Available Regions<br/>🔐 Auth Required]
+        
+        %% Enterprise API
+        EnterpriseAPI[🏢 POST /api/analyze<br/>Enterprise API<br/>🏢 Enterprise Only]
+    end
+    
+    %% Report Generation Routes
+    subgraph "Report API (/api/v1/reports)"
+        GenerateReport[📄 POST /generate<br/>Generate PDF Report<br/>💼 Professional+]
+        PrintReport[🖨️ POST /print<br/>Print-Optimized Report<br/>💼 Professional+]
+        CustomReport[🎨 POST /custom<br/>Custom Report<br/>🏢 Enterprise Only]
+        ReportStatus[📊 GET /status/:id<br/>Report Status<br/>💼 Professional+]
+    end
+    
+    %% Integration Routes
+    subgraph "Integration API (/api/v1/integrations)"
+        WebhookEndpoint[🔗 POST /webhook<br/>Webhook Endpoint<br/>🏢 Enterprise Only]
+        APIStatus[📊 GET /status<br/>API Status<br/>🔐 Auth Required]
+        UsageStats[📈 GET /usage<br/>Usage Statistics<br/>🔐 Auth Required]
+    end
+    
+    %% Backend Services
+    subgraph "Backend Services"
+        SoilCalcService[🧮 Soil Calculation Service<br/>24-Equation System]
+        ReportService[📄 Report Generation Service<br/>Puppeteer PDF]
+        EmailService[📧 Email Service<br/>SMTP Provider]
+        AuthService[🔐 Authentication Service<br/>JWT Management]
+    end
+    
+    %% Database
+    subgraph "Database Layer"
+        UserDB[(👥 Users Table)]
+        AnalysisDB[(🌱 Soil Analyses Table)]
+        ReportDB[(📄 Reports Table)]
+        UsageDB[(📊 Usage Records Table)]
+        SubscriptionDB[(💳 Subscriptions Table)]
+    end
+    
+    %% Middleware Layer
+    subgraph "Middleware"
+        AuthMW[🔐 Authentication<br/>JWT Verification]
+        TierMW[🎯 Tier Access Control<br/>Feature Gating]
+        RateMW[⏱️ Rate Limiting<br/>Usage Throttling]
+        ValidMW[✅ Input Validation<br/>Data Sanitization]
+    end
+    
+    %% Frontend to Gateway
+    Landing --> Gateway
+    MainApp --> Gateway
+    Demo --> Gateway
+    AdvDemo --> Gateway
+    Profile --> Gateway
+    
+    %% Gateway to Auth Routes
+    Gateway --> AuthRegister
+    Gateway --> AuthLogin
+    Gateway --> AuthVerify
+    Gateway --> AuthReset
+    Gateway --> AuthProfile
+    
+    %% Gateway to Soil Routes
+    Gateway --> DemoAnalyze
+    Gateway --> DemoEnhanced
+    Gateway --> BasicAnalyze
+    Gateway --> AdvAnalyze
+    Gateway --> BatchAnalyze
+    Gateway --> AnalysisHistory
+    Gateway --> ExportData
+    Gateway --> Recommendations
+    Gateway --> MoistureCurve
+    Gateway --> Profile3D
+    Gateway --> CompareAnalyses
+    Gateway --> RealtimeAdjust
+    Gateway --> RegionalData
+    Gateway --> AvailableRegions
+    Gateway --> EnterpriseAPI
+    
+    %% Gateway to Report Routes
+    Gateway --> GenerateReport
+    Gateway --> PrintReport
+    Gateway --> CustomReport
+    Gateway --> ReportStatus
+    
+    %% Gateway to Integration Routes
+    Gateway --> WebhookEndpoint
+    Gateway --> APIStatus
+    Gateway --> UsageStats
+    
+    %% Middleware Flow
+    Gateway --> AuthMW
+    Gateway --> TierMW
+    Gateway --> RateMW
+    Gateway --> ValidMW
+    
+    %% Services Integration
+    AuthRegister --> AuthService
+    AuthLogin --> AuthService
+    BasicAnalyze --> SoilCalcService
+    AdvAnalyze --> SoilCalcService
+    GenerateReport --> ReportService
+    AuthVerify --> EmailService
+    
+    %% Database Connections
+    AuthService --> UserDB
+    SoilCalcService --> AnalysisDB
+    ReportService --> ReportDB
+    AuthMW --> UsageDB
+    TierMW --> SubscriptionDB
+    
+    %% Styling
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef gateway fill:#f3e5f5,stroke:#4a148c,stroke-width:3px
+    classDef auth fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef soil fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef report fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef integration fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef service fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef database fill:#e8eaf6,stroke:#283593,stroke-width:2px
+    classDef middleware fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    classDef demo fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef professional fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
+    classDef enterprise fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+    
+    class Landing,MainApp,Demo,AdvDemo,Profile frontend
+    class Gateway gateway
+    class AuthRegister,AuthLogin,AuthVerify,AuthReset,AuthProfile auth
+    class BasicAnalyze,AdvAnalyze,BatchAnalyze,AnalysisHistory,ExportData,Recommendations,MoistureCurve,Profile3D,CompareAnalyses,RealtimeAdjust,RegionalData,AvailableRegions soil
+    class GenerateReport,PrintReport,CustomReport,ReportStatus report
+    class WebhookEndpoint,APIStatus,UsageStats integration
+    class SoilCalcService,ReportService,EmailService,AuthService service
+    class UserDB,AnalysisDB,ReportDB,UsageDB,SubscriptionDB database
+    class AuthMW,TierMW,RateMW,ValidMW middleware
+    class DemoAnalyze,DemoEnhanced,DemoMoisture,DemoProfile3D demo
+    class EnterpriseAPI enterprise

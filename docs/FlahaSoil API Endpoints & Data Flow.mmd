@@ -1,0 +1,120 @@
+flowchart TD
+    Start([🌐 User Visits FlahaSoil]) --> Landing[🏠 Landing Page<br/>landing.html]
+    
+    Landing --> Choice{User Choice}
+    
+    %% Demo Path
+    Choice -->|Try Demo| DemoFlow[🧪 Demo Mode]
+    DemoFlow --> DemoPage[📊 Basic Demo<br/>demo.html]
+    DemoPage --> DemoCalc[🧮 Basic Soil Calculations<br/>No Authentication Required]
+    DemoCalc --> DemoResult[📋 Demo Results<br/>Limited Features]
+    DemoResult --> DemoEnd{Continue?}
+    DemoEnd -->|Register| SignupModal
+    DemoEnd -->|Exit| Landing
+    
+    %% Authentication Path
+    Choice -->|Login| LoginModal[🔐 Login Modal]
+    Choice -->|Sign Up| SignupModal[📝 Signup Modal]
+    
+    %% Login Flow
+    LoginModal --> LoginValidation{Valid Credentials?}
+    LoginValidation -->|No| LoginError[❌ Login Error]
+    LoginError --> LoginModal
+    LoginValidation -->|Yes| LoginSuccess[✅ Login Success]
+    LoginSuccess --> StoreAuth[💾 Store JWT Token<br/>& User Data]
+    StoreAuth --> RedirectMain[↗️ Redirect to Main App]
+    
+    %% Signup Flow
+    SignupModal --> SignupValidation{Valid Data?}
+    SignupValidation -->|No| SignupError[❌ Signup Error]
+    SignupError --> SignupModal
+    SignupValidation -->|Yes| CreateUser[👤 Create User Account]
+    CreateUser --> SelectPlan[🎯 Plan Selection<br/>FREE/PROFESSIONAL/ENTERPRISE]
+    SelectPlan --> EmailVerification[📧 Send Verification Email]
+    EmailVerification --> SignupSuccess[✅ Account Created]
+    SignupSuccess --> StoreAuth
+    
+    %% Main Application Flow
+    RedirectMain --> MainApp[🌱 Main Webapp<br/>index.html]
+    MainApp --> AuthCheck{Authenticated?}
+    AuthCheck -->|No| Landing
+    AuthCheck -->|Yes| TierCheck{User Tier?}
+    
+    %% Tier-Based Access
+    TierCheck -->|FREE| FreeFeatures[🆓 Free Features<br/>• Basic Calculations<br/>• 50 analyses/month<br/>• No reports]
+    TierCheck -->|PROFESSIONAL| ProFeatures[💼 Professional Features<br/>• Full 24-equation system<br/>• Unlimited analyses<br/>• PDF reports<br/>• Analysis history]
+    TierCheck -->|ENTERPRISE| EntFeatures[🏢 Enterprise Features<br/>• All Professional features<br/>• Custom reports<br/>• API access<br/>• Priority support]
+    
+    %% Feature Access
+    FreeFeatures --> SoilAnalysis[🧮 Soil Analysis]
+    ProFeatures --> SoilAnalysis
+    EntFeatures --> SoilAnalysis
+    
+    SoilAnalysis --> InputValidation{Valid Input?}
+    InputValidation -->|No| InputError[❌ Input Error]
+    InputError --> SoilAnalysis
+    InputValidation -->|Yes| UsageCheck{Usage Limit?}
+    
+    UsageCheck -->|Exceeded| UsageError[⚠️ Usage Limit Reached<br/>Upgrade Required]
+    UsageError --> UpgradePrompt[💰 Upgrade Prompt]
+    UpgradePrompt --> MainApp
+    
+    UsageCheck -->|OK| ProcessAnalysis[⚙️ Process Analysis<br/>Saxton & Rawls 2006]
+    ProcessAnalysis --> AnalysisResult[📊 Analysis Results]
+    
+    %% Results & Reports
+    AnalysisResult --> ResultDisplay[📈 Display Results<br/>• Soil properties<br/>• Water characteristics<br/>• Visualizations]
+    
+    ResultDisplay --> ReportChoice{Generate Report?}
+    ReportChoice -->|No| ContinueAnalysis[🔄 Continue Analysis]
+    ReportChoice -->|Yes| ReportAccess{Report Access?}
+    
+    ReportAccess -->|FREE| NoReportAccess[❌ No Report Access<br/>Upgrade Required]
+    NoReportAccess --> UpgradePrompt
+    
+    ReportAccess -->|PRO/ENT| GenerateReport[📄 Generate PDF Report]
+    GenerateReport --> ReportReady[✅ Report Ready<br/>Download Available]
+    
+    %% Navigation Options
+    ContinueAnalysis --> SoilAnalysis
+    ReportReady --> NavigationChoice{Where to go?}
+    NavigationChoice -->|New Analysis| SoilAnalysis
+    NavigationChoice -->|Profile| ProfilePage[👤 Profile Page<br/>profile.html]
+    NavigationChoice -->|Advanced Demo| AdvancedDemo[⚡ Advanced Demo<br/>advanced-demo.html]
+    NavigationChoice -->|Logout| LogoutProcess[🚪 Logout Process]
+    
+    %% Profile Management
+    ProfilePage --> ProfileFeatures[👤 Profile Features<br/>• Usage statistics<br/>• Plan management<br/>• Account settings<br/>• Analysis history]
+    ProfileFeatures --> ProfileActions{Action?}
+    ProfileActions -->|Upgrade| PlanUpgrade[💰 Plan Upgrade]
+    ProfileActions -->|Settings| AccountSettings[⚙️ Account Settings]
+    ProfileActions -->|History| AnalysisHistory[📊 Analysis History]
+    ProfileActions -->|Back| MainApp
+    
+    %% Advanced Features
+    AdvancedDemo --> AdvancedCheck{Advanced Access?}
+    AdvancedCheck -->|No| AdvancedUpgrade[💰 Upgrade for Advanced Features]
+    AdvancedUpgrade --> MainApp
+    AdvancedCheck -->|Yes| AdvancedFeatures[⚡ Advanced Features<br/>• 3D visualizations<br/>• Comparative analysis<br/>• Real-time adjustments<br/>• Regional data]
+    AdvancedFeatures --> MainApp
+    
+    %% Logout Process
+    LogoutProcess --> ClearAuth[🗑️ Clear Authentication]
+    ClearAuth --> Landing
+    
+    %% Styling
+    classDef startEnd fill:#ffcdd2,stroke:#d32f2f,stroke-width:3px
+    classDef process fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef error fill:#ffebee,stroke:#f44336,stroke-width:2px
+    classDef success fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    classDef feature fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef premium fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    
+    class Start,Landing startEnd
+    class DemoFlow,DemoPage,DemoCalc,MainApp,SoilAnalysis,ProcessAnalysis,GenerateReport,ProfilePage,AdvancedDemo process
+    class Choice,LoginValidation,SignupValidation,AuthCheck,TierCheck,InputValidation,UsageCheck,ReportChoice,ReportAccess,NavigationChoice,ProfileActions,AdvancedCheck,DemoEnd decision
+    class LoginError,SignupError,InputError,UsageError,NoReportAccess error
+    class LoginSuccess,SignupSuccess,AnalysisResult,ReportReady success
+    class FreeFeatures,ProFeatures,EntFeatures,ResultDisplay,ProfileFeatures,AdvancedFeatures feature
+    class UpgradePrompt,PlanUpgrade,AdvancedUpgrade premium

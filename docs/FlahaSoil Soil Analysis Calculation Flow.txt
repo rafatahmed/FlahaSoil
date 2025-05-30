@@ -1,0 +1,169 @@
+flowchart TD
+    %% Input Stage
+    UserInput[👤 User Input] --> InputValidation{Input Validation}
+    
+    %% Input Parameters
+    subgraph "Input Parameters"
+        Sand[🏖️ Sand %<br/>Range: 0-100%]
+        Clay[🧱 Clay %<br/>Range: 0-100%]
+        OM[🌱 Organic Matter %<br/>Range: 0-8%]
+        Density[⚖️ Bulk Density<br/>Range: 0.9-1.8 g/cm³]
+        Gravel[🪨 Gravel Content %<br/>Range: 0-80%]
+        EC[⚡ Electrical Conductivity<br/>Range: 0-20 dS/m]
+    end
+    
+    UserInput --> Sand
+    UserInput --> Clay
+    UserInput --> OM
+    UserInput --> Density
+    UserInput --> Gravel
+    UserInput --> EC
+    
+    %% Validation Checks
+    InputValidation -->|Invalid| ValidationErrors[❌ Validation Errors<br/>Sand + Clay ≤ 100%<br/>All values in range<br/>Required fields present]
+    ValidationErrors --> UserInput
+    
+    InputValidation -->|Valid| TierCheck{User Tier Check}
+    
+    %% Tier-Based Processing
+    TierCheck -->|FREE| BasicCalculations[🆓 Basic Calculations<br/>Limited Equation Set]
+    TierCheck -->|PROFESSIONAL| FullCalculations[💼 Full 24-Equation System<br/>Saxton & Rawls 2006]
+    TierCheck -->|ENTERPRISE| EnhancedCalculations[🏢 Enhanced Calculations<br/>+ Gravel & Salinity Effects]
+    
+    %% Saxton & Rawls 2006 Equation System
+    subgraph "Saxton & Rawls 2006 - 24 Equation System"
+        %% Primary Equations 1-8
+        Eq1[📐 Eq 1: Field Capacity Base]
+        Eq2[📐 Eq 2: Field Capacity Adjusted]
+        Eq3[📐 Eq 3: Wilting Point Base]
+        Eq4[📐 Eq 4: Wilting Point Adjusted]
+        Eq5[📐 Eq 5: Available Water]
+        Eq6[📐 Eq 6: Saturated Content]
+        Eq7[📐 Eq 7: B Parameter]
+        Eq8[📐 Eq 8: Lambda Parameter]
+        
+        %% Density Adjustments 9-12
+        Eq9[📐 Eq 9: Density Factor FC]
+        Eq10[📐 Eq 10: Density Factor WP]
+        Eq11[📐 Eq 11: FC Density Adjusted]
+        Eq12[📐 Eq 12: WP Density Adjusted]
+        
+        %% Gravel Effects 13-16 Enterprise Only
+        Eq13[📐 Eq 13: FC Gravel Adjusted]
+        Eq14[📐 Eq 14: WP Gravel Adjusted]
+        Eq15[📐 Eq 15: Saturated Gravel Adjusted]
+        Eq16[📐 Eq 16: Conductivity Gravel Adjusted]
+        
+        %% Salinity Effects 17-20 Enterprise Only
+        Eq17[📐 Eq 17: FC Salinity Adjusted]
+        Eq18[📐 Eq 18: WP Salinity Adjusted]
+        Eq19[📐 Eq 19: Conductivity Salinity Adjusted]
+        Eq20[📐 Eq 20: Air Entry Salinity Adjusted]
+        
+        %% Advanced Properties 21-24 Professional+
+        Eq21[📐 Eq 21: Hydraulic Conductivity]
+        Eq22[📐 Eq 22: Air Entry Potential]
+        Eq23[📐 Eq 23: S-Index]
+        Eq24[📐 Eq 24: R² Confidence Intervals]
+    end
+    
+    %% Calculation Routing
+    BasicCalculations --> Eq1
+    BasicCalculations --> Eq2
+    BasicCalculations --> Eq3
+    BasicCalculations --> Eq4
+    BasicCalculations --> Eq5
+    BasicCalculations --> Eq6
+    
+    FullCalculations --> Eq1
+    FullCalculations --> Eq2
+    FullCalculations --> Eq3
+    FullCalculations --> Eq4
+    FullCalculations --> Eq5
+    FullCalculations --> Eq6
+    FullCalculations --> Eq7
+    FullCalculations --> Eq8
+    FullCalculations --> Eq9
+    FullCalculations --> Eq10
+    FullCalculations --> Eq11
+    FullCalculations --> Eq12
+    FullCalculations --> Eq21
+    FullCalculations --> Eq22
+    FullCalculations --> Eq23
+    FullCalculations --> Eq24
+    
+    EnhancedCalculations --> Eq1
+    EnhancedCalculations --> Eq2
+    EnhancedCalculations --> Eq3
+    EnhancedCalculations --> Eq4
+    EnhancedCalculations --> Eq5
+    EnhancedCalculations --> Eq6
+    EnhancedCalculations --> Eq7
+    EnhancedCalculations --> Eq8
+    EnhancedCalculations --> Eq9
+    EnhancedCalculations --> Eq10
+    EnhancedCalculations --> Eq11
+    EnhancedCalculations --> Eq12
+    EnhancedCalculations --> Eq13
+    EnhancedCalculations --> Eq14
+    EnhancedCalculations --> Eq15
+    EnhancedCalculations --> Eq16
+    EnhancedCalculations --> Eq17
+    EnhancedCalculations --> Eq18
+    EnhancedCalculations --> Eq19
+    EnhancedCalculations --> Eq20
+    EnhancedCalculations --> Eq21
+    EnhancedCalculations --> Eq22
+    EnhancedCalculations --> Eq23
+    EnhancedCalculations --> Eq24
+    
+    %% Results Processing
+    Eq6 --> ResultsProcessing[⚙️ Results Processing]
+    Eq8 --> ResultsProcessing
+    Eq12 --> ResultsProcessing
+    Eq16 --> ResultsProcessing
+    Eq20 --> ResultsProcessing
+    Eq24 --> ResultsProcessing
+    
+    %% Output Results
+    ResultsProcessing --> SoilProperties[📊 Soil Properties<br/>Field Capacity<br/>Wilting Point<br/>Available Water<br/>Saturated Content<br/>Bulk Density Effects]
+    
+    ResultsProcessing --> WaterCharacteristics[💧 Water Characteristics<br/>Hydraulic Conductivity<br/>Air Entry Potential<br/>Moisture Retention<br/>Drainage Properties<br/>Infiltration Rate]
+    
+    ResultsProcessing --> QualityMetrics[📈 Quality Metrics<br/>R² Confidence Values<br/>Calculation Reliability<br/>Input Data Quality<br/>Recommendation Confidence]
+    
+    %% Advanced Outputs Professional+
+    ResultsProcessing --> AdvancedOutputs{Advanced Features?}
+    AdvancedOutputs -->|Professional+| Visualizations[📈 Advanced Visualizations<br/>Moisture-Tension Curves<br/>3D Soil Profiles<br/>USDA Triangle Position<br/>Comparative Charts]
+    
+    AdvancedOutputs -->|Enterprise| EnterpriseOutputs[🏢 Enterprise Features<br/>Gravel Effect Analysis<br/>Salinity Impact Assessment<br/>Regional Comparisons<br/>Custom Parameters]
+    
+    %% Final Results
+    SoilProperties --> FinalResults[✅ Analysis Complete]
+    WaterCharacteristics --> FinalResults
+    QualityMetrics --> FinalResults
+    Visualizations --> FinalResults
+    EnterpriseOutputs --> FinalResults
+    
+    FinalResults --> ReportGeneration{Generate Report?}
+    ReportGeneration -->|Yes| PDFReport[📄 PDF Report Generation]
+    ReportGeneration -->|No| DisplayResults[📱 Display Results]
+    
+    %% Styling
+    classDef input fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef validation fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef basic fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    classDef professional fill:#e1f5fe,stroke:#0277bd,stroke-width:2px
+    classDef enterprise fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef equation fill:#fff8e1,stroke:#f9a825,stroke-width:1px
+    classDef result fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef error fill:#ffebee,stroke:#d32f2f,stroke-width:2px
+    
+    class UserInput,Sand,Clay,OM,Density,Gravel,EC input
+    class InputValidation,TierCheck,AdvancedOutputs,ReportGeneration validation
+    class BasicCalculations basic
+    class FullCalculations,Visualizations professional
+    class EnhancedCalculations,EnterpriseOutputs enterprise
+    class Eq1,Eq2,Eq3,Eq4,Eq5,Eq6,Eq7,Eq8,Eq9,Eq10,Eq11,Eq12,Eq13,Eq14,Eq15,Eq16,Eq17,Eq18,Eq19,Eq20,Eq21,Eq22,Eq23,Eq24 equation
+    class SoilProperties,WaterCharacteristics,QualityMetrics,FinalResults,PDFReport,DisplayResults,ResultsProcessing result
+    class ValidationErrors error

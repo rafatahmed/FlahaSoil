@@ -3,6 +3,7 @@
 const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs").promises;
+const { generateSoilTriangleSVG } = require("../utils/soilTriangleGenerator");
 
 class ReportService {
 	constructor() {
@@ -46,8 +47,23 @@ class ReportService {
 			// Generate HTML content for the report
 			const htmlContent = this.generateStandardReportHTML(soilData, userInfo);
 
-			// Set content and generate PDF
+			// Set content and wait for it to load
 			await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+			// Wait for chart ready marker to ensure SVG is fully rendered
+			try {
+				await page.waitForSelector("#chart-ready-marker", { timeout: 5000 });
+				console.log(
+					"📊 Chart ready marker found - SVG triangle rendered successfully"
+				);
+			} catch (error) {
+				console.warn(
+					"⚠️ Chart ready marker not found, proceeding with PDF generation"
+				);
+			}
+
+			// Add a small delay to ensure all rendering is complete
+			await new Promise((resolve) => setTimeout(resolve, 1000));
 
 			const pdfBuffer = await page.pdf({
 				format: "A4",
@@ -60,6 +76,7 @@ class ReportService {
 				},
 			});
 
+			console.log(`📄 PDF generated successfully: ${pdfBuffer.length} bytes`);
 			return pdfBuffer;
 		} finally {
 			await page.close();
@@ -87,6 +104,17 @@ class ReportService {
 
 			await page.setContent(htmlContent, { waitUntil: "networkidle0" });
 
+			// Wait for chart ready marker to ensure SVG is fully rendered
+			try {
+				await page.waitForSelector("#chart-ready-marker", { timeout: 5000 });
+				console.log("📊 Custom report chart ready marker found");
+			} catch (error) {
+				console.warn("⚠️ Custom report chart ready marker not found");
+			}
+
+			// Add a small delay to ensure all rendering is complete
+			await new Promise((resolve) => setTimeout(resolve, 1000));
+
 			const pdfBuffer = await page.pdf({
 				format: customOptions.pageFormat || "A4",
 				printBackground: true,
@@ -98,6 +126,9 @@ class ReportService {
 				},
 			});
 
+			console.log(
+				`📄 Custom PDF generated successfully: ${pdfBuffer.length} bytes`
+			);
 			return pdfBuffer;
 		} finally {
 			await page.close();
@@ -116,6 +147,38 @@ class ReportService {
 		const reportNumber = Math.floor(Math.random() * 999) + 1;
 
 		return `FLH-${String(reportNumber).padStart(3, "0")}-${day}${month}${year}`;
+	}
+
+	/**
+	 * Generate soil triangle SVG for reports
+	 * @param {Object} soilData - Soil composition data
+	 * @returns {string} SVG markup
+	 */
+	generateSoilTriangleSVG(soilData) {
+		try {
+			// Use the SVG generator utility
+			const svgMarkup = generateSoilTriangleSVG({
+				sand: parseFloat(soilData.sand) || 0,
+				clay: parseFloat(soilData.clay) || 0,
+				silt: parseFloat(soilData.silt) || 0,
+			});
+
+			console.log("📊 Soil triangle SVG generated successfully");
+			return svgMarkup;
+		} catch (error) {
+			console.error("❌ Error generating soil triangle SVG:", error);
+
+			// Return fallback SVG with error message
+			return `
+				<svg width="500" height="450" viewBox="0 0 500 450" xmlns="http://www.w3.org/2000/svg">
+					<rect width="500" height="450" fill="#f8f8f8" stroke="#cccccc"/>
+					<text x="250" y="200" fill="#cc0000" font-size="16" font-family="Arial, sans-serif" text-anchor="middle" font-weight="bold">Error Generating Triangle</text>
+					<text x="250" y="230" fill="#666" font-size="14" font-family="Arial, sans-serif" text-anchor="middle">Please check soil composition data</text>
+					<text x="250" y="260" fill="#666" font-size="12" font-family="Arial, sans-serif" text-anchor="middle">Sand: ${soilData.sand}% | Clay: ${soilData.clay}% | Silt: ${soilData.silt}%</text>
+					<g id="chart-ready-marker" style="display: none;">READY</g>
+				</svg>
+			`;
+		}
 	}
 
 	/**
@@ -662,17 +725,19 @@ class ReportService {
                     <p>The soil texture triangle is a fundamental tool in soil science that classifies soils based on their sand, silt, and clay content. This classification helps predict soil behavior, water retention, drainage characteristics, and agricultural suitability.</p>
 
                     <div class="chart-container" id="chart-container">
-                        <div class="chart-placeholder">
-                            <p><strong>Soil Texture Triangle Chart</strong></p>
-                            <p>Sand: ${soilData.sand}% | Clay: ${
-			soilData.clay
-		}% | Silt: ${soilData.silt}%</p>
-                            <p><strong>Classification: ${
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <h4 style="color: #2E8B57; margin-bottom: 10px;">Soil Texture Triangle Chart</h4>
+                            <p style="margin-bottom: 5px;">Sand: ${
+															soilData.sand
+														}% | Clay: ${soilData.clay}% | Silt: ${
+			soilData.silt
+		}%</p>
+                            <p style="font-weight: bold; color: #4682B4; margin-bottom: 15px;">Classification: ${
 															soilData.textureClass
-														}</strong></p>
-                            <p style="margin-top: 20px; font-size: 14px; color: #888;">
-                                Chart visualization would appear here in the interactive version
-                            </p>
+														}</p>
+                        </div>
+                        <div style="display: flex; justify-content: center; align-items: center;">
+                            ${this.generateSoilTriangleSVG(soilData)}
                         </div>
                     </div>
 

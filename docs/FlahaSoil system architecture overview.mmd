@@ -1,0 +1,132 @@
+graph TB
+    %% External Users
+    User[👤 User]
+    Demo[🔍 Demo User]
+    
+    %% Frontend Layer
+    subgraph "Frontend Layer (Port 3000)"
+        Landing[🏠 Landing Page<br/>landing.html]
+        MainApp[🌱 Main Webapp<br/>index.html]
+        DemoPage[🧪 Demo Page<br/>demo.html]
+        AdvDemo[⚡ Advanced Demo<br/>advanced-demo.html]
+        Profile[👤 Profile Page<br/>profile.html]
+        `
+        subgraph "Frontend Assets"
+            CSS[🎨 CSS Styles]
+            JS[⚙️ JavaScript Modules]
+            Images[🖼️ Images & Icons]
+        end
+    end
+    
+    %% Backend Layer
+    subgraph "Backend API Layer (Port 3001)"
+        Server[🖥️ Express Server<br/>server.js]
+        
+        subgraph "API Routes"
+            AuthAPI[🔐 Auth Routes<br/>/api/v1/auth]
+            SoilAPI[🌱 Soil Routes<br/>/api/v1/soil]
+            ReportAPI[📄 Report Routes<br/>/api/v1/reports]
+            IntegAPI[🔗 Integration Routes<br/>/api/v1/integrations]
+        end
+        
+        subgraph "Controllers"
+            AuthCtrl[🔐 Auth Controller]
+            SoilCtrl[🌱 Soil Controller]
+            ReportCtrl[📄 Report Controller]
+            EnhancedCtrl[⚡ Enhanced Controller]
+        end
+        
+        subgraph "Services"
+            SoilCalc[🧮 Soil Calculation Service<br/>24-Equation System]
+            ReportSvc[📄 Report Service<br/>PDF Generation]
+            EmailSvc[📧 Email Service]
+            AuthSvc[🔐 Auth Service]
+        end
+        
+        subgraph "Middleware"
+            AuthMW[🔐 Auth Middleware]
+            RateLimit[⏱️ Rate Limiting]
+            Validation[✅ Input Validation]
+            TierCheck[🎯 Tier Access Control]
+        end
+    end
+    
+    %% Database Layer
+    subgraph "Database Layer"
+        SQLite[(🗄️ SQLite Database<br/>Prisma ORM)]
+        
+        subgraph "Data Models"
+            Users[👥 Users]
+            SoilAnalyses[🌱 Soil Analyses]
+            Subscriptions[💳 Subscriptions]
+            UsageRecords[📊 Usage Records]
+            Reports[📄 Reports]
+        end
+    end
+    
+    %% External Services
+    subgraph "External Services"
+        Puppeteer[🎭 Puppeteer<br/>PDF Generation]
+        EmailProvider[📧 Email Provider<br/>SMTP]
+        FileSystem[📁 File System<br/>Report Storage]
+    end
+    
+    %% User Flow Connections
+    User --> Landing
+    Demo --> DemoPage
+    Landing --> MainApp
+    Landing --> DemoPage
+    MainApp --> Profile
+    MainApp --> AdvDemo
+    
+    %% Frontend to Backend
+    Landing --> AuthAPI
+    MainApp --> SoilAPI
+    MainApp --> ReportAPI
+    Profile --> AuthAPI
+    DemoPage --> SoilAPI
+    AdvDemo --> SoilAPI
+    
+    %% API to Controllers
+    AuthAPI --> AuthCtrl
+    SoilAPI --> SoilCtrl
+    SoilAPI --> EnhancedCtrl
+    ReportAPI --> ReportCtrl
+    IntegAPI --> SoilCtrl
+    
+    %% Controllers to Services
+    AuthCtrl --> AuthSvc
+    AuthCtrl --> EmailSvc
+    SoilCtrl --> SoilCalc
+    EnhancedCtrl --> SoilCalc
+    ReportCtrl --> ReportSvc
+    
+    %% Services to External
+    ReportSvc --> Puppeteer
+    EmailSvc --> EmailProvider
+    ReportSvc --> FileSystem
+    
+    %% Database Connections
+    AuthCtrl --> SQLite
+    SoilCtrl --> SQLite
+    ReportCtrl --> SQLite
+    
+    %% Middleware Flow
+    AuthAPI --> AuthMW
+    SoilAPI --> AuthMW
+    SoilAPI --> TierCheck
+    SoilAPI --> RateLimit
+    SoilAPI --> Validation
+    
+    %% Styling
+    classDef frontend fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backend fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef database fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef user fill:#ffebee,stroke:#c62828,stroke-width:2px
+    
+    class Landing,MainApp,DemoPage,AdvDemo,Profile,CSS,JS,Images frontend
+    class Server,AuthAPI,SoilAPI,ReportAPI,IntegAPI,AuthCtrl,SoilCtrl,ReportCtrl,EnhancedCtrl,SoilCalc,ReportSvc,EmailSvc,AuthSvc,AuthMW,RateLimit,Validation,TierCheck backend
+    class SQLite,Users,SoilAnalyses,Subscriptions,UsageRecords,Reports database
+    class Puppeteer,EmailProvider,FileSystem external
+    class User,Demo user

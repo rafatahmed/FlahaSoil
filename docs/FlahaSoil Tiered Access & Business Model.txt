@@ -1,0 +1,153 @@
+graph TD
+    %% User Entry Points
+    Visitor[🌐 Website Visitor] --> Landing[🏠 Landing Page]
+    
+    %% Plan Selection
+    Landing --> PlanChoice{Choose Plan}
+    
+    %% Free Tier Path
+    PlanChoice -->|Free| FreeTier[🆓 FREE TIER<br/>$0/month]
+    FreeTier --> FreeFeatures[📋 Free Features<br/>• 50 analyses/month<br/>• Basic soil calculations<br/>• USDA triangle visualization<br/>• Web interface access<br/>❌ No reports<br/>❌ No print functionality<br/>❌ No analysis history<br/>❌ No export capabilities]
+    
+    %% Professional Tier Path
+    PlanChoice -->|Professional| ProTier[💼 PROFESSIONAL TIER<br/>$29/month]
+    ProTier --> ProFeatures[📋 Professional Features<br/>• Unlimited analyses<br/>• Full 24-equation system<br/>• Confidence intervals R²<br/>• PDF report generation<br/>• Print functionality<br/>• Analysis history<br/>• Export capabilities<br/>• Advanced visualizations<br/>• Moisture-tension curves<br/>• 3D soil profiles<br/>• Comparative analysis<br/>• Real-time adjustments]
+    
+    %% Enterprise Tier Path
+    PlanChoice -->|Enterprise| EntTier[🏢 ENTERPRISE TIER<br/>$199/month]
+    EntTier --> EntFeatures[📋 Enterprise Features<br/>• All Professional features<br/>• Custom report branding<br/>• API access & webhooks<br/>• Gravel effects calculations<br/>• Salinity effects calculations<br/>• Regional data integration<br/>• Priority support<br/>• Custom integrations<br/>• Bulk processing<br/>• White-label options]
+    
+    %% Demo Access
+    Landing --> DemoAccess[🧪 Try Demo<br/>No Registration Required]
+    DemoAccess --> DemoFeatures[📋 Demo Features<br/>• Basic calculations only<br/>• Limited to demo data<br/>• No data storage<br/>• No reports<br/>• Upgrade prompts<br/>• Sample visualizations]
+    
+    %% Feature Access Control
+    subgraph "Feature Access Matrix"
+        BasicCalc[🧮 Basic Soil Calculations]
+        AdvCalc[⚡ Advanced 24-Equation System]
+        Reports[📄 PDF Reports]
+        History[📚 Analysis History]
+        Export[📤 Data Export]
+        API[🔗 API Access]
+        CustomBrand[🎨 Custom Branding]
+        RegionalData[🌍 Regional Data]
+        Support[🎧 Support Level]
+    end
+    
+    %% Access Permissions
+    FreeFeatures --> BasicCalc
+    FreeFeatures -.->|❌| AdvCalc
+    FreeFeatures -.->|❌| Reports
+    FreeFeatures -.->|❌| History
+    FreeFeatures -.->|❌| Export
+    FreeFeatures -.->|❌| API
+    FreeFeatures -.->|❌| CustomBrand
+    FreeFeatures -.->|❌| RegionalData
+    FreeFeatures --> Support
+    
+    ProFeatures --> BasicCalc
+    ProFeatures --> AdvCalc
+    ProFeatures --> Reports
+    ProFeatures --> History
+    ProFeatures --> Export
+    ProFeatures -.->|❌| API
+    ProFeatures -.->|❌| CustomBrand
+    ProFeatures --> RegionalData
+    ProFeatures --> Support
+    
+    EntFeatures --> BasicCalc
+    EntFeatures --> AdvCalc
+    EntFeatures --> Reports
+    EntFeatures --> History
+    EntFeatures --> Export
+    EntFeatures --> API
+    EntFeatures --> CustomBrand
+    EntFeatures --> RegionalData
+    EntFeatures --> Support
+    
+    DemoFeatures --> BasicCalc
+    DemoFeatures -.->|❌| AdvCalc
+    DemoFeatures -.->|❌| Reports
+    DemoFeatures -.->|❌| History
+    DemoFeatures -.->|❌| Export
+    DemoFeatures -.->|❌| API
+    DemoFeatures -.->|❌| CustomBrand
+    DemoFeatures -.->|❌| RegionalData
+    DemoFeatures -.->|❌| Support
+    
+    %% Usage Limits & Monitoring
+    subgraph "Usage Control System"
+        UsageMonitor[📊 Usage Monitoring]
+        RateLimit[⏱️ Rate Limiting]
+        TierGating[🚪 Feature Gating]
+        UpgradePrompts[💰 Upgrade Prompts]
+    end
+    
+    %% Usage Limits by Tier
+    FreeTier --> UsageLimit1[📊 50 analyses/month]
+    ProTier --> UsageLimit2[📊 Unlimited analyses]
+    EntTier --> UsageLimit3[📊 Unlimited + API quotas]
+    DemoAccess --> UsageLimit4[📊 Demo only - no storage]
+    
+    %% Upgrade Paths
+    FreeFeatures --> UpgradeToProPrompt[💰 Upgrade to Professional<br/>When limits reached]
+    ProFeatures --> UpgradeToEntPrompt[💰 Upgrade to Enterprise<br/>For API access]
+    DemoFeatures --> UpgradeToAnyPrompt[💰 Register for Full Access<br/>After demo usage]
+    
+    UpgradeToProPrompt --> ProTier
+    UpgradeToEntPrompt --> EntTier
+    UpgradeToAnyPrompt --> PlanChoice
+    
+    %% Revenue Streams
+    subgraph "Revenue Model"
+        Freemium[🆓 Freemium Model<br/>Lead Generation]
+        ProSubs[💼 Professional Subscriptions<br/>$29/month × users]
+        EntSubs[🏢 Enterprise Subscriptions<br/>$199/month × organizations]
+        APIUsage[🔗 API Usage Fees<br/>Enterprise add-ons]
+        CustomDev[🛠️ Custom Development<br/>Enterprise services]
+    end
+    
+    FreeTier --> Freemium
+    ProTier --> ProSubs
+    EntTier --> EntSubs
+    EntTier --> APIUsage
+    EntTier --> CustomDev
+    
+    %% IP Protection Strategy
+    subgraph "IP Protection"
+        BackendOnly[🔒 Backend-Only Calculations<br/>24-Equation System Protected]
+        APIAuth[🔐 API Authentication<br/>JWT + Tier Validation]
+        ServerSide[🖥️ Server-Side Processing<br/>No Client-Side Algorithms]
+        TierValidation[✅ Real-time Tier Validation<br/>Feature Access Control]
+    end
+    
+    %% All tiers connect to IP protection
+    FreeFeatures --> BackendOnly
+    ProFeatures --> BackendOnly
+    EntFeatures --> BackendOnly
+    DemoFeatures --> BackendOnly
+    
+    BackendOnly --> APIAuth
+    APIAuth --> ServerSide
+    ServerSide --> TierValidation
+    
+    %% Styling
+    classDef free fill:#e8f5e8,stroke:#4caf50,stroke-width:2px
+    classDef professional fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef enterprise fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef demo fill:#ffebee,stroke:#f44336,stroke-width:2px
+    classDef feature fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef revenue fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef protection fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef upgrade fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    classDef limit fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    
+    class FreeTier,FreeFeatures,UsageLimit1,Freemium free
+    class ProTier,ProFeatures,UsageLimit2,ProSubs professional
+    class EntTier,EntFeatures,UsageLimit3,EntSubs,APIUsage,CustomDev enterprise
+    class DemoAccess,DemoFeatures,UsageLimit4 demo
+    class BasicCalc,AdvCalc,Reports,History,Export,API,CustomBrand,RegionalData,Support feature
+    class ProSubs,EntSubs,APIUsage,CustomDev,Freemium revenue
+    class BackendOnly,APIAuth,ServerSide,TierValidation protection
+    class UpgradeToProPrompt,UpgradeToEntPrompt,UpgradeToAnyPrompt,UpgradePrompts upgrade
+    class UsageMonitor,RateLimit,TierGating limit

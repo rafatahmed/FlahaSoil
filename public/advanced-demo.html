@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/visualizations.css">
     <link rel="stylesheet" href="assets/css/demo.css">
+    <link rel="stylesheet" href="assets/css/advanced-demo.css">
     <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
     <!-- Load Chart.js Library - Local file for reliability -->
     <script src="assets/js/chart.min.js"></script>
@@ -33,20 +34,42 @@
 </head>
 
 <body>
-    <!-- Flaha PA Navigation -->
-    <nav class="navbar flaha-navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
+    <!-- Flaha PA Header -->
+    <header class="flaha-header">
+        <div class="header-content">
+            <!-- Brand Section -->
+            <div class="brand-section">
                 <a href="./landing.html" class="logo-link">
-                    <img src="./assets/img/logo/flaha_pa_logo.svg" alt="Flaha PA" class="logo-img">
+                    <img src="./assets/img/logo/flaha_pa_logo.svg" alt="Flaha PA" class="logo-image">
                     <div class="logo-text">
                         <span class="flaha-text">FLAHA</span>
                         <span class="pa-text">PA</span>
                         <span class="app-name">FlahaSoil</span>
                     </div>
                 </a>
+                <div class="brand-tagline">Precision Agriculture Technology</div>
             </div>
 
+            <!-- App Title Section -->
+            <div class="app-title-section">
+                <h1 class="app-title">Advanced Soil Visualization Suite</h1>
+                <p class="app-subtitle">Professional+ features for comprehensive soil analysis</p>
+            </div>
+
+            <!-- User Section -->
+            <div class="user-section">
+                <div class="user-info">
+                    <span id="user-name" class="user-name"></span>
+                    <span id="user-plan" class="user-plan"></span>
+                </div>
+                <button id="auth-btn" class="btn btn-primary">Sign In</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Flaha PA Navigation -->
+    <nav class="navbar flaha-navbar">
+        <div class="nav-container">
             <!-- Mobile Navigation Toggle -->
             <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">
                 <span></span>
@@ -55,14 +78,30 @@
             </button>
 
             <div class="nav-menu" id="navMenu">
-                <a href="./index.html" class="nav-link">Soil Analysis</a>
-                <a href="./demo.html" class="nav-link">Basic Demo</a>
-                <a href="./advanced-demo.html" class="nav-link active">Advanced Features</a>
-                <a href="./profile.html" class="nav-link">Profile</a>
+                <a href="./index.html" class="nav-link">
+                    <span class="nav-icon">🧪</span>
+                    <span class="nav-text">Soil Analysis</span>
+                </a>
+                <a href="./demo.html" class="nav-link">
+                    <span class="nav-icon">🎯</span>
+                    <span class="nav-text">Basic Demo</span>
+                </a>
+                <a href="./advanced-demo.html" class="nav-link active">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Advanced Features</span>
+                </a>
+                <a href="./profile.html" class="nav-link">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-text">Profile</span>
+                </a>
             </div>
-            <div class="nav-auth">
-                <span id="user-info" class="user-info"></span>
-                <button id="auth-btn" class="btn btn-primary">Sign In</button>
+
+            <!-- Quick Actions -->
+            <div class="nav-actions">
+                <button id="quick-analysis-btn" class="btn btn-secondary btn-sm" onclick="runQuickAnalysis()">Quick
+                    Analysis</button>
+                <button id="upgrade-nav-btn" class="btn btn-accent btn-sm"
+                    onclick="window.location.href='profile.html#upgrade'" style="display: none;">Upgrade</button>
             </div>
         </div>
     </nav>
@@ -98,50 +137,151 @@
 
                 <!-- Soil Input Section -->
                 <div class="demo-section">
-                    <h2>🧪 Soil Analysis Input</h2>
+                    <h2>🧪 Professional Soil Analysis Input</h2>
                     <div class="input-grid">
                         <div class="input-group">
                             <label for="demo-sand">Sand (%)</label>
-                            <input type="number" id="demo-sand" value="45" min="0" max="100" class="form-input">
+                            <input type="number" id="demo-sand" value="45" min="0" max="100" class="form-input"
+                                onchange="updateSiltValue(); updateAnalysis();">
+                            <small class="input-help">USDA particle size: 0.05-2.0 mm</small>
                         </div>
                         <div class="input-group">
                             <label for="demo-clay">Clay (%)</label>
-                            <input type="number" id="demo-clay" value="25" min="0" max="100" class="form-input">
+                            <input type="number" id="demo-clay" value="25" min="0" max="100" class="form-input"
+                                onchange="updateSiltValue(); updateAnalysis();">
+                            <small class="input-help">USDA particle size: <0.002 mm</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="demo-silt">Silt (%) <span class="auto-calculated">Auto-calculated</span></label>
+                            <input type="number" id="demo-silt" value="30" min="0" max="100" class="form-input"
+                                readonly>
+                            <small class="input-help">USDA particle size: 0.002-0.05 mm</small>
                         </div>
                         <div class="input-group">
                             <label for="demo-om">Organic Matter (%)</label>
-                            <input type="number" id="demo-om" value="3.2" min="0" max="10" step="0.1"
-                                class="form-input">
+                            <input type="number" id="demo-om" value="3.2" min="0" max="10" step="0.1" class="form-input"
+                                onchange="updateAnalysis();">
+                            <small class="input-help">Typical range: 1-8% for agricultural soils</small>
                         </div>
                         <div class="input-group">
-                            <label for="demo-region">Region</label>
-                            <select id="demo-region" class="form-input">
-                                <option value="">Select Region</option>
-                                <option value="us-midwest">US Midwest</option>
-                                <option value="california-central">California Central Valley</option>
-                                <option value="texas-high-plains">Texas High Plains</option>
-                                <option value="european-lowlands">European Lowlands</option>
-                                <option value="australian-wheat">Australian Wheat Belt</option>
+                            <label for="demo-bulk-density">Bulk Density (g/cm³)</label>
+                            <input type="number" id="demo-bulk-density" value="1.35" min="0.9" max="1.8" step="0.01"
+                                class="form-input" onchange="updateAnalysis();">
+                            <small class="input-help">Typical range: 1.0-1.6 g/cm³</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="demo-region">Climate Region</label>
+                            <select id="demo-region" class="form-input" onchange="updateAnalysis();">
+                                <option value="">Select Climate Region</option>
+                                <option value="temperate-humid">Temperate Humid</option>
+                                <option value="temperate-semi-arid">Temperate Semi-Arid</option>
+                                <option value="subtropical-humid">Subtropical Humid</option>
+                                <option value="mediterranean">Mediterranean</option>
+                                <option value="continental">Continental</option>
+                                <option value="tropical">Tropical</option>
                             </select>
+                            <small class="input-help">Affects water retention calculations</small>
                         </div>
                     </div>
+
+                    <!-- Real-time Validation -->
+                    <div id="validation-status" class="validation-status">
+                        <div class="validation-item" id="composition-validation">
+                            <span class="validation-icon">✓</span>
+                            <span class="validation-text">Particle composition totals 100%</span>
+                        </div>
+                        <div class="validation-item" id="texture-classification">
+                            <span class="validation-icon">🏷️</span>
+                            <span class="validation-text">Texture Class: <strong
+                                    id="texture-class-name">Loam</strong></span>
+                        </div>
+                    </div>
+
                     <div class="action-buttons">
-                        <button id="analyze-btn" class="btn btn-primary">🔬 Enhanced Analysis</button>
+                        <button id="analyze-btn" class="btn btn-primary">🔬 Advanced Analysis</button>
                         <button id="compare-btn" class="btn btn-secondary">📊 Compare Analyses</button>
+                        <button id="generate-report-btn" class="btn btn-accent" style="display: none;">📄 Generate
+                            Report</button>
                     </div>
                 </div>
 
                 <!-- Feature Tabs -->
                 <div class="feature-tabs">
                     <div class="tab-buttons">
-                        <button class="tab-btn active" data-tab="moisture-curve">📈 Moisture-Tension Curve</button>
+                        <button class="tab-btn active" data-tab="soil-triangle">🔺 Soil Texture Triangle</button>
+                        <button class="tab-btn" data-tab="moisture-curve">📈 Moisture-Tension Curve</button>
                         <button class="tab-btn" data-tab="soil-profile">🏔️ 3D Soil Profile</button>
                         <button class="tab-btn" data-tab="comparison">⚖️ Comparative Analysis</button>
                         <button class="tab-btn" data-tab="realtime">⚡ Real-time Adjustment</button>
                     </div>
 
+                    <!-- Soil Texture Triangle Tab -->
+                    <div id="soil-triangle" class="tab-content active">
+                        <h3>Professional Soil Texture Triangle</h3>
+                        <p>Clean, scientific-grade soil texture classification with real-time positioning</p>
+                        <div class="triangle-container">
+                            <div id="soil-triangle-svg" class="triangle-display">
+                                <!-- SVG triangle will be inserted here -->
+                            </div>
+                            <div class="triangle-info">
+                                <div class="info-card">
+                                    <h4>Current Analysis</h4>
+                                    <div class="analysis-details">
+                                        <div class="detail-item">
+                                            <span class="label">Texture Class:</span>
+                                            <span id="current-texture-class" class="value">Loam</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="label">Sand:</span>
+                                            <span id="current-sand" class="value">45%</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="label">Clay:</span>
+                                            <span id="current-clay" class="value">25%</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="label">Silt:</span>
+                                            <span id="current-silt" class="value">30%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="info-card">
+                                    <h4>Soil Properties</h4>
+                                    <div class="properties-grid">
+                                        <div class="property-item">
+                                            <span class="prop-label">Field Capacity:</span>
+                                            <span id="field-capacity" class="prop-value">24.8%</span>
+                                        </div>
+                                        <div class="property-item">
+                                            <span class="prop-label">Wilting Point:</span>
+                                            <span id="wilting-point" class="prop-value">12.4%</span>
+                                        </div>
+                                        <div class="property-item">
+                                            <span class="prop-label">Available Water:</span>
+                                            <span id="available-water" class="prop-value">12.4%</span>
+                                        </div>
+                                        <div class="property-item">
+                                            <span class="prop-label">Saturation:</span>
+                                            <span id="saturation" class="prop-value">49.1%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="feature-info">
+                            <h4>Professional Features:</h4>
+                            <ul>
+                                <li>✅ Clean, grid-free triangle for professional presentation</li>
+                                <li>✅ Real-time sample point positioning using barycentric coordinates</li>
+                                <li>✅ USDA soil texture classification system</li>
+                                <li>✅ Scientific-grade accuracy and visual quality</li>
+                                <li>✅ Print-ready vector graphics for reports</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- Moisture-Tension Curve Tab -->
-                    <div id="moisture-curve" class="tab-content active">
+                    <div id="moisture-curve" class="tab-content">
                         <h3>Interactive Moisture-Tension Curve</h3>
                         <p>Visualize soil water retention characteristics across different tension levels</p>
                         <div id="moisture-tension-chart" class="chart-container"></div>
@@ -264,39 +404,90 @@
         </section>
     </main>
 
-    <footer class="footer">
+    <!-- Flaha PA Footer -->
+    <footer class="flaha-footer">
         <div class="container">
             <div class="footer-content">
+                <!-- Brand Section -->
                 <div class="footer-section">
                     <div class="footer-brand">
-                        <img src="./assets/img/logo/flaha_pa_logo.svg" alt="Flaha PA" class="footer-logo">
-                        <div class="brand-text">
-                            <span class="flaha-text">FLAHA</span>
-                            <span class="pa-text">PA</span>
-                            <span class="app-name">FlahaSoil</span>
-                        </div>
+                        <a href="./landing.html" class="logo-link">
+                            <img src="./assets/img/logo/flaha_pa_logo.svg" alt="Flaha PA" class="footer-logo">
+                            <div class="brand-text">
+                                <span class="flaha-text">FLAHA</span>
+                                <span class="pa-text">PA</span>
+                                <span class="app-name">FlahaSoil</span>
+                            </div>
+                        </a>
                     </div>
-                    <p>Advanced soil analysis for modern agriculture</p>
+                    <p class="footer-description">
+                        Advanced soil analysis technology for precision agriculture.
+                        Empowering farmers and agronomists with scientific-grade soil texture analysis and comprehensive
+                        reporting.
+                    </p>
+                    <div class="footer-badges">
+                        <span class="footer-badge">🌱 Sustainable Agriculture</span>
+                        <span class="footer-badge">🔬 Scientific Accuracy</span>
+                        <span class="footer-badge">📊 Professional Reports</span>
+                    </div>
                 </div>
+
+                <!-- FlahaSoil Features -->
                 <div class="footer-section">
-                    <h4>Features</h4>
+                    <h4>FlahaSoil Features</h4>
                     <ul>
-                        <li><a href="demo.html">Basic Analysis</a></li>
-                        <li><a href="advanced-demo.html">Advanced Visualizations</a></li>
-                        <li><a href="#regional">Regional Data</a></li>
+                        <li><a href="demo.html" class="footer-link">Basic Soil Analysis</a></li>
+                        <li><a href="advanced-demo.html" class="footer-link">Advanced Visualizations</a></li>
+                        <li><a href="index.html" class="footer-link">Professional Reports</a></li>
+                        <li><a href="#texture-triangle" class="footer-link">Soil Texture Triangle</a></li>
+                        <li><a href="#moisture-curves" class="footer-link">Moisture-Tension Curves</a></li>
+                        <li><a href="#3d-profiles" class="footer-link">3D Soil Profiles</a></li>
                     </ul>
                 </div>
+
+                <!-- Flaha PA Division -->
                 <div class="footer-section">
-                    <h4>Support</h4>
+                    <h4>Flaha PA Division</h4>
                     <ul>
-                        <li><a href="#help">Documentation</a></li>
-                        <li><a href="#contact">Contact Us</a></li>
-                        <li><a href="#api">API Access</a></li>
+                        <li><a href="https://evapotran.flaha.org" class="footer-link" target="_blank">EvapotranCalc</a>
+                        </li>
+                        <li><a href="#flahafert" class="footer-link">FlahaFert Calculator</a></li>
+                        <li><a href="#precision-ag" class="footer-link">Precision Agriculture Tools</a></li>
+                        <li><a href="#digital-solutions" class="footer-link">Digital Solutions</a></li>
+                        <li><a href="#api-access" class="footer-link">API Access</a></li>
+                    </ul>
+                </div>
+
+                <!-- Support & Resources -->
+                <div class="footer-section">
+                    <h4>Support & Resources</h4>
+                    <ul>
+                        <li><a href="#documentation" class="footer-link">Documentation</a></li>
+                        <li><a href="#user-guide" class="footer-link">User Guide</a></li>
+                        <li><a href="#scientific-methods" class="footer-link">Scientific Methods</a></li>
+                        <li><a href="#contact" class="footer-link">Contact Support</a></li>
+                        <li><a href="#training" class="footer-link">Training Resources</a></li>
+                        <li><a href="#updates" class="footer-link">Updates & News</a></li>
                     </ul>
                 </div>
             </div>
+
+            <!-- Footer Bottom -->
             <div class="footer-bottom">
-                <p>&copy; 2024 FlahaSoil. All rights reserved.</p>
+                <div class="footer-bottom-content">
+                    <div class="footer-legal">
+                        <p>&copy; 2024 Flaha Agri Tech. All rights reserved.</p>
+                        <p>FlahaSoil is a product of <strong>Flaha PA</strong> (Precision Agriculture Division)</p>
+                    </div>
+                    <div class="footer-links">
+                        <a href="#privacy" class="footer-link">Privacy Policy</a>
+                        <a href="#terms" class="footer-link">Terms of Service</a>
+                        <a href="#cookies" class="footer-link">Cookie Policy</a>
+                    </div>
+                    <div class="footer-version">
+                        <span class="version-info">FlahaSoil v2.1.0 | API v3.0</span>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
@@ -307,10 +498,12 @@
             <div class="loader"></div>
             <p>Processing advanced soil analysis...</p>
         </div>
-    </div> <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    </div>
+
+    <!-- Application Scripts -->
     <script src="assets/js/apiClient.js?v=3.0"></script>
     <script src="assets/js/visualizationManager.js"></script>
+    <script src="assets/js/reportManager.js"></script>
     <script>
         // Initialize the advanced demo
         document.addEventListener('DOMContentLoaded', function () {
@@ -327,28 +520,54 @@
             setupEventListeners();
 
             function updateAuthUI() {
-                const userInfo = document.getElementById('user-info');
+                const userName = document.getElementById('user-name');
+                const userPlan = document.getElementById('user-plan');
                 const authBtn = document.getElementById('auth-btn');
                 const planStatus = document.getElementById('plan-status');
                 const planText = document.getElementById('plan-text');
+                const upgradeNavBtn = document.getElementById('upgrade-nav-btn');
 
                 if (apiClient.token) {
-                    userInfo.textContent = `Plan: ${apiClient.userPlan}`;
+                    // Update user info in header
+                    userName.textContent = apiClient.userName || 'Professional User';
+                    userPlan.textContent = `${apiClient.userPlan} Plan`;
+                    userPlan.className = `user-plan plan-${apiClient.userPlan.toLowerCase()}`;
+
+                    // Update auth button
                     authBtn.textContent = 'Sign Out';
                     authBtn.onclick = logout;
 
+                    // Handle plan-specific UI
                     if (apiClient.userPlan === 'FREE') {
-                        planStatus.style.display = 'block';
-                        planText.textContent = 'Free Plan - Upgrade for full access to advanced features';
+                        if (planStatus) {
+                            planStatus.style.display = 'block';
+                            planText.textContent = 'Free Plan - Upgrade for full access to advanced features';
+                        }
+                        if (upgradeNavBtn) {
+                            upgradeNavBtn.style.display = 'inline-block';
+                        }
                     } else {
-                        planStatus.style.display = 'none';
+                        if (planStatus) {
+                            planStatus.style.display = 'none';
+                        }
+                        if (upgradeNavBtn) {
+                            upgradeNavBtn.style.display = 'none';
+                        }
                     }
                 } else {
-                    userInfo.textContent = '';
+                    // Not authenticated
+                    userName.textContent = '';
+                    userPlan.textContent = '';
                     authBtn.textContent = 'Sign In';
                     authBtn.onclick = () => window.location.href = 'index.html#login';
-                    planStatus.style.display = 'block';
-                    planText.textContent = 'Sign in to access advanced visualization features';
+
+                    if (planStatus) {
+                        planStatus.style.display = 'block';
+                        planText.textContent = 'Sign in to access advanced visualization features';
+                    }
+                    if (upgradeNavBtn) {
+                        upgradeNavBtn.style.display = 'none';
+                    }
                 }
             }
 
@@ -359,51 +578,226 @@
             }
 
             function initializeDemo() {
+                // Initialize silt value
+                updateSiltValue();
+
                 // Show sample visualizations or upgrade prompts based on user plan
                 const hasAccess = apiClient.hasAdvancedVisualizationAccess();
 
                 if (hasAccess) {
-                    loadSampleAnalysis();
+                    updateAnalysis();
                 } else {
                     showUpgradePrompts();
                 }
             }
 
-            async function loadSampleAnalysis() {
+            // Update silt value automatically
+            function updateSiltValue() {
+                const sand = parseFloat(document.getElementById('demo-sand').value) || 0;
+                const clay = parseFloat(document.getElementById('demo-clay').value) || 0;
+                const silt = Math.max(0, 100 - sand - clay);
+
+                document.getElementById('demo-silt').value = silt.toFixed(1);
+
+                // Update validation status
+                updateValidationStatus(sand, clay, silt);
+            }
+
+            // Update validation status
+            function updateValidationStatus(sand, clay, silt) {
+                const total = sand + clay + silt;
+                const compositionValid = Math.abs(total - 100) < 0.1;
+
+                const validationIcon = document.querySelector('#composition-validation .validation-icon');
+                const validationText = document.querySelector('#composition-validation .validation-text');
+
+                if (compositionValid) {
+                    validationIcon.textContent = '✓';
+                    validationIcon.style.color = '#4CAF50';
+                    validationText.textContent = 'Particle composition totals 100%';
+                } else {
+                    validationIcon.textContent = '⚠️';
+                    validationIcon.style.color = '#FF9800';
+                    validationText.textContent = `Composition totals ${total.toFixed(1)}% (should be 100%)`;
+                }
+            }
+
+            // Main analysis update function
+            async function updateAnalysis() {
+                const soilData = {
+                    sand: parseFloat(document.getElementById('demo-sand').value) || 45,
+                    clay: parseFloat(document.getElementById('demo-clay').value) || 25,
+                    silt: parseFloat(document.getElementById('demo-silt').value) || 30,
+                    organicMatter: parseFloat(document.getElementById('demo-om').value) || 3.2,
+                    bulkDensity: parseFloat(document.getElementById('demo-bulk-density').value) || 1.35,
+                    region: document.getElementById('demo-region').value || ''
+                };
+
                 try {
-                    // Create sample enhanced analysis
-                    const sampleData = {
-                        sand: parseFloat(document.getElementById('demo-sand').value),
-                        clay: parseFloat(document.getElementById('demo-clay').value),
-                        organicMatter: parseFloat(document.getElementById('demo-om').value),
-                        densityFactor: 1.3,
-                        regionId: document.getElementById('demo-region').value || 'us-midwest',
-                        location: { latitude: 40.7128, longitude: -74.0060 }
-                    };
+                    // Check if user has access to advanced features
+                    if (!apiClient.hasAdvancedVisualizationAccess()) {
+                        showUpgradePrompts();
+                        return;
+                    }
 
-                    const response = await apiClient.createEnhancedAnalysis(sampleData);
-                    if (response.success) {
-                        const analysisId = response.data.analysis.id;
+                    // Call backend API for soil analysis
+                    const response = await fetch('/api/soil/analyze', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiClient.token}`
+                        },
+                        body: JSON.stringify(soilData)
+                    });
 
-                        // Load visualizations
-                        await visualizationManager.createMoistureTensionCurve('moisture-tension-chart', analysisId);
-                        await visualizationManager.createSoilProfile3D('soil-profile-3d', analysisId);
-                        await visualizationManager.createRealtimeAdjustment('realtime-adjustment', analysisId);
+                    if (response.ok) {
+                        const analysisResult = await response.json();
 
-                        // Create sample comparison
-                        const sampleAnalyses = [analysisId]; // In real app, would have multiple IDs
-                        await visualizationManager.createComparativeAnalysis('comparison-chart', sampleAnalyses);
+                        // Update UI with results
+                        updateSoilTriangle(analysisResult);
+                        updateSoilProperties(analysisResult);
+                        updateTextureClassification(analysisResult.textureClass);
+
+                        // Load advanced visualizations
+                        await loadAdvancedVisualizations(analysisResult);
+
+                        // Show report generation button
+                        const reportBtn = document.getElementById('generate-report-btn');
+                        if (reportBtn) reportBtn.style.display = 'inline-block';
+                    } else {
+                        throw new Error(`Analysis failed: ${response.statusText}`);
+                    }
+
+                } catch (error) {
+                    /* eslint-disable */console.error(...oo_tx(`3808617186_375_20_375_74_11`, 'Error in analysis:', error));
+
+                    // Fallback to client-side calculations for demo
+                    const fallbackResult = calculateFallbackAnalysis(soilData);
+                    updateSoilTriangle(fallbackResult);
+                    updateSoilProperties(fallbackResult);
+                    updateTextureClassification(fallbackResult.textureClass);
+                }
+            }
+
+            // Update soil triangle with clean SVG
+            async function updateSoilTriangle(analysisResult) {
+                try {
+                    // Get SVG from backend
+                    const response = await fetch('/api/soil/triangle-svg', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiClient.token}`
+                        },
+                        body: JSON.stringify({
+                            sand: analysisResult.sand,
+                            clay: analysisResult.clay,
+                            silt: analysisResult.silt
+                        })
+                    });
+
+                    if (response.ok) {
+                        const svgData = await response.text();
+                        document.getElementById('soil-triangle-svg').innerHTML = svgData;
+                    } else {
+                        // Fallback to simple triangle display
+                        displayFallbackTriangle(analysisResult);
                     }
                 } catch (error) {
-                    /* eslint-disable */console.error(...oo_tx(`3808617186_375_20_375_74_11`, 'Error loading sample analysis:', error));
+                    /* eslint-disable */console.error(...oo_tx(`3808617186_384_20_384_68_4`, 'Error loading triangle SVG:', error));
+                    displayFallbackTriangle(analysisResult);
+                }
+            }
+
+            // Update soil properties display
+            function updateSoilProperties(analysisResult) {
+                document.getElementById('field-capacity').textContent = `${analysisResult.fieldCapacity?.toFixed(1) || 'N/A'}%`;
+                document.getElementById('wilting-point').textContent = `${analysisResult.wiltingPoint?.toFixed(1) || 'N/A'}%`;
+                document.getElementById('available-water').textContent = `${analysisResult.plantAvailableWater?.toFixed(1) || 'N/A'}%`;
+                document.getElementById('saturation').textContent = `${analysisResult.saturation?.toFixed(1) || 'N/A'}%`;
+
+                // Update current analysis display
+                document.getElementById('current-sand').textContent = `${analysisResult.sand}%`;
+                document.getElementById('current-clay').textContent = `${analysisResult.clay}%`;
+                document.getElementById('current-silt').textContent = `${analysisResult.silt}%`;
+            }
+
+            // Update texture classification
+            function updateTextureClassification(textureClass) {
+                document.getElementById('texture-class-name').textContent = textureClass || 'Unknown';
+                document.getElementById('current-texture-class').textContent = textureClass || 'Unknown';
+            }
+
+            // Fallback triangle display
+            function displayFallbackTriangle(analysisResult) {
+                const triangleContainer = document.getElementById('soil-triangle-svg');
+                triangleContainer.innerHTML = `
+                    <div class="triangle-placeholder">
+                        <div class="triangle-icon">🔺</div>
+                        <div class="triangle-data">
+                            <p><strong>Soil Composition:</strong></p>
+                            <p>Sand: ${analysisResult.sand}%</p>
+                            <p>Clay: ${analysisResult.clay}%</p>
+                            <p>Silt: ${analysisResult.silt}%</p>
+                            <p><strong>Texture: ${analysisResult.textureClass}</strong></p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Calculate fallback analysis for demo purposes
+            function calculateFallbackAnalysis(soilData) {
+                // Simple texture classification logic
+                const { sand, clay, silt } = soilData;
+                let textureClass = 'Loam';
+
+                if (clay >= 40) textureClass = 'Clay';
+                else if (clay >= 27 && sand <= 45) textureClass = 'Clay Loam';
+                else if (sand >= 85) textureClass = 'Sand';
+                else if (sand >= 70) textureClass = 'Sandy Loam';
+                else if (silt >= 80) textureClass = 'Silt';
+                else if (silt >= 50) textureClass = 'Silt Loam';
+
+                // Estimate soil properties (simplified)
+                const fieldCapacity = 10 + (clay * 0.4) + (silt * 0.2);
+                const wiltingPoint = 2 + (clay * 0.3);
+                const plantAvailableWater = fieldCapacity - wiltingPoint;
+                const saturation = 35 + (clay * 0.3) + (silt * 0.15);
+
+                return {
+                    sand,
+                    clay,
+                    silt,
+                    textureClass,
+                    fieldCapacity,
+                    wiltingPoint,
+                    plantAvailableWater,
+                    saturation
+                };
+            }
+
+            // Load advanced visualizations
+            async function loadAdvancedVisualizations(analysisResult) {
+                try {
+                    if (visualizationManager) {
+                        await visualizationManager.createMoistureTensionCurve('moisture-tension-chart', analysisResult);
+                        await visualizationManager.createSoilProfile3D('soil-profile-3d', analysisResult);
+                        await visualizationManager.createRealtimeAdjustment('realtime-adjustment', analysisResult);
+                        await visualizationManager.createComparativeAnalysis('comparison-chart', [analysisResult]);
+                    }
+                } catch (error) {
+                    /* eslint-disable */console.error(...oo_tx(`3808617186_384_20_384_68_4`, 'Error loading advanced visualizations:', error));
                 }
             }
 
             function showUpgradePrompts() {
-                visualizationManager.showUpgradePrompt('moisture-tension-chart', 'Moisture-Tension Curves');
-                visualizationManager.showUpgradePrompt('soil-profile-3d', '3D Soil Profiles');
-                visualizationManager.showUpgradePrompt('comparison-chart', 'Comparative Analysis');
-                visualizationManager.showUpgradePrompt('realtime-adjustment', 'Real-time Parameter Adjustment');
+                if (visualizationManager) {
+                    visualizationManager.showUpgradePrompt('soil-triangle-svg', 'Professional Soil Triangle');
+                    visualizationManager.showUpgradePrompt('moisture-tension-chart', 'Moisture-Tension Curves');
+                    visualizationManager.showUpgradePrompt('soil-profile-3d', '3D Soil Profiles');
+                    visualizationManager.showUpgradePrompt('comparison-chart', 'Comparative Analysis');
+                    visualizationManager.showUpgradePrompt('realtime-adjustment', 'Real-time Parameter Adjustment');
+                }
             }
 
             function setupEventListeners() {
@@ -433,13 +827,79 @@
                 });
 
                 // Input change listeners for live updates
-                ['demo-sand', 'demo-clay', 'demo-om', 'demo-region'].forEach(inputId => {
-                    document.getElementById(inputId).addEventListener('change', function () {
-                        if (apiClient.hasAdvancedVisualizationAccess()) {
-                            debounce(loadSampleAnalysis, 1000)();
+                ['demo-sand', 'demo-clay', 'demo-om', 'demo-bulk-density', 'demo-region'].forEach(inputId => {
+                    const element = document.getElementById(inputId);
+                    if (element) {
+                        element.addEventListener('change', function () {
+                            if (inputId === 'demo-sand' || inputId === 'demo-clay') {
+                                updateSiltValue();
+                            }
+                            if (apiClient.hasAdvancedVisualizationAccess()) {
+                                debounce(updateAnalysis, 1000)();
+                            }
+                        });
+                    }
+                });
+
+                // Report generation button
+                const reportBtn = document.getElementById('generate-report-btn');
+                if (reportBtn) {
+                    reportBtn.addEventListener('click', async function () {
+                        if (!apiClient.hasAdvancedVisualizationAccess()) {
+                            alert('Please upgrade to Professional+ to generate reports.');
+                            return;
+                        }
+
+                        try {
+                            this.disabled = true;
+                            this.textContent = '📄 Generating...';
+
+                            const soilData = {
+                                sand: parseFloat(document.getElementById('demo-sand').value) || 45,
+                                clay: parseFloat(document.getElementById('demo-clay').value) || 25,
+                                silt: parseFloat(document.getElementById('demo-silt').value) || 30,
+                                organicMatter: parseFloat(document.getElementById('demo-om').value) || 3.2,
+                                bulkDensity: parseFloat(document.getElementById('demo-bulk-density').value) || 1.35
+                            };
+
+                            const response = await fetch('/api/reports/generate', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${apiClient.token}`
+                                },
+                                body: JSON.stringify({
+                                    soilData,
+                                    userInfo: {
+                                        name: 'Demo User',
+                                        email: 'demo@example.com',
+                                        tier: apiClient.userPlan
+                                    }
+                                })
+                            });
+
+                            if (response.ok) {
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `FlahaSoil-Report-${new Date().toISOString().split('T')[0]}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                document.body.removeChild(a);
+                            } else {
+                                throw new Error('Report generation failed');
+                            }
+                        } catch (error) {
+                            /* eslint-disable */console.error(...oo_tx(`3808617186_384_20_384_68_4`, 'Error generating report:', error));
+                            alert('Error generating report. Please try again.');
+                        } finally {
+                            this.disabled = false;
+                            this.textContent = '📄 Generate Report';
                         }
                     });
-                });
+                }
 
                 // Upgrade button
                 document.getElementById('upgrade-btn').addEventListener('click', function () {
@@ -471,6 +931,56 @@
                     clearTimeout(timeout);
                     timeout = setTimeout(later, wait);
                 };
+            }
+
+            /**
+             * Quick Analysis Function
+             */
+            function runQuickAnalysis() {
+                const loadingOverlay = document.getElementById('loading-overlay');
+                loadingOverlay.style.display = 'flex';
+
+                // Simulate quick analysis
+                setTimeout(() => {
+                    updateAnalysis();
+                    loadingOverlay.style.display = 'none';
+
+                    // Switch to soil triangle tab
+                    switchTab('soil-triangle');
+
+                    // Show success message
+                    showNotification('Quick analysis completed!', 'success');
+                }, 1500);
+            }
+
+            /**
+             * Show notification message
+             */
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.textContent = message;
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#F44336' : '#2196F3'};
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 0.5rem;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                    z-index: 10000;
+                    animation: slideIn 0.3s ease;
+                `;
+
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
             }
 
             /**
@@ -513,12 +1023,6 @@
             });
         });
     </script>
-
-    <!-- Application Scripts -->
-    <script src="assets/js/apiClient.js?v=3.0"></script>
-    <script src="assets/js/reportManager.js"></script>
-    <script src="assets/js/visualizationManager.js"></script>
-    <script src="assets/js/advanced-demo.js"></script>
 </body>
 
 </html>
