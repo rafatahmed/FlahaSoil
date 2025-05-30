@@ -232,7 +232,7 @@ curl -X POST \
 - `/api/v1/soil/analyze/advanced`: ✅ **200 OK** - Advanced analysis for Professional+
 - `/api/v1/soil/demo/analyze`: ✅ **200 OK** - Demo analysis
 - `/api/v1/reports/capabilities`: ✅ **200 OK** - Report access check
-- `/api/v1/reports/generate/standard`: ✅ **200 OK** - PDF generation (Professional+)
+- `/api/v1/reports/generate/standard`: ✅ **200 OK** - PDF generation (Professional+) - **FIXED: Buffer validation issue resolved**
 - `/api/v1/reports/generate/custom`: ✅ **200 OK** - Custom reports (Enterprise)
 - `/health`: ✅ **200 OK** - Health check
 

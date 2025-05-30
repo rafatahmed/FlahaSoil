@@ -9,6 +9,9 @@ const { requireFeature } = require("../middleware/planAccess");
 // Initialize report service
 const reportService = new ReportService();
 
+// Track active PDF generation requests to prevent duplicates
+const activeGenerations = new Map();
+
 /**
  * @route GET /api/v1/reports/capabilities
  * @desc Get user's report capabilities based on their plan
@@ -70,7 +73,25 @@ router.post(
 	requireFeature("reportGeneration"),
 	async (req, res) => {
 		try {
-			console.log("📄 PDF Generation Request from:", req.user.email);
+			console.log("📄 PDF Generation Request received");
+			console.log("📄 User data:", req.user);
+			console.log("📄 Request headers:", req.headers);
+			console.log("📄 Request body keys:", Object.keys(req.body));
+
+			// Check for concurrent requests from the same user
+			const userId = req.user.userId || req.user.id;
+			const requestKey = `${userId}-standard`;
+
+			if (activeGenerations.has(requestKey)) {
+				console.log("⚠️ Duplicate PDF generation request detected, rejecting");
+				return res.status(429).json({
+					success: false,
+					error: "PDF generation already in progress. Please wait.",
+				});
+			}
+
+			// Mark this request as active
+			activeGenerations.set(requestKey, Date.now());
 
 			// Set CORS headers explicitly
 			res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
@@ -101,6 +122,44 @@ router.post(
 			);
 
 			console.log("✅ PDF generated successfully, size:", pdfBuffer.length);
+			console.log("🔍 PDF buffer type:", typeof pdfBuffer);
+			console.log("🔍 PDF buffer constructor:", pdfBuffer?.constructor?.name);
+			console.log("🔍 Is Buffer:", Buffer.isBuffer(pdfBuffer));
+			console.log("🔍 Is Uint8Array:", pdfBuffer instanceof Uint8Array);
+			console.log("🔍 Has length property:", "length" in pdfBuffer);
+
+			// Validate PDF buffer (Puppeteer returns Uint8Array, not Buffer)
+			if (
+				!pdfBuffer ||
+				(!Buffer.isBuffer(pdfBuffer) && !(pdfBuffer instanceof Uint8Array))
+			) {
+				console.error("❌ Invalid PDF buffer type:", typeof pdfBuffer);
+				console.error(
+					"❌ PDF buffer constructor:",
+					pdfBuffer?.constructor?.name
+				);
+				return res.status(500).json({
+					success: false,
+					error: "Invalid PDF buffer generated",
+				});
+			}
+
+			// Convert Uint8Array to Buffer if needed
+			const pdfBufferAsBuffer = Buffer.isBuffer(pdfBuffer)
+				? pdfBuffer
+				: Buffer.from(pdfBuffer);
+
+			// Check PDF header
+			const header = pdfBufferAsBuffer.slice(0, 4).toString();
+			if (!header.startsWith("%PDF")) {
+				console.error("❌ Invalid PDF header:", header);
+				return res.status(500).json({
+					success: false,
+					error: "Generated PDF is corrupted",
+				});
+			}
+
+			console.log("✅ PDF validation passed, sending response...");
 
 			// Set response headers for PDF download
 			res.setHeader("Content-Type", "application/pdf");
@@ -108,16 +167,36 @@ router.post(
 				"Content-Disposition",
 				`attachment; filename="FlahaSoil-Report-${Date.now()}.pdf"`
 			);
-			res.setHeader("Content-Length", pdfBuffer.length);
+			res.setHeader("Content-Length", pdfBufferAsBuffer.length);
 			res.setHeader("Cache-Control", "no-cache");
+			res.setHeader("Accept-Ranges", "bytes");
 
-			res.send(pdfBuffer);
+			// Ensure we don't send the response multiple times
+			if (res.headersSent) {
+				console.log("⚠️ Headers already sent, skipping response");
+				return;
+			}
+
+			// Send the PDF buffer as a single write operation
+			res.writeHead(200);
+			res.write(pdfBufferAsBuffer);
+			res.end();
+
+			console.log("📤 PDF response sent, size:", pdfBufferAsBuffer.length);
 		} catch (error) {
 			console.error("❌ Standard report generation error:", error);
-			res.status(500).json({
-				success: false,
-				error: "Failed to generate standard report: " + error.message,
-			});
+			if (!res.headersSent) {
+				res.status(500).json({
+					success: false,
+					error: "Failed to generate standard report: " + error.message,
+				});
+			}
+		} finally {
+			// Clean up active generation tracking
+			const userId = req.user.userId || req.user.id;
+			const requestKey = `${userId}-standard`;
+			activeGenerations.delete(requestKey);
+			console.log("🧹 Cleaned up active generation for:", requestKey);
 		}
 	}
 );

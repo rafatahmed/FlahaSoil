@@ -9,6 +9,7 @@ class ReportManager {
 	constructor() {
 		this.currentSoilData = null;
 		this.reportCapabilities = null;
+		this.isGeneratingPDF = false; // Prevent concurrent requests
 		this.initializeReportManager();
 	}
 
@@ -320,7 +321,14 @@ class ReportManager {
 			return;
 		}
 
+		// Prevent concurrent requests
+		if (this.isGeneratingPDF) {
+			console.log("🔄 PDF generation already in progress, ignoring request");
+			return;
+		}
+
 		try {
+			this.isGeneratingPDF = true; // Set flag
 			this.showLoadingState("Generating PDF report...");
 
 			const token = localStorage.getItem("flahasoil_token");
@@ -330,14 +338,29 @@ class ReportManager {
 			);
 			console.log("🔧 Soil data for PDF:", this.currentSoilData);
 
+			// Test if backend is reachable first
+			console.log("🔧 Testing backend connectivity...");
+			try {
+				const healthCheck = await fetch("http://localhost:3001/health");
+				console.log("✅ Backend health check:", healthCheck.status);
+			} catch (healthError) {
+				console.error("❌ Backend not reachable:", healthError);
+				throw new Error(
+					"Backend server is not reachable. Please ensure the API server is running on port 3001."
+				);
+			}
+
 			// Create AbortController for timeout
 			const controller = new AbortController();
 			const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
+			console.log("🔧 Making PDF generation request...");
 			const response = await fetch(
 				"http://localhost:3001/api/v1/reports/generate/standard",
 				{
 					method: "POST",
+					mode: "cors",
+					credentials: "include",
 					headers: {
 						Authorization: `Bearer ${token}`,
 						"Content-Type": "application/json",
@@ -404,6 +427,7 @@ class ReportManager {
 
 			this.showErrorMessage(errorMessage);
 		} finally {
+			this.isGeneratingPDF = false; // Reset flag
 			this.hideLoadingState();
 		}
 	}
