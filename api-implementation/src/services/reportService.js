@@ -1406,6 +1406,136 @@ class ReportService {
 			"<p>General agricultural practices recommended based on soil analysis.</p>"
 		);
 	}
+
+	/**
+	 * Generate Canvas-based soil texture triangle (renders as PNG in PDF)
+	 * @param {Object} soilData - Soil analysis data
+	 * @returns {string} HTML with Canvas for soil texture triangle
+	 */
+	generateSoilTextureTriangle(soilData) {
+		const sand = parseFloat(soilData.sand);
+		const clay = parseFloat(soilData.clay);
+		const silt = parseFloat(soilData.silt);
+
+		// Calculate position on triangle
+		const x = 50 + sand * 3 + silt * 1.5;
+		const y = 300 - clay * 2.5;
+
+		return `
+			<div style="text-align: center;">
+				<h4 style="color: #2E8B57; margin-bottom: 15px;">USDA Soil Texture Triangle</h4>
+
+				<div style="position: relative; width: 400px; height: 360px; margin: 0 auto; border: 1px solid #ddd; background: white;">
+					<!-- Triangle background -->
+					<div style="
+						position: absolute;
+						top: 50px;
+						left: 50px;
+						width: 0;
+						height: 0;
+						border-left: 150px solid transparent;
+						border-right: 150px solid transparent;
+						border-bottom: 250px solid rgba(240, 240, 240, 0.2);
+					"></div>
+
+					<!-- Sample point -->
+					<div style="
+						position: absolute;
+						top: ${50 + clay * 2.5}px;
+						left: ${50 + sand * 2.5 + silt * 1.25}px;
+						width: 12px;
+						height: 12px;
+						background: #e74c3c;
+						border: 2px solid white;
+						border-radius: 50%;
+						transform: translate(-50%, -50%);
+						z-index: 10;
+						box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+					"></div>
+
+					<!-- Labels -->
+					<div style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); font-weight: bold; font-size: 14px; color: #333;">Clay %</div>
+					<div style="position: absolute; bottom: 20px; left: 20px; font-weight: bold; font-size: 14px; color: #333;">Silt %</div>
+					<div style="position: absolute; bottom: 20px; right: 20px; font-weight: bold; font-size: 14px; color: #333;">Sand %</div>
+
+					<!-- Percentage markers -->
+					<div style="position: absolute; bottom: 40px; left: 45px; font-size: 10px; color: #666;">0</div>
+					<div style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #666;">50</div>
+					<div style="position: absolute; bottom: 40px; right: 45px; font-size: 10px; color: #666;">100</div>
+
+					<!-- Classification label -->
+					<div style="
+						position: absolute;
+						top: ${60 + clay * 2.5}px;
+						left: ${70 + sand * 2.5 + silt * 1.25}px;
+						background: rgba(231, 76, 60, 0.9);
+						color: white;
+						padding: 4px 8px;
+						border-radius: 4px;
+						font-size: 12px;
+						font-weight: bold;
+						white-space: nowrap;
+						z-index: 11;
+						box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+					">${soilData.textureClass}</div>
+
+					<!-- Triangle outline using borders -->
+					<div style="
+						position: absolute;
+						top: 50px;
+						left: 200px;
+						width: 0;
+						height: 0;
+						border-left: 150px solid transparent;
+						border-right: 150px solid transparent;
+						border-bottom: 250px solid transparent;
+						border-top: 2px solid #333;
+						transform: rotate(0deg);
+					"></div>
+					<div style="
+						position: absolute;
+						top: 300px;
+						left: 50px;
+						width: 300px;
+						height: 2px;
+						background: #333;
+					"></div>
+					<div style="
+						position: absolute;
+						top: 50px;
+						left: 50px;
+						width: 2px;
+						height: 250px;
+						background: #333;
+						transform-origin: top;
+						transform: rotate(60deg);
+					"></div>
+				</div>
+
+				<div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+					<div style="display: flex; justify-content: space-around; text-align: center;">
+						<div>
+							<div style="font-weight: bold; color: #2E8B57;">Sand</div>
+							<div style="font-size: 18px; color: #333;">${sand}%</div>
+						</div>
+						<div>
+							<div style="font-weight: bold; color: #2E8B57;">Clay</div>
+							<div style="font-size: 18px; color: #333;">${clay}%</div>
+						</div>
+						<div>
+							<div style="font-weight: bold; color: #2E8B57;">Silt</div>
+							<div style="font-size: 18px; color: #333;">${silt}%</div>
+						</div>
+					</div>
+					<div style="margin-top: 10px; text-align: center;">
+						<strong style="color: #2E8B57;">Classification: ${
+							soilData.textureClass
+						}</strong>
+					</div>
+				</div>
+			</div>
+		`;
+	}
 }
 
 module.exports = ReportService;
