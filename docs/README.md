@@ -1,185 +1,455 @@
-# FlahaSoil Documentation
+<!-- @format -->
 
-Welcome to the FlahaSoil application documentation. This directory contains comprehensive guides for implementing and maintaining the FlahaSoil navigation system and Flaha PA branding.
+# FlahaSoil Documentation Hub
 
-## 📚 Documentation Overview
+Welcome to the comprehensive FlahaSoil application documentation. This directory contains technical specifications, implementation guides, and architectural documentation for the FlahaSoil precision agriculture platform.
 
-### [Navigation & Branding Implementation Guide](./NAVIGATION_BRANDING_GUIDE.md)
-**Comprehensive documentation for the unified navigation system and Flaha PA branding implementation.**
+## 🏗️ **Technical Architecture Overview**
 
-**Contents:**
-- Brand identity standards and logo usage
+FlahaSoil is a **backend-API-driven** precision agriculture platform implementing the complete **Saxton & Rawls (2006) 24-equation system** for advanced soil analysis with tiered access control and comprehensive reporting capabilities.
+
+### **Core Technology Stack**
+
+- **Frontend**: Static HTML5/CSS3/JavaScript (Port 3000)
+- **Backend**: Node.js/Express.js API (Port 3001)
+- **Database**: SQLite with Prisma ORM
+- **Authentication**: JWT-based with tier-based access control
+- **Reports**: Puppeteer-based PDF generation
+- **Architecture**: RESTful API with microservice-oriented design
+
+## 📚 **Documentation Structure**
+
+### **🔧 Technical Documentation**
+
+#### [Project Summary](./PROJECT_SUMMARY.md)
+
+**Executive overview of the complete FlahaSoil platform**
+
+- Project mission, technical architecture, and business model
+- Scientific implementation and target user analysis
+- Development status, performance metrics, and future roadmap
+- Comprehensive project overview for stakeholders and new team members
+
+#### [Technical Overview](./TECHNICAL_OVERVIEW.md)
+
+**Comprehensive technical architecture and implementation guide**
+
+- System architecture patterns and design decisions
+- Scientific implementation of Saxton & Rawls methodology
+- Authentication, security, and tier-based access control
+- Performance optimization and monitoring strategies
+
+#### [Project Structure](./PROJECT_STRUCTURE.md)
+
+**Complete project organization and file structure documentation**
+
+- Directory structure and file organization
+- Architecture layers and component relationships
+- Data flow and request processing
+- Development workflow and deployment procedures
+
+#### [API Reference](./API_REFERENCE.md)
+
+**Comprehensive API endpoint documentation with examples**
+
+- Complete endpoint specifications with request/response examples
+- Authentication and authorization details
+- Error handling and status codes
+- Integration guidelines and best practices
+
+#### [Deployment Guide](./DEPLOYMENT_GUIDE.md)
+
+**Production deployment and operations manual**
+
+- Development environment setup
+- Production deployment procedures
+- Docker containerization
+- Monitoring, maintenance, and security considerations
+
+#### [System Architecture Overview](./FlahaSoil%20system%20architecture%20overview.mmd)
+
+**Visual system architecture with data flow diagrams**
+
+- Frontend-Backend separation
+- API routing and middleware stack
+- Database schema and relationships
+- External service integrations
+
+#### [Database Schema & Relationships](./FlahaSoil%20Database%20Schema%20&%20Relationships.mmd)
+
+**Comprehensive database design documentation**
+
+- User management and authentication
+- Soil analysis data models
+- Subscription and usage tracking
+- Report generation and storage
+
+#### [API Endpoints & Data Flow](./FlahaSoil%20API%20Endpoints%20&%20Data%20Flow.mmd)
+
+**Complete API specification with request/response flows**
+
+- Authentication endpoints
+- Soil analysis calculations
+- Report generation workflows
+- Integration endpoints
+
+#### [Soil Analysis Calculation Flow](./FlahaSoil%20Soil%20Analysis%20Calculation%20Flow.mmd)
+
+**Scientific calculation methodology documentation**
+
+- Saxton & Rawls 24-equation implementation
+- Tier-based feature access
+- Confidence intervals and R² validation
+- Input validation and error handling
+
+### **💼 Business & Access Control**
+
+#### [Tiered Access & Business Model](./FlahaSoil%20Tiered%20Access%20&%20Business%20Model.mmd)
+
+**Monetization strategy and feature access control**
+
+- Free/Professional/Enterprise tier definitions
+- Feature matrix and limitations
+- Usage tracking and rate limiting
+- Subscription management
+
+#### [User Flow & Authentication Journey](./FlahaSoil%20User%20Flow%20&%20Authentication%20Journey.mmd)
+
+**Complete user experience documentation**
+
+- Registration and verification flows
+- Login/logout processes
+- Profile management
+- Password reset workflows
+
+### **🎨 Frontend & UI Documentation**
+
+#### [Navigation & Branding Implementation Guide](./NAVIGATION_BRANDING_GUIDE.md)
+
+**Comprehensive UI/UX implementation guide**
+
+- Flaha PA brand identity standards
+- Responsive navigation system
 - Page-by-page implementation details
-- CSS architecture and styling guidelines
-- Mobile responsiveness implementation
-- JavaScript functionality documentation
-- File structure and organization
-- Implementation guidelines for new pages
-- Maintenance and troubleshooting guide
+- Mobile optimization guidelines
 
-**Target Audience:** Developers, designers, and maintainers working on the FlahaSoil application.
+#### [Routing & Navigation](./FlahaSoil-Routing-Navigation.md)
 
-### [Quick Reference Guide](./QUICK_REFERENCE.md)
-**Fast reference for common navigation and branding tasks.**
+**Frontend routing and navigation patterns**
 
-**Contents:**
-- Standard navigation HTML templates
-- Essential CSS and JavaScript snippets
-- Brand color specifications
-- Page type reference table
-- Common tasks and testing checklist
-- Troubleshooting quick fixes
+- Page hierarchy and flow
+- Authentication-based routing
+- Demo vs authenticated experiences
+- Navigation state management
 
-**Target Audience:** Developers who need quick access to implementation details.
+#### [Quick Reference Guide](./QUICK_REFERENCE.md)
 
-## 🚀 Getting Started
+**Developer quick reference for common tasks**
 
-### For New Developers
+- Code snippets and templates
+- Brand specifications
+- Testing checklists
+- Troubleshooting guides
 
-1. **Read the Implementation Guide**: Start with [NAVIGATION_BRANDING_GUIDE.md](./NAVIGATION_BRANDING_GUIDE.md) to understand the complete system
-2. **Review Page Examples**: Examine existing pages (`landing.html`, `index.html`, etc.) to see implementations
-3. **Use Quick Reference**: Keep [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) handy for daily development tasks
+### **📄 Report System Documentation**
 
-### For Designers
+#### [Report Documentation](./reports/REPORT_DOCUMENTATION.md)
 
-1. **Brand Standards**: Review the brand identity section in the Implementation Guide
-2. **Color Specifications**: Use the documented color scheme for consistency
-3. **Mobile Guidelines**: Follow responsive design patterns documented
+**Complete report generation system guide**
 
-### For Maintainers
+- PDF generation workflows
+- Template customization
+- Tier-specific report features
+- Performance optimization
 
-1. **Regular Tasks**: Follow maintenance schedules in the Implementation Guide
-2. **Troubleshooting**: Use the troubleshooting section for common issues
-3. **Updates**: Follow version control guidelines when making changes
+#### [Report API Reference](./reports/REPORT_API_REFERENCE.md)
 
-## 📁 File Structure
+**Technical API documentation for reports**
+
+- Endpoint specifications
+- Request/response formats
+- Error handling
+- Integration examples
+
+#### [Report User Guide](./reports/REPORT_USER_GUIDE.md)
+
+**End-user documentation for report features**
+
+- How to generate reports
+- Customization options
+- Print functionality
+- Export capabilities
+
+#### [Report Test Results](./reports/REPORT_TEST_RESULTS.md)
+
+**Quality assurance and testing documentation**
+
+- Test coverage reports
+- Performance benchmarks
+- Regression testing results
+- Known issues and limitations
+
+### **🔬 Brand & Design Documentation**
+
+#### [Flaha Agri Tech Brand Identity Guidelines](./Flaha%20Agri%20Tech%20Brand%20Identity%20Guidelines.md)
+
+**Official brand identity and design standards**
+
+- Logo usage and specifications
+- Color palette and typography
+- Brand voice and messaging
+- Visual identity guidelines
+
+#### [Brand Identity and Website Validation Report](./Brand%20Identity%20and%20Website%20Validation%20Report.md)
+
+**Brand compliance validation and audit results**
+
+- Implementation validation
+- Consistency checks
+- Compliance recommendations
+- Quality assurance metrics
+
+## 🚀 **Getting Started**
+
+### **For Backend Developers**
+
+1. **Architecture Review**: Start with [System Architecture Overview](./FlahaSoil%20system%20architecture%20overview.mmd)
+2. **API Documentation**: Review [API Endpoints & Data Flow](./FlahaSoil%20API%20Endpoints%20&%20Data%20Flow.mmd)
+3. **Database Schema**: Understand [Database Schema & Relationships](./FlahaSoil%20Database%20Schema%20&%20Relationships.mmd)
+4. **Calculation Engine**: Study [Soil Analysis Calculation Flow](./FlahaSoil%20Soil%20Analysis%20Calculation%20Flow.mmd)
+
+### **For Frontend Developers**
+
+1. **Navigation System**: Start with [Navigation & Branding Implementation Guide](./NAVIGATION_BRANDING_GUIDE.md)
+2. **User Flows**: Review [User Flow & Authentication Journey](./FlahaSoil%20User%20Flow%20&%20Authentication%20Journey.mmd)
+3. **Routing Patterns**: Study [Routing & Navigation](./FlahaSoil-Routing-Navigation.md)
+4. **Quick Reference**: Keep [Quick Reference Guide](./QUICK_REFERENCE.md) handy
+
+### **For Product Managers**
+
+1. **Business Model**: Review [Tiered Access & Business Model](./FlahaSoil%20Tiered%20Access%20&%20Business%20Model.mmd)
+2. **User Experience**: Study [User Flow & Authentication Journey](./FlahaSoil%20User%20Flow%20&%20Authentication%20Journey.mmd)
+3. **Feature Matrix**: Understand tier-based feature access
+4. **Report Capabilities**: Review [Report Documentation](./reports/REPORT_DOCUMENTATION.md)
+
+### **For QA Engineers**
+
+1. **Test Documentation**: Start with [Report Test Results](./reports/REPORT_TEST_RESULTS.md)
+2. **API Testing**: Use [Report API Reference](./reports/REPORT_API_REFERENCE.md)
+3. **User Testing**: Follow [Report User Guide](./reports/REPORT_USER_GUIDE.md)
+4. **Brand Compliance**: Check [Brand Identity Validation Report](./Brand%20Identity%20and%20Website%20Validation%20Report.md)
+
+## 📁 **Complete File Structure**
 
 ```
 docs/
-├── README.md                           # This overview document
-├── NAVIGATION_BRANDING_GUIDE.md        # Comprehensive implementation guide
-└── QUICK_REFERENCE.md                  # Quick reference for developers
+├── README.md                                           # This documentation hub
+├── PROJECT_SUMMARY.md                                 # Executive project overview
+├── TECHNICAL_OVERVIEW.md                              # Technical architecture guide
+├── PROJECT_STRUCTURE.md                               # Project organization guide
+├── API_REFERENCE.md                                   # Comprehensive API documentation
+├── DEPLOYMENT_GUIDE.md                                # Production deployment guide
+├──
+├── 🔧 TECHNICAL ARCHITECTURE
+├── FlahaSoil system architecture overview.mmd          # System architecture diagram
+├── FlahaSoil Database Schema & Relationships.mmd       # Database design
+├── FlahaSoil API Endpoints & Data Flow.mmd            # API specification
+├── FlahaSoil Soil Analysis Calculation Flow.mmd       # Calculation methodology
+├──
+├── 💼 BUSINESS & ACCESS CONTROL
+├── FlahaSoil Tiered Access & Business Model.mmd       # Business model
+├── FlahaSoil User Flow & Authentication Journey.mmd    # User experience flows
+├──
+├── 🎨 FRONTEND & UI
+├── NAVIGATION_BRANDING_GUIDE.md                       # UI/UX implementation
+├── FlahaSoil-Routing-Navigation.md                    # Frontend routing
+├── QUICK_REFERENCE.md                                 # Developer quick reference
+├──
+├── 🔬 BRAND & DESIGN
+├── Flaha Agri Tech Brand Identity Guidelines.md       # Brand standards
+├── Brand Identity and Website Validation Report.md    # Brand compliance
+├──
+├── 📄 REPORT SYSTEM
+├── reports/
+│   ├── REPORT_DOCUMENTATION.md                       # Report system guide
+│   ├── REPORT_API_REFERENCE.md                       # Report API docs
+│   ├── REPORT_USER_GUIDE.md                          # User guide
+│   └── REPORT_TEST_RESULTS.md                        # QA documentation
+├──
+└── 🖼️ ASSETS
+    ├── soil_data_analysis.png                         # Technical diagrams
+    └── Untitled-2.svg                                # Visual assets
 ```
 
-## 🎯 Key Features Documented
+## 🎯 **Key System Features**
 
-### ✅ Navigation System
+### ✅ **Backend API Architecture**
+
+- Complete Saxton & Rawls 24-equation implementation
+- JWT-based authentication with tier access control
+- RESTful API design with comprehensive validation
+- SQLite database with Prisma ORM
+- Puppeteer-based PDF report generation
+- Rate limiting and usage tracking
+
+### ✅ **Frontend User Experience**
+
 - Unified Flaha PA branding across all pages
-- Mobile-responsive hamburger menu
-- Professional gradient styling
-- Consistent user experience
+- Mobile-responsive design with progressive enhancement
+- Authentication-based routing and access control
+- Interactive soil texture triangle visualization
+- Real-time calculation updates
+- Tier-specific feature disclosure
 
-### ✅ Brand Implementation
-- Official Flaha PA logo usage
-- Standardized color scheme
-- Typography hierarchy
-- Mobile optimization
+### ✅ **Scientific Accuracy**
 
-### ✅ Code Quality
-- Clean, maintainable CSS architecture
-- Accessible HTML structure
-- Performance-optimized JavaScript
-- Cross-browser compatibility
+- Complete 24-equation Saxton & Rawls methodology
+- Input validation with scientific ranges
+- Confidence intervals and R² validation
+- Gravel and salinity effects (tier-dependent)
+- Moisture-tension relationship calculations
+- Professional-grade soil texture classification
 
-## 🔧 Implementation Status
+### ✅ **Business Model Implementation**
 
-| Page | Status | Navigation Type | Mobile Support |
-|------|--------|----------------|----------------|
-| Landing Page | ✅ Complete | Marketing navbar | ✅ Responsive |
-| Main Application | ✅ Complete | App header | ✅ Responsive |
-| Profile Page | ✅ Complete | Professional navbar | ✅ Responsive |
-| Demo Page | ✅ Complete | Demo header | ✅ Responsive |
-| Advanced Demo | ✅ Complete | Full navbar | ✅ Responsive |
+- Three-tier access control (Free/Professional/Enterprise)
+- Usage tracking and rate limiting
+- Feature-based access control middleware
+- Subscription management
+- Report generation capabilities by tier
+- API access for Enterprise customers
 
-## 📱 Browser Support
+## 🔧 **Implementation Status**
 
-| Browser | Version | Support Level |
-|---------|---------|---------------|
-| Chrome | 90+ | ✅ Full Support |
-| Firefox | 88+ | ✅ Full Support |
-| Safari | 14+ | ✅ Full Support |
-| Edge | 90+ | ✅ Full Support |
-| Mobile Safari | iOS 14+ | ✅ Full Support |
-| Chrome Mobile | Android 10+ | ✅ Full Support |
+| Component             | Status      | Tier Access    | Documentation                                                              |
+| --------------------- | ----------- | -------------- | -------------------------------------------------------------------------- |
+| **Backend API**       | ✅ Complete | All Tiers      | [API Endpoints](./FlahaSoil%20API%20Endpoints%20&%20Data%20Flow.mmd)       |
+| **Authentication**    | ✅ Complete | All Tiers      | [User Flow](./FlahaSoil%20User%20Flow%20&%20Authentication%20Journey.mmd)  |
+| **Soil Calculations** | ✅ Complete | Tier-Based     | [Calculation Flow](./FlahaSoil%20Soil%20Analysis%20Calculation%20Flow.mmd) |
+| **Report Generation** | ✅ Complete | Pro/Enterprise | [Report Docs](./reports/REPORT_DOCUMENTATION.md)                           |
+| **Frontend UI**       | ✅ Complete | All Tiers      | [Navigation Guide](./NAVIGATION_BRANDING_GUIDE.md)                         |
+| **Database Schema**   | ✅ Complete | Backend        | [Database Schema](./FlahaSoil%20Database%20Schema%20&%20Relationships.mmd) |
 
-## 🛠️ Development Workflow
+## 📱 **Platform Support**
 
-### Making Changes
+| Platform            | Version     | Support Level   | Notes                      |
+| ------------------- | ----------- | --------------- | -------------------------- |
+| **Desktop Chrome**  | 90+         | ✅ Full Support | Primary development target |
+| **Desktop Firefox** | 88+         | ✅ Full Support | Full feature compatibility |
+| **Desktop Safari**  | 14+         | ✅ Full Support | macOS optimization         |
+| **Desktop Edge**    | 90+         | ✅ Full Support | Windows integration        |
+| **Mobile Safari**   | iOS 14+     | ✅ Full Support | Touch-optimized interface  |
+| **Chrome Mobile**   | Android 10+ | ✅ Full Support | Progressive web app ready  |
+| **API Clients**     | Any         | ✅ Full Support | RESTful API compatibility  |
 
-1. **Review Documentation**: Check relevant sections before making changes
-2. **Follow Guidelines**: Adhere to implementation guidelines
-3. **Test Thoroughly**: Use testing checklists provided
-4. **Update Documentation**: Keep documentation current with changes
+## 🛠️ **Development Workflow**
 
-### Quality Assurance
+### **Backend Development**
 
-1. **Brand Compliance**: Verify Flaha PA branding standards
-2. **Responsive Testing**: Test on multiple device sizes
-3. **Cross-Browser Testing**: Verify compatibility across browsers
-4. **Accessibility**: Ensure WCAG compliance
+1. **API Design**: Follow RESTful principles and tier-based access patterns
+2. **Database Changes**: Use Prisma migrations for schema updates
+3. **Testing**: Implement comprehensive unit and integration tests
+4. **Documentation**: Update API documentation with changes
 
-## 📞 Support & Maintenance
+### **Frontend Development**
 
-### Getting Help
+1. **Brand Compliance**: Follow Flaha PA brand guidelines strictly
+2. **Responsive Design**: Test on multiple device sizes and orientations
+3. **Accessibility**: Ensure WCAG 2.1 AA compliance
+4. **Performance**: Optimize for fast loading and smooth interactions
 
-- **Implementation Questions**: Refer to the Implementation Guide
-- **Quick Tasks**: Use the Quick Reference Guide
-- **Technical Issues**: Check troubleshooting sections
-- **Code Examples**: Review existing page implementations
+### **Quality Assurance**
 
-### Reporting Issues
+1. **Functional Testing**: Verify all tier-based features work correctly
+2. **API Testing**: Test all endpoints with proper authentication
+3. **Report Testing**: Validate PDF generation and print functionality
+4. **Cross-Platform Testing**: Verify compatibility across supported platforms
 
-When reporting navigation or branding issues:
+## 📞 **Support & Maintenance**
 
-1. **Specify Page**: Which page is affected
-2. **Browser/Device**: Testing environment details
-3. **Expected vs Actual**: What should happen vs what happens
-4. **Steps to Reproduce**: Clear reproduction steps
+### **Getting Technical Help**
 
-### Contributing
+- **Backend Issues**: Review [System Architecture](./FlahaSoil%20system%20architecture%20overview.mmd) and [API Documentation](./FlahaSoil%20API%20Endpoints%20&%20Data%20Flow.mmd)
+- **Frontend Issues**: Check [Navigation Guide](./NAVIGATION_BRANDING_GUIDE.md) and [Quick Reference](./QUICK_REFERENCE.md)
+- **Database Issues**: Consult [Database Schema](./FlahaSoil%20Database%20Schema%20&%20Relationships.mmd)
+- **Report Issues**: Review [Report Documentation](./reports/REPORT_DOCUMENTATION.md)
 
-When contributing to navigation or branding:
+### **Reporting Issues**
 
-1. **Follow Standards**: Use documented guidelines
-2. **Test Thoroughly**: Complete all testing checklists
-3. **Update Documentation**: Keep docs current
-4. **Review Process**: Follow code review procedures
+When reporting technical issues:
 
-## 🎨 Design System
+1. **Component**: Specify affected component (Frontend/Backend/Database/Reports)
+2. **Environment**: Development/Production environment details
+3. **User Tier**: Free/Professional/Enterprise tier context
+4. **Steps to Reproduce**: Clear reproduction steps with sample data
+5. **Expected vs Actual**: What should happen vs what actually happens
 
-The FlahaSoil navigation system implements a comprehensive design system:
+### **Contributing Guidelines**
 
-- **Consistent Branding**: Flaha PA identity across all touchpoints
-- **Responsive Design**: Mobile-first approach with progressive enhancement
-- **Accessibility**: WCAG 2.1 AA compliance
-- **Performance**: Optimized for fast loading and smooth interactions
+1. **Follow Architecture**: Maintain backend-API-driven design patterns
+2. **Respect Tiers**: Implement proper tier-based access control
+3. **Test Thoroughly**: Include unit tests and integration tests
+4. **Update Documentation**: Keep all documentation current with changes
+5. **Brand Compliance**: Follow Flaha PA brand standards
 
-## 📈 Future Enhancements
+## 🎨 **Design System**
 
-Planned improvements to the navigation system:
+FlahaSoil implements a comprehensive design system:
 
-- [ ] Dark mode support
-- [ ] Enhanced accessibility features
+- **Scientific Accuracy**: Saxton & Rawls methodology with proper validation
+- **Tier-Based Access**: Progressive feature disclosure based on subscription
+- **Responsive Design**: Mobile-first approach with desktop enhancement
+- **Brand Consistency**: Flaha PA identity across all touchpoints
+- **Performance**: Optimized API responses and efficient PDF generation
+
+## 📈 **Future Enhancements**
+
+### **Phase 1 (Current)**
+
+- [x] Complete 24-equation Saxton & Rawls implementation
+- [x] Tier-based access control system
+- [x] PDF report generation
+- [x] Mobile-responsive UI
+
+### **Phase 2 (Planned)**
+
+- [ ] Regional soil data integration
+- [ ] Advanced visualization features
+- [ ] API rate limiting enhancements
 - [ ] Performance optimizations
-- [ ] Additional mobile gestures
-- [ ] Internationalization support
+
+### **Phase 3 (Future)**
+
+- [ ] Machine learning soil predictions
+- [ ] IoT sensor integration
+- [ ] Multi-language support
+- [ ] Advanced analytics dashboard
 
 ---
 
-## 📝 Document Maintenance
+## 📝 **Document Maintenance**
 
-This documentation is maintained alongside the FlahaSoil application. When making changes to navigation or branding:
+This documentation hub is maintained alongside the FlahaSoil application. When making changes:
 
-1. Update relevant documentation sections
-2. Verify all links and references
-3. Test documented code examples
-4. Update version information
+1. **Update Relevant Sections**: Keep technical documentation current
+2. **Verify Links**: Ensure all internal links work correctly
+3. **Test Examples**: Validate all code examples and API calls
+4. **Version Control**: Update version information and timestamps
 
-**Last Updated:** December 2024  
-**Version:** 1.0  
-**Maintainer:** FlahaSoil Development Team
+**Last Updated:** December 2024
+**Version:** 2.0
+**Maintainer:** Flaha Agri Tech - Precision Agriculture Division
 
 ---
 
-*For technical implementation details, see [NAVIGATION_BRANDING_GUIDE.md](./NAVIGATION_BRANDING_GUIDE.md)*  
-*For quick development tasks, see [QUICK_REFERENCE.md](./QUICK_REFERENCE.md)*
+## 🔗 **Quick Navigation**
+
+**📋 Overview:** [Project Summary](./PROJECT_SUMMARY.md) | [Technical Overview](./TECHNICAL_OVERVIEW.md) | [Project Structure](./PROJECT_STRUCTURE.md) | [API Reference](./API_REFERENCE.md) | [Deployment Guide](./DEPLOYMENT_GUIDE.md)
+
+**🔧 Technical:** [Architecture](./FlahaSoil%20system%20architecture%20overview.mmd) | [API Flow](./FlahaSoil%20API%20Endpoints%20&%20Data%20Flow.mmd) | [Database](./FlahaSoil%20Database%20Schema%20&%20Relationships.mmd) | [Calculations](./FlahaSoil%20Soil%20Analysis%20Calculation%20Flow.mmd)
+
+**💼 Business:** [Tiers](./FlahaSoil%20Tiered%20Access%20&%20Business%20Model.mmd) | [User Flow](./FlahaSoil%20User%20Flow%20&%20Authentication%20Journey.mmd)
+
+**🎨 Frontend:** [Navigation](./NAVIGATION_BRANDING_GUIDE.md) | [Routing](./FlahaSoil-Routing-Navigation.md) | [Quick Ref](./QUICK_REFERENCE.md)
+
+**📄 Reports:** [Documentation](./reports/REPORT_DOCUMENTATION.md) | [API](./reports/REPORT_API_REFERENCE.md) | [User Guide](./reports/REPORT_USER_GUIDE.md) | [Tests](./reports/REPORT_TEST_RESULTS.md)

@@ -50,49 +50,100 @@
             <!-- Demo Controls (Read-only) -->
             <div class="demo-panel">
                 <h2>Soil Texture Analysis Demo</h2>
-                <div class="demo-inputs">
-                    <div class="input-group">
-                        <label>Sand (%)</label>
-                        <input type="number" id="sandDemo" value="45" readonly class="demo-input">
-                    </div>
-                    <div class="input-group">
-                        <label>Clay (%)</label>
-                        <input type="number" id="clayDemo" value="25" readonly class="demo-input">
-                    </div>
-                    <div class="input-group">
-                        <label>Silt (%)</label>
-                        <input type="number" id="siltDemo" value="30" readonly class="demo-input">
-                    </div>
+
+                <!-- Sample Selector -->
+                <div class="sample-selector-group">
+                    <label for="sampleSelector">Choose a soil sample:</label>
+                    <select id="sampleSelector" class="sample-selector">
+                        <option value="">Select a soil sample...</option>
+                    </select>
                 </div>
-                <button class="btn-calculate-demo" onclick="runDemoCalculation()">
+
+                <div class="demo-inputs">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label>Sand (%)</label>
+                            <input type="number" id="sandDemo" value="45" readonly class="demo-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Clay (%)</label>
+                            <input type="number" id="clayDemo" value="25" readonly class="demo-input">
+                        </div>
+                        <div class="input-group">
+                            <label>Silt (%)</label>
+                            <input type="number" id="siltDemo" value="30" readonly class="demo-input">
+                        </div>
+                    </div>
+
+                    <div class="input-row auth-only">
+                        <div class="input-group">
+                            <label>Organic Matter (%)</label>
+                            <input type="number" id="organicMatterDemo" value="3.2" readonly class="demo-input">
+                        </div>
+                        <div class="input-group">
+                            <label>pH Level</label>
+                            <input type="number" id="phDemo" value="6.8" readonly class="demo-input">
+                        </div>
+                    </div>
+
+                    <div id="validationMessage" class="validation-message"></div>
+                </div>
+
+                <button class="btn-calculate-demo" onclick="handleCalculateClick()">
                     View Demo Analysis
                 </button>
             </div>
 
             <!-- Results Display -->
             <div class="results-container" id="demoResults" style="display: none;">
+                <!-- Soil Classification -->
                 <div class="result-card">
                     <h3>Soil Classification</h3>
                     <div class="classification-result">
-                        <span class="soil-type">Loam</span>
+                        <span id="soilTextureResult" class="soil-type">Loam</span>
                     </div>
                 </div>
 
+                <!-- Soil Properties -->
                 <div class="result-card">
-                    <h3>Water Characteristics</h3>
-                    <div class="water-results">
-                        <div class="water-property">
-                            <label>Field Capacity:</label>
-                            <span>28.5%</span>
+                    <h3>Soil Properties</h3>
+                    <div class="properties-grid">
+                        <div class="property-item" id="drainageRateContainer">
+                            <label>Drainage Rate:</label>
+                            <div class="progress-container">
+                                <div class="progress-bar"></div>
+                            </div>
+                            <span class="property-value">0%</span>
                         </div>
-                        <div class="water-property">
-                            <label>Wilting Point:</label>
-                            <span>14.2%</span>
+                        <div class="property-item" id="waterHoldingCapacityContainer">
+                            <label>Water Holding:</label>
+                            <div class="progress-container">
+                                <div class="progress-bar"></div>
+                            </div>
+                            <span class="property-value">0%</span>
                         </div>
-                        <div class="water-property">
-                            <label>Available Water:</label>
-                            <span>14.3%</span>
+                        <div class="property-item" id="nutrientRetentionContainer">
+                            <label>Nutrient Retention:</label>
+                            <div class="progress-container">
+                                <div class="progress-bar"></div>
+                            </div>
+                            <span class="property-value">0%</span>
                         </div>
+                        <div class="property-item" id="workabilityContainer">
+                            <label>Workability:</label>
+                            <div class="progress-container">
+                                <div class="progress-bar"></div>
+                            </div>
+                            <span class="property-value">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommendations -->
+                <div class="result-card">
+                    <h3>Management Recommendations</h3>
+                    <div id="recommendationsContainer" class="recommendations-list">
+                        <p class="text-muted">Analyzing soil properties...</p>
                     </div>
                 </div>
 
@@ -100,6 +151,15 @@
                 <div class="result-card full-width">
                     <h3>USDA Soil Triangle</h3>
                     <div id="soilTriangle" class="triangle-container"></div>
+                </div>
+
+                <!-- Advanced Visualizations (Professional+ only) -->
+                <div id="moistureTensionChart" class="result-card full-width auth-only" style="display: none;">
+                    <!-- Moisture-tension curve will be rendered here -->
+                </div>
+
+                <div id="soilProfile3D" class="result-card full-width auth-only" style="display: none;">
+                    <!-- 3D soil profile will be rendered here -->
                 </div>
             </div>
 
@@ -136,8 +196,8 @@
             </div>
             <div class="footer-section">
                 <h4>Get Started</h4>
-                <a href="./landing.html" class="footer-link" onclick="showSignupModal()">Sign Up Free</a>
-                <a href="./landing.html" class="footer-link" onclick="showLoginModal()">Login</a>
+                <a href="./landing.html" class="footer-link">Sign Up Free</a>
+                <a href="./landing.html" class="footer-link">Login</a>
                 <a href="./landing.html#pricing" class="footer-link">View Plans</a>
             </div>
             <div class="footer-section">
@@ -154,6 +214,7 @@
     </footer>
 
     <!-- Scripts -->
+    <script src="./assets/js/apiClient.js"></script>
     <script src="./assets/js/demo.js"></script>
 </body>
 

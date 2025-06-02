@@ -93,6 +93,13 @@ class SoilCalculationService {
 			textureClass
 		);
 
+		// Calculate additional soil properties
+		const additionalProperties = this.calculateAdditionalProperties(
+			densityResults,
+			gravelContent,
+			userPlan
+		);
+
 		// Prepare results based on user plan
 		return this.formatResultsByPlan(
 			densityResults,
@@ -102,7 +109,16 @@ class SoilCalculationService {
 			confidenceIntervals,
 			textureClass,
 			qualityIndicators,
-			userPlan
+			additionalProperties,
+			userPlan,
+			{
+				sand,
+				clay,
+				organicMatter: om,
+				densityFactor,
+				gravelContent,
+				electricalConductivity,
+			}
 		);
 	}
 
@@ -168,10 +184,10 @@ class SoilCalculationService {
 	static calculateDensityEffects(moistureResults, densityFactor) {
 		const { theta1500t, theta33t, thetaS33t, thetaS } = moistureResults;
 
-		// Equation 6: Normal density (ρN)
+		// Equation 6: Normal density (ρN) - CALCULATED from soil texture
 		const rhoN = (1 - thetaS) * 2.65;
 
-		// Equation 7: Density factor (ρDF)
+		// Equation 7: Density factor (ρDF) - USER INPUT for comparison
 		const rhoDF = densityFactor;
 
 		// Equation 8: Saturation with density factor (θS-DF)
@@ -186,8 +202,8 @@ class SoilCalculationService {
 
 		return {
 			...moistureResults,
-			rhoN,
-			rhoDF,
+			rhoN, // Calculated bulk density from soil texture
+			rhoDF, // User input bulk density for comparison
 			thetaSDF: Math.min(0.6, Math.max(0.25, thetaSDF)),
 			theta33DF: Math.min(0.5, Math.max(0.05, theta33DF)),
 			thetaS33DF: Math.max(0.01, thetaS33DF),
@@ -505,6 +521,34 @@ class SoilCalculationService {
 	}
 
 	/**
+	 * Calculate additional soil properties (porosity, void ratio, etc.)
+	 */
+	static calculateAdditionalProperties(
+		densityResults,
+		gravelContent,
+		userPlan
+	) {
+		const { rhoDF, thetaSDF } = densityResults;
+
+		// Calculate porosity from saturation moisture content
+		const porosity = thetaSDF * 100; // Convert to percentage
+
+		// Calculate void ratio (e = n / (1 - n))
+		const voidRatio = porosity / (100 - porosity);
+
+		// Calculate particle density (assumed 2.65 g/cm³ for mineral soils)
+		const particleDensity = 2.65;
+
+		return {
+			porosity: porosity.toFixed(1),
+			voidRatio: voidRatio.toFixed(3),
+			particleDensity: particleDensity.toFixed(2),
+			// Include input gravel content for report display
+			inputGravelContent: gravelContent,
+		};
+	}
+
+	/**
 	 * Format results based on user plan (tiered access)
 	 */
 	static formatResultsByPlan(
@@ -515,7 +559,9 @@ class SoilCalculationService {
 		confidenceIntervals,
 		textureClass,
 		qualityIndicators,
-		userPlan
+		additionalProperties,
+		userPlan,
+		inputParameters = {}
 	) {
 		// Base results for all users
 		const baseResults = {
@@ -532,14 +578,31 @@ class SoilCalculationService {
 			drainageClass: qualityIndicators.drainageClass,
 			compactionRisk: qualityIndicators.compactionRisk,
 			erosionRisk: qualityIndicators.erosionRisk,
-			bulkDensity: densityResults.rhoDF.toFixed(3),
+
+			// Bulk density information with clarification
+			bulkDensity: densityResults.rhoN.toFixed(3), // CALCULATED bulk density from soil texture (Equation 6)
+			bulkDensityFactor: densityResults.rhoN.toFixed(2), // Same as above, for compatibility
+			inputBulkDensity: inputParameters.densityFactor, // User input for comparison
+
+			// Additional soil properties
+			porosity: additionalProperties.porosity,
+			voidRatio: additionalProperties.voidRatio,
+			particleDensity: additionalProperties.particleDensity,
+
+			// Input parameters for report display
+			sand: inputParameters.sand,
+			clay: inputParameters.clay,
+			silt: 100 - inputParameters.sand - inputParameters.clay,
+			organicMatter: inputParameters.organicMatter,
+			gravelContent: inputParameters.gravelContent || 0, // Always include, even if 0
+			electricalConductivity: inputParameters.electricalConductivity || 0,
 		};
 
 		// Professional tier additions
 		if (userPlan === "PROFESSIONAL" || userPlan === "ENTERPRISE") {
 			Object.assign(baseResults, {
 				airEntryTension: conductivityResults.airEntryTension,
-				bulkDensity: densityResults.rhoDF.toFixed(2),
+				bulkDensity: densityResults.rhoN.toFixed(2), // Use calculated bulk density (rhoN)
 				lambda: conductivityResults.lambda.toFixed(2),
 				compactionRisk: qualityIndicators.compactionRisk,
 				erosionRisk: qualityIndicators.erosionRisk,

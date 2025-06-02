@@ -4,6 +4,7 @@ const express = require("express");
 const { body } = require("express-validator");
 const SoilController = require("../controllers/soilController");
 const EnhancedSoilController = require("../controllers/enhancedSoilController");
+const ReportService = require("../services/reportService");
 const authMiddleware = require("../middleware/auth");
 const { freeTierLimit, professionalLimit } = require("../middleware/rateLimit");
 const {
@@ -199,6 +200,101 @@ router.post(
 	incrementUsage(),
 	soilAnalysisValidation,
 	EnhancedSoilController.createEnhancedAnalysis
+);
+
+// REPORT GENERATION ENDPOINTS
+
+// Generate professional PDF report (Professional+ users only)
+router.post(
+	"/report",
+	authMiddleware,
+	requireFeature("reportGeneration"),
+	async (req, res) => {
+		try {
+			const soilData = req.body;
+			const userInfo = {
+				name: req.user.name,
+				email: req.user.email,
+				tier: req.user.plan || "PROFESSIONAL",
+			};
+
+			console.log(
+				"📄 Generating professional report for:",
+				userInfo.email,
+				`(${userInfo.tier})`
+			);
+
+			const reportService = new ReportService();
+			const pdfBuffer = await reportService.generateStandardReport(
+				soilData,
+				userInfo
+			);
+
+			res.setHeader("Content-Type", "application/pdf");
+			res.setHeader(
+				"Content-Disposition",
+				`attachment; filename="FlahaSoil-Professional-Report-${
+					new Date().toISOString().split("T")[0]
+				}.pdf"`
+			);
+			res.send(pdfBuffer);
+
+			console.log("✅ Professional report generated successfully");
+		} catch (error) {
+			console.error("❌ Error generating professional report:", error);
+			res.status(500).json({
+				error: "Failed to generate professional report",
+				details: error.message,
+			});
+		}
+	}
+);
+
+// Generate custom branded PDF report (Enterprise users only)
+router.post(
+	"/report/custom",
+	authMiddleware,
+	requireFeature("customReports"),
+	async (req, res) => {
+		try {
+			const { soilData, customOptions } = req.body;
+			const userInfo = {
+				name: req.user.name,
+				email: req.user.email,
+				tier: req.user.plan || "ENTERPRISE",
+			};
+
+			console.log(
+				"🏢 Generating custom report for:",
+				userInfo.email,
+				`(${userInfo.tier})`
+			);
+
+			const reportService = new ReportService();
+			const pdfBuffer = await reportService.generateCustomReport(
+				soilData,
+				userInfo,
+				customOptions
+			);
+
+			res.setHeader("Content-Type", "application/pdf");
+			res.setHeader(
+				"Content-Disposition",
+				`attachment; filename="FlahaSoil-Custom-Report-${
+					new Date().toISOString().split("T")[0]
+				}.pdf"`
+			);
+			res.send(pdfBuffer);
+
+			console.log("✅ Custom report generated successfully");
+		} catch (error) {
+			console.error("❌ Error generating custom report:", error);
+			res.status(500).json({
+				error: "Failed to generate custom report",
+				details: error.message,
+			});
+		}
+	}
 );
 
 module.exports = router;

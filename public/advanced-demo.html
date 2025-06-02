@@ -862,20 +862,13 @@
                                 bulkDensity: parseFloat(document.getElementById('demo-bulk-density').value) || 1.35
                             };
 
-                            const response = await fetch('/api/reports/generate', {
+                            const response = await fetch('/api/v1/soil/report', {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                     'Authorization': `Bearer ${apiClient.token}`
                                 },
-                                body: JSON.stringify({
-                                    soilData,
-                                    userInfo: {
-                                        name: 'Demo User',
-                                        email: 'demo@example.com',
-                                        tier: apiClient.userPlan
-                                    }
-                                })
+                                body: JSON.stringify(soilData)
                             });
 
                             if (response.ok) {
@@ -883,7 +876,7 @@
                                 const url = window.URL.createObjectURL(blob);
                                 const a = document.createElement('a');
                                 a.href = url;
-                                a.download = `FlahaSoil-Report-${new Date().toISOString().split('T')[0]}.pdf`;
+                                a.download = `FlahaSoil-Professional-Report-${new Date().toISOString().split('T')[0]}.pdf`;
                                 document.body.appendChild(a);
                                 a.click();
                                 window.URL.revokeObjectURL(url);

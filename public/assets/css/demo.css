@@ -334,6 +334,166 @@
 	user-select: none;
 }
 
+/* Sample Selector Styles */
+.sample-selector-group {
+	margin-bottom: 20px;
+}
+
+.sample-selector-group label {
+	display: block;
+	margin-bottom: 8px;
+	color: #2d5430;
+	font-weight: 600;
+}
+
+.sample-selector {
+	width: 100%;
+	padding: 12px 15px;
+	border: 2px solid #e0e0e0;
+	border-radius: 8px;
+	background: white;
+	font-size: 1rem;
+	color: #333;
+	cursor: pointer;
+	transition: border-color 0.3s ease;
+}
+
+.sample-selector:focus {
+	outline: none;
+	border-color: #4caf50;
+}
+
+/* Input Row Layout */
+.input-row {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: 15px;
+	margin-bottom: 15px;
+}
+
+/* Validation Message */
+.validation-message {
+	padding: 10px;
+	border-radius: 6px;
+	margin-top: 10px;
+	font-size: 0.9rem;
+	display: none;
+}
+
+.validation-message.error {
+	background: #ffebee;
+	color: #c62828;
+	border: 1px solid #ffcdd2;
+	display: block;
+}
+
+.validation-message.success {
+	background: #e8f5e8;
+	color: #2e7d32;
+	border: 1px solid #c8e6c9;
+	display: block;
+}
+
+/* Properties Grid */
+.properties-grid {
+	display: grid;
+	gap: 15px;
+}
+
+.property-item {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+	padding: 12px;
+	background: #f8f9fa;
+	border-radius: 8px;
+}
+
+.property-item label {
+	min-width: 120px;
+	color: #666;
+	font-weight: 500;
+	font-size: 0.9rem;
+}
+
+.progress-container {
+	flex: 1;
+	height: 8px;
+	background: #e0e0e0;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.progress-bar {
+	height: 100%;
+	background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
+	border-radius: 4px;
+	transition: width 0.8s ease;
+	width: 0%;
+}
+
+.property-value {
+	min-width: 50px;
+	text-align: right;
+	color: #2d5430;
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+/* Recommendations */
+.recommendations-list {
+	space-y: 10px;
+}
+
+.recommendation-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px;
+	background: #f0f7ff;
+	border-left: 4px solid #2196f3;
+	border-radius: 6px;
+	margin-bottom: 10px;
+}
+
+.recommendation-icon {
+	color: #2196f3;
+	font-size: 1.2rem;
+	margin-top: 2px;
+}
+
+.recommendation-text {
+	color: #333;
+	line-height: 1.5;
+}
+
+/* Auth-only elements (hidden in demo) */
+.auth-only {
+	opacity: 0.6;
+	position: relative;
+}
+
+.auth-only::after {
+	content: "🔒 Professional+";
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: rgba(255, 107, 53, 0.9);
+	color: white;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	font-weight: 600;
+	pointer-events: none;
+}
+
+/* Text utilities */
+.text-muted {
+	color: #666;
+	font-style: italic;
+}
+
 /* Disable context menu */
 .demo-panel,
 .results-container {
