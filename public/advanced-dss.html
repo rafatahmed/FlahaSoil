@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlahaSoil Advanced DSS - Irrigation Decision Support System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/style.css" rel="stylesheet">
+    <style>
+        :root {
+            --flaha-green: #3d7a42;
+            --flaha-blue: #1e5f8c;
+            --flaha-light-green: #e8f5e8;
+            --flaha-light-blue: #e3f2fd;
+        }
+
+        .dss-header {
+            background: linear-gradient(135deg, var(--flaha-green) 0%, var(--flaha-blue) 100%);
+            color: white;
+            padding: 2rem 0;
+        }
+
+        .dss-card {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+
+        .dss-card-header {
+            background: var(--flaha-light-green);
+            border-bottom: 2px solid var(--flaha-green);
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1rem 1.5rem;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .progress-step .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--flaha-green);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+            font-weight: bold;
+        }
+
+        .progress-step.active .step-number {
+            background: var(--flaha-blue);
+        }
+
+        .progress-step.completed .step-number {
+            background: #28a745;
+        }
+
+        .btn-flaha {
+            background: var(--flaha-green);
+            border-color: var(--flaha-green);
+            color: white;
+        }
+
+        .btn-flaha:hover {
+            background: var(--flaha-blue);
+            border-color: var(--flaha-blue);
+            color: white;
+        }
+
+        .result-card {
+            background: var(--flaha-light-blue);
+            border-left: 4px solid var(--flaha-blue);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--flaha-green);
+        }
+
+        .loading-spinner {
+            display: none;
+        }
+
+        .loading-spinner.show {
+            display: inline-block;
+        }
+
+        .soil-summary {
+            background: var(--flaha-light-green);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .recommendation-card {
+            border-left: 4px solid var(--flaha-green);
+            background: #f8f9fa;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .priority-high {
+            border-left-color: #dc3545;
+        }
+
+        .priority-medium {
+            border-left-color: #ffc107;
+        }
+
+        .priority-low {
+            border-left-color: #28a745;
+        }
+
+        /* Week 3: Progressive Disclosure UI Styles */
+        .user-level-selector {
+            background: var(--flaha-light-green);
+            border: 2px solid var(--flaha-green);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .level-card {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .level-card:hover {
+            border-color: var(--flaha-green);
+            background: var(--flaha-light-green);
+        }
+
+        .level-card.active {
+            border-color: var(--flaha-green);
+            background: var(--flaha-light-green);
+            box-shadow: 0 4px 8px rgba(61, 122, 66, 0.2);
+        }
+
+        .level-icon {
+            font-size: 2rem;
+            color: var(--flaha-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .complexity-indicator {
+            display: flex;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .complexity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+            margin-right: 4px;
+        }
+
+        .complexity-dot.active {
+            background: var(--flaha-green);
+        }
+
+        /* Role-based visibility classes */
+        .farmer-only {
+            display: none;
+        }
+
+        .designer-only {
+            display: none;
+        }
+
+        .consultant-only {
+            display: none;
+        }
+
+        .user-level-farmer .farmer-only,
+        .user-level-farmer .farmer-designer {
+            display: block;
+        }
+
+        .user-level-designer .designer-only,
+        .user-level-designer .farmer-designer,
+        .user-level-designer .designer-consultant {
+            display: block;
+        }
+
+        .user-level-consultant .consultant-only,
+        .user-level-consultant .designer-consultant,
+        .user-level-consultant .farmer-designer {
+            display: block;
+        }
+
+        /* Enhanced interactive components */
+        .search-dropdown {
+            position: relative;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .search-result-item {
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .search-result-item:hover {
+            background: var(--flaha-light-green);
+        }
+
+        .advanced-field-config {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .config-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .config-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        /* Week 3: Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .user-level-selector {
+                padding: 0.75rem;
+                margin-bottom: 1rem;
+            }
+
+            .user-level-selector .row {
+                flex-direction: column;
+            }
+
+            .user-level-selector .col-md-3 {
+                margin-bottom: 1rem;
+                text-align: center;
+            }
+
+            .level-card {
+                margin-bottom: 0.75rem;
+                padding: 0.75rem;
+            }
+
+            .level-icon {
+                font-size: 1.5rem;
+            }
+
+            .dss-header {
+                padding: 1rem 0;
+                text-align: center;
+            }
+
+            .dss-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .dss-header .lead {
+                font-size: 1rem;
+            }
+
+            .progress-step {
+                flex-direction: column;
+                text-align: center;
+                margin-bottom: 0.75rem;
+            }
+
+            .progress-step .step-number {
+                margin-right: 0;
+                margin-bottom: 0.5rem;
+            }
+
+            .advanced-field-config {
+                padding: 1rem;
+                margin-top: 0.75rem;
+            }
+
+            .config-section {
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+            }
+
+            .search-results {
+                max-height: 150px;
+            }
+
+            .search-result-item {
+                padding: 0.5rem;
+            }
+
+            /* Stack form elements vertically on mobile */
+            .row .col-md-6,
+            .row .col-md-4 {
+                margin-bottom: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+
+            .dss-card {
+                margin-bottom: 1rem;
+            }
+
+            .dss-card-header {
+                padding: 0.75rem 1rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            .btn+.btn {
+                margin-left: 0;
+            }
+
+            .text-end {
+                text-align: center !important;
+            }
+
+            .user-level-selector .col-md-9 .row {
+                gap: 0.5rem;
+            }
+
+            .level-card {
+                padding: 0.5rem;
+            }
+
+            .complexity-indicator {
+                justify-content: center;
+            }
+        }
+
+        /* Touch device optimizations */
+        .touch-device .level-card:hover {
+            transform: scale(1.02);
+        }
+
+        .touch-device .search-result-item:hover {
+            transform: none;
+            background: var(--flaha-light-green) !important;
+        }
+
+        /* Loading states for mobile */
+        .mobile-loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--flaha-green);">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <i class="fas fa-seedling me-2"></i>FlahaSoil DSS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="fas fa-flask me-1"></i>Soil Analysis
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="advanced-dss.html">
+                            <i class="fas fa-brain me-1"></i>Advanced DSS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="profile.html">
+                            <i class="fas fa-user me-1"></i>Profile
+                        </a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="logout()">
+                            <i class="fas fa-sign-out-alt me-1"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <div class="dss-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-brain me-3"></i>Advanced Decision Support System</h1>
+                    <p class="lead mb-0">Transform your soil analysis into intelligent irrigation recommendations</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex align-items-center justify-content-end">
+                        <i class="fas fa-tint fa-3x me-3"></i>
+                        <div>
+                            <h5 class="mb-0">Smart Irrigation</h5>
+                            <small>Powered by FAO-56</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        <!-- Week 3: Progressive Disclosure UI - User Level Selector -->
+        <div class="user-level-selector">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <h6 class="mb-0"><i class="fas fa-user-cog me-2"></i>Choose Your Experience Level</h6>
+                    <small class="text-muted">Interface adapts to your expertise</small>
+                </div>
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="level-card" data-level="farmer" onclick="setUserLevel('farmer')">
+                                <div class="text-center">
+                                    <div class="level-icon"><i class="fas fa-seedling"></i></div>
+                                    <h6 class="mb-1">Farmer</h6>
+                                    <small class="text-muted">Simple & Essential</small>
+                                    <div class="complexity-indicator">
+                                        <div class="complexity-dot active"></div>
+                                        <div class="complexity-dot"></div>
+                                        <div class="complexity-dot"></div>
+                                        <span class="ms-2 small">Basic</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="level-card active" data-level="designer" onclick="setUserLevel('designer')">
+                                <div class="text-center">
+                                    <div class="level-icon"><i class="fas fa-drafting-compass"></i></div>
+                                    <h6 class="mb-1">Designer</h6>
+                                    <small class="text-muted">Technical & Detailed</small>
+                                    <div class="complexity-indicator">
+                                        <div class="complexity-dot active"></div>
+                                        <div class="complexity-dot active"></div>
+                                        <div class="complexity-dot"></div>
+                                        <span class="ms-2 small">Intermediate</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="level-card" data-level="consultant" onclick="setUserLevel('consultant')">
+                                <div class="text-center">
+                                    <div class="level-icon"><i class="fas fa-user-tie"></i></div>
+                                    <h6 class="mb-1">Consultant</h6>
+                                    <small class="text-muted">Advanced & Complete</small>
+                                    <div class="complexity-indicator">
+                                        <div class="complexity-dot active"></div>
+                                        <div class="complexity-dot active"></div>
+                                        <div class="complexity-dot active"></div>
+                                        <span class="ms-2 small">Advanced</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-route me-2"></i>DSS Workflow</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="progress-step active" id="step-1">
+                                    <div class="step-number">1</div>
+                                    <div>
+                                        <strong>Soil Data</strong><br>
+                                        <small>Import from analysis</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="progress-step" id="step-2">
+                                    <div class="step-number">2</div>
+                                    <div>
+                                        <strong>Crop Selection</strong><br>
+                                        <small>Choose crop & field</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="progress-step" id="step-3">
+                                    <div class="step-number">3</div>
+                                    <div>
+                                        <strong>Calculations</strong><br>
+                                        <small>DSS processing</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="progress-step" id="step-4">
+                                    <div class="step-number">4</div>
+                                    <div>
+                                        <strong>Recommendations</strong><br>
+                                        <small>Irrigation plan</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Soil Data Import -->
+        <div class="row" id="step-1-content">
+            <div class="col-md-6">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-flask me-2"></i>Soil Analysis Data</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="soil-data-display">
+                            <div class="text-center py-4">
+                                <i class="fas fa-download fa-3x text-muted mb-3"></i>
+                                <p>Loading soil analysis data...</p>
+                                <button class="btn btn-flaha" onclick="loadSoilData()">
+                                    <i class="fas fa-sync-alt me-2"></i>Load Latest Analysis
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>DSS Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6><i class="fas fa-brain me-2"></i>What is DSS?</h6>
+                        <p>The Decision Support System transforms your soil analysis into actionable irrigation
+                            recommendations using:</p>
+                        <ul>
+                            <li><strong>FAO-56 Methodology</strong> - Global standard for crop water requirements</li>
+                            <li><strong>BBCH Growth Stages</strong> - Precise crop development tracking</li>
+                            <li><strong>Localized Kc Values</strong> - Regional climate adjustments</li>
+                            <li><strong>Economic Analysis</strong> - ROI and cost-benefit calculations</li>
+                        </ul>
+                        <div class="alert alert-info">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <strong>Pro Tip:</strong> Ensure your soil analysis is recent (within 6 months) for best
+                            results.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Crop and Field Configuration (Hidden initially) -->
+        <div class="row d-none" id="step-2-content">
+            <div class="col-md-8">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-seedling me-2"></i>Crop & Field Configuration</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="dss-config-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="crop-search" class="form-label">
+                                            <i class="fas fa-leaf me-1"></i>Select Crop
+                                            <span class="designer-only consultant-only">
+                                                <i class="fas fa-search ms-2 text-muted"></i>
+                                            </span>
+                                        </label>
+                                        <!-- Week 3: Enhanced crop selection with search -->
+                                        <div class="search-dropdown farmer-designer">
+                                            <input type="text" class="form-control" id="crop-search"
+                                                placeholder="Type to search crops..." autocomplete="off" required>
+                                            <div class="search-results" id="crop-search-results"></div>
+                                            <input type="hidden" id="selected-crop-id" required>
+                                        </div>
+                                        <!-- Fallback simple select for basic users -->
+                                        <select class="form-select farmer-only" id="crop-select-simple" required>
+                                            <option value="">Loading crops...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="field-area" class="form-label">
+                                            <i class="fas fa-expand-arrows-alt me-1"></i>Field Area
+                                            <span class="farmer-only">(hectares)</span>
+                                            <span class="designer-only consultant-only">(hectares - precision to
+                                                0.01)</span>
+                                        </label>
+                                        <input type="number" class="form-control" id="field-area" min="0.1" max="1000"
+                                            step="0.1" required placeholder="Enter field area">
+                                        <div class="form-text consultant-only">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            For irregular fields, calculate equivalent rectangular area
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="climate-zone" class="form-label">
+                                            <i class="fas fa-sun me-1"></i>Climate Zone
+                                            <span class="designer-only consultant-only">
+                                                <i class="fas fa-info-circle ms-1 text-muted"
+                                                    title="Affects Kc coefficient adjustments"></i>
+                                            </span>
+                                        </label>
+                                        <select class="form-select" id="climate-zone">
+                                            <!-- Farmer level: Simplified options -->
+                                            <option value="gcc_arid" class="farmer-only">Gulf Region (Hot & Dry)
+                                            </option>
+                                            <option value="temperate" class="farmer-only" selected>Moderate Climate
+                                            </option>
+                                            <option value="humid" class="farmer-only">Humid Climate</option>
+
+                                            <!-- Designer/Consultant level: Detailed options -->
+                                            <option value="gcc_arid" class="designer-only consultant-only">GCC Arid (Kc
+                                                × 1.15)</option>
+                                            <option value="mena_mediterranean" class="designer-only consultant-only">
+                                                MENA Mediterranean (Kc × 1.05)</option>
+                                            <option value="gulf_coastal" class="designer-only consultant-only">Gulf
+                                                Coastal (Kc × 1.10)</option>
+                                            <option value="temperate" class="designer-only consultant-only" selected>
+                                                Temperate (Kc × 1.0)</option>
+                                            <option value="arid" class="designer-only consultant-only">Arid (Kc × 1.05)
+                                            </option>
+                                            <option value="humid" class="designer-only consultant-only">Humid (Kc ×
+                                                0.95)</option>
+                                        </select>
+                                        <div class="form-text consultant-only">
+                                            <small>Climate zone affects crop coefficient (Kc) multipliers for regional
+                                                accuracy</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="irrigation-method" class="form-label">
+                                            <i class="fas fa-tint me-1"></i>Irrigation Method
+                                            <span class="designer-only consultant-only">
+                                                <i class="fas fa-cog ms-1 text-muted"
+                                                    title="Affects application efficiency"></i>
+                                            </span>
+                                        </label>
+                                        <select class="form-select" id="irrigation-method">
+                                            <!-- Farmer level: Simple descriptions -->
+                                            <option value="drip" class="farmer-only">Drip System (Most Efficient)
+                                            </option>
+                                            <option value="sprinkler" class="farmer-only" selected>Sprinkler System
+                                                (Balanced)</option>
+                                            <option value="surface" class="farmer-only">Flood/Furrow (Traditional)
+                                            </option>
+
+                                            <!-- Designer/Consultant level: Technical details -->
+                                            <option value="drip" class="designer-only consultant-only">Drip Irrigation
+                                                (Kc × 0.9, 85-95% efficiency)</option>
+                                            <option value="sprinkler" class="designer-only consultant-only" selected>
+                                                Sprinkler System (Kc × 1.0, 75-85% efficiency)</option>
+                                            <option value="surface" class="designer-only consultant-only">Surface
+                                                Irrigation (Kc × 1.05, 60-75% efficiency)</option>
+                                        </select>
+                                        <div class="form-text consultant-only">
+                                            <small>Method affects Kc adjustments and application efficiency
+                                                calculations</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="et0-value" class="form-label">
+                                            <i class="fas fa-thermometer-half me-1"></i>Reference ET₀
+                                            <span class="farmer-only">(mm/day)</span>
+                                            <span class="designer-only consultant-only">(mm/day from FlahaCalc)</span>
+                                        </label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="et0-value" min="1" max="20"
+                                                step="0.01" value="5.0" placeholder="5.0">
+                                            <span class="input-group-text">mm/day</span>
+                                            <button class="btn btn-outline-secondary consultant-only" type="button"
+                                                onclick="fetchFlahaCalcET0()" title="Fetch from FlahaCalc API">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </div>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            <span class="farmer-only">Default value works for most cases</span>
+                                            <span class="designer-only consultant-only">
+                                                Get accurate ET₀ from <a href="https://evapotran.flaha.org"
+                                                    target="_blank">FlahaCalc</a>
+                                                or use local weather station data
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="growth-stage" class="form-label">
+                                            <i class="fas fa-chart-line me-1"></i>Growth Stage
+                                            <span class="designer-only consultant-only">
+                                                <i class="fas fa-seedling ms-1 text-muted" title="BBCH scale based"></i>
+                                            </span>
+                                        </label>
+                                        <select class="form-select" id="growth-stage">
+                                            <!-- Farmer level: Simple stages -->
+                                            <option value="initial" class="farmer-only">Early Growth</option>
+                                            <option value="mid" class="farmer-only" selected>Peak Growth</option>
+                                            <option value="late" class="farmer-only">Harvest Time</option>
+
+                                            <!-- Designer/Consultant level: Technical stages -->
+                                            <option value="initial" class="designer-only consultant-only">Initial Stage
+                                                (Kc_ini) - BBCH 0-19</option>
+                                            <option value="development" class="designer-only consultant-only">
+                                                Development Stage - BBCH 20-59</option>
+                                            <option value="mid" class="designer-only consultant-only" selected>
+                                                Mid-season (Kc_mid) - BBCH 60-79</option>
+                                            <option value="late" class="designer-only consultant-only">Late Season
+                                                (Kc_end) - BBCH 80-99</option>
+                                        </select>
+                                        <div class="form-text consultant-only">
+                                            <small>Growth stage determines appropriate Kc coefficient from crop
+                                                database</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Week 3: Advanced Configuration for Consultant Level -->
+                            <div class="advanced-field-config consultant-only">
+                                <h6 class="mb-3"><i class="fas fa-cogs me-2"></i>Advanced Configuration</h6>
+
+                                <div class="config-section">
+                                    <h6 class="text-muted mb-2">Environmental Parameters</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="temperature" class="form-label">Temperature (°C)</label>
+                                                <input type="number" class="form-control" id="temperature" min="-10"
+                                                    max="60" step="0.1" placeholder="25.0">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="wind-speed" class="form-label">Wind Speed (m/s)</label>
+                                                <input type="number" class="form-control" id="wind-speed" min="0"
+                                                    max="20" step="0.1" placeholder="2.0">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="humidity" class="form-label">Humidity (%)</label>
+                                                <input type="number" class="form-control" id="humidity" min="0"
+                                                    max="100" step="1" placeholder="50">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="config-section">
+                                    <h6 class="text-muted mb-2">Field Characteristics</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="field-slope" class="form-label">Field Slope (%)</label>
+                                                <input type="number" class="form-control" id="field-slope" min="0"
+                                                    max="30" step="0.1" placeholder="2.0">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="field-elevation" class="form-label">Elevation (m)</label>
+                                                <input type="number" class="form-control" id="field-elevation" min="0"
+                                                    max="3000" step="1" placeholder="100">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="config-section">
+                                    <h6 class="text-muted mb-2">Economic Parameters</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="water-cost" class="form-label">Water Cost ($/m³)</label>
+                                                <input type="number" class="form-control" id="water-cost" min="0"
+                                                    max="10" step="0.01" placeholder="2.50">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="labor-cost" class="form-label">Labor Cost ($/hour)</label>
+                                                <input type="number" class="form-control" id="labor-cost" min="0"
+                                                    max="100" step="0.50" placeholder="15.00">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" class="btn btn-secondary me-2" onclick="goToStep(1)">
+                                    <i class="fas fa-arrow-left me-1"></i>Back
+                                </button>
+                                <button type="submit" class="btn btn-flaha">
+                                    <i class="fas fa-calculator me-1"></i>Calculate Recommendations
+                                    <span class="loading-spinner spinner-border spinner-border-sm ms-2"></span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Crop Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="crop-info-display">
+                            <p class="text-muted">Select a crop to see detailed information</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Results Display (Hidden initially) -->
+        <div class="row d-none" id="step-3-content">
+            <div class="col-12">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>DSS Calculation Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="results-display">
+                            <!-- Results will be populated here -->
+                        </div>
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-secondary me-2" onclick="goToStep(2)">
+                                <i class="fas fa-arrow-left me-1"></i>Modify Parameters
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="saveCalculation()">
+                                <i class="fas fa-save me-1"></i>Save Calculation
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // DSS JavaScript functionality
+        let currentStep = 1;
+        let soilData = null;
+        let crops = [];
+        let currentCalculation = null;
+
+        // Week 3: Progressive Disclosure UI variables (only for Professional/Enterprise)
+        let currentUserLevel = 'designer'; // Default to designer level
+        let cropSearchTimeout = null;
+
+        // Tier-based access control
+        let userTier = null;
+        let hasAccessToDSS = false;
+
+        // Initialize DSS on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            checkAuthentication();
+            checkSubscriptionTier();
+        });
+
+        // Upgrade functions
+        function upgradeToProfessional() {
+            alert('Redirecting to Professional tier upgrade...\n\nThis would integrate with your payment system.');
+            // In production, redirect to payment/upgrade page
+            // window.location.href = '/upgrade/professional';
+        }
+
+        function upgradeToEnterprise() {
+            alert('Redirecting to Enterprise tier upgrade...\n\nThis would integrate with your payment system.');
+            // In production, redirect to payment/upgrade page
+            // window.location.href = '/upgrade/enterprise';
+        }
+
+        // Week 3: Progressive Disclosure UI Functions (only for Professional/Enterprise users)
+        function initializeUserLevel() {
+            // Only initialize if user has DSS access
+            if (!hasAccessToDSS) {
+                console.log('User level initialization skipped - no DSS access');
+                return;
+            }
+
+            // Load saved user level or default to designer
+            const savedLevel = localStorage.getItem('dss-user-level') || 'designer';
+            setUserLevel(savedLevel);
+        }
+
+        function setUserLevel(level) {
+            // Only allow level setting for users with DSS access
+            if (!hasAccessToDSS) {
+                console.log('User level setting denied - no DSS access');
+                return;
+            }
+
+            currentUserLevel = level;
+            localStorage.setItem('dss-user-level', level);
+
+            // Update UI classes
+            document.body.className = document.body.className.replace(/user-level-\w+/g, '');
+            document.body.classList.add(`user-level-${level}`);
+
+            // Update active level card
+            document.querySelectorAll('.level-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.level === level) {
+                    card.classList.add('active');
+                }
+            });
+
+            // Update form elements based on level
+            updateFormComplexity(level);
+
+            console.log(`User level set to: ${level} (${userTier} tier)`);
+        }
+
+        function updateFormComplexity(level) {
+            // Update select options visibility
+            const selects = document.querySelectorAll('select');
+            selects.forEach(select => {
+                const options = select.querySelectorAll('option');
+                options.forEach(option => {
+                    const classes = option.className;
+                    if (classes.includes('farmer-only') && level !== 'farmer') {
+                        option.style.display = 'none';
+                    } else if (classes.includes('designer-only') && level === 'farmer') {
+                        option.style.display = 'none';
+                    } else if (classes.includes('consultant-only') && level !== 'consultant') {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = '';
+                    }
+                });
+            });
+
+            // Reset form values when switching levels
+            if (level === 'farmer') {
+                // Simplify for farmers
+                document.getElementById('et0-value').value = '5.0';
+                document.getElementById('climate-zone').value = 'temperate';
+                document.getElementById('irrigation-method').value = 'sprinkler';
+            }
+        }
+
+        // Week 3: Enhanced Crop Search Functionality
+        function setupCropSearch() {
+            const cropSearch = document.getElementById('crop-search');
+            const searchResults = document.getElementById('crop-search-results');
+            const selectedCropId = document.getElementById('selected-crop-id');
+
+            if (!cropSearch) return;
+
+            cropSearch.addEventListener('input', function (e) {
+                const query = e.target.value.toLowerCase().trim();
+
+                // Clear previous timeout
+                if (cropSearchTimeout) {
+                    clearTimeout(cropSearchTimeout);
+                }
+
+                // Debounce search
+                cropSearchTimeout = setTimeout(() => {
+                    if (query.length >= 2) {
+                        performCropSearch(query, searchResults, selectedCropId);
+                    } else {
+                        searchResults.style.display = 'none';
+                    }
+                }, 300);
+            });
+
+            // Hide results when clicking outside
+            document.addEventListener('click', function (e) {
+                if (!cropSearch.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+
+        function performCropSearch(query, resultsContainer, hiddenInput) {
+            const filteredCrops = crops.filter(crop =>
+                crop.name.toLowerCase().includes(query) ||
+                crop.type.toLowerCase().includes(query) ||
+                (crop.scientificName && crop.scientificName.toLowerCase().includes(query))
+            );
+
+            if (filteredCrops.length === 0) {
+                resultsContainer.innerHTML = '<div class="search-result-item text-muted">No crops found</div>';
+            } else {
+                resultsContainer.innerHTML = filteredCrops.map(crop => `
+                    <div class="search-result-item" onclick="selectCrop('${crop.id}', '${crop.name}')">
+                        <strong>${crop.name}</strong>
+                        <br><small class="text-muted">${crop.type}${crop.scientificName ? ' • ' + crop.scientificName : ''}</small>
+                    </div>
+                `).join('');
+            }
+
+            resultsContainer.style.display = 'block';
+        }
+
+        function selectCrop(cropId, cropName) {
+            document.getElementById('crop-search').value = cropName;
+            document.getElementById('selected-crop-id').value = cropId;
+            document.getElementById('crop-search-results').style.display = 'none';
+
+            // Load crop information
+            loadCropInformation(cropId);
+        }
+
+        function loadCropInformation(cropId) {
+            const crop = crops.find(c => c.id === cropId);
+            if (!crop) return;
+
+            const infoDisplay = document.getElementById('crop-info-display');
+            const complexity = currentUserLevel === 'farmer' ? 'basic' :
+                currentUserLevel === 'designer' ? 'technical' : 'advanced';
+
+            let infoHTML = `
+                <h6><i class="fas fa-leaf me-2"></i>${crop.name}</h6>
+                <p><strong>Type:</strong> ${crop.type}</p>
+            `;
+
+            if (complexity !== 'basic' && crop.scientificName) {
+                infoHTML += `<p><strong>Scientific Name:</strong> <em>${crop.scientificName}</em></p>`;
+            }
+
+            if (crop.kcPeriods && crop.kcPeriods.length > 0) {
+                if (complexity === 'basic') {
+                    infoHTML += `<p><strong>Water Needs:</strong> ${getWaterNeedsDescription(crop.kcPeriods)}</p>`;
+                } else {
+                    infoHTML += `<p><strong>Kc Coefficients:</strong></p><ul>`;
+                    crop.kcPeriods.forEach(period => {
+                        infoHTML += `<li>${period.periodName}: ${period.kcValue}</li>`;
+                    });
+                    infoHTML += `</ul>`;
+                }
+            }
+
+            if (complexity === 'advanced' && crop.description) {
+                infoHTML += `<p><strong>Notes:</strong> ${crop.description}</p>`;
+            }
+
+            infoDisplay.innerHTML = infoHTML;
+        }
+
+        function getWaterNeedsDescription(kcPeriods) {
+            const maxKc = Math.max(...kcPeriods.map(p => p.kcValue));
+            if (maxKc > 1.2) return 'High water needs';
+            if (maxKc > 1.0) return 'Moderate water needs';
+            return 'Low water needs';
+        }
+
+        // Check if user is authenticated
+        function checkAuthentication() {
+            const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'landing.html';
+                return;
+            }
+        }
+
+        // Tier-based access control for DSS
+        async function checkSubscriptionTier() {
+            try {
+                const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
+                const user = JSON.parse(localStorage.getItem('flahasoil_user') || localStorage.getItem('user') || '{}');
+
+                // Check user tier from localStorage or API
+                userTier = user.tier || 'free'; // Default to free if not specified
+
+                console.log(`User tier: ${userTier}`);
+
+                // DSS is only available for Professional and Enterprise tiers
+                hasAccessToDSS = userTier === 'professional' || userTier === 'enterprise';
+
+                if (hasAccessToDSS) {
+                    // User has access to DSS - initialize normally
+                    initializeDSSForSubscriber();
+                } else {
+                    // User is on Free/Demo tier - show upgrade message
+                    showUpgradeRequired();
+                }
+
+            } catch (error) {
+                console.error('Error checking subscription tier:', error);
+                // Default to no access on error
+                showUpgradeRequired();
+            }
+        }
+
+        // Initialize DSS for Professional/Enterprise users
+        function initializeDSSForSubscriber() {
+            console.log('Initializing DSS for subscribed user...');
+
+            // Show the user level selector (only for Professional/Enterprise)
+            const userLevelSelector = document.querySelector('.user-level-selector');
+            if (userLevelSelector) {
+                userLevelSelector.style.display = 'block';
+            }
+
+            // Initialize user level selection
+            initializeUserLevel();
+
+            // Load DSS data and setup
+            loadSoilData();
+            loadCrops();
+            setupEventListeners();
+
+            // Show success message
+            showTierWelcomeMessage();
+        }
+
+        // Show upgrade required message for Free/Demo users
+        function showUpgradeRequired() {
+            console.log('DSS access denied - upgrade required');
+
+            // Hide the user level selector
+            const userLevelSelector = document.querySelector('.user-level-selector');
+            if (userLevelSelector) {
+                userLevelSelector.style.display = 'none';
+            }
+
+            // Hide all DSS content
+            const dssContent = document.querySelectorAll('.dss-card, .progress-step');
+            dssContent.forEach(element => {
+                element.style.display = 'none';
+            });
+
+            // Show upgrade message
+            const container = document.querySelector('.container');
+            const upgradeHTML = `
+                <div class="row justify-content-center mt-5">
+                    <div class="col-md-8">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-lock me-2"></i>DSS Access Required
+                                </h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="mb-4">
+                                    <i class="fas fa-brain fa-4x text-muted mb-3"></i>
+                                    <h4>Advanced Decision Support System</h4>
+                                    <p class="lead">Transform your soil analysis into intelligent irrigation recommendations</p>
+                                </div>
+
+                                <div class="row mb-4">
+                                    <div class="col-md-6">
+                                        <div class="card h-100 border-success">
+                                            <div class="card-header bg-success text-white">
+                                                <h6 class="mb-0">Professional Tier</h6>
+                                                <small>$29/month</small>
+                                            </div>
+                                            <div class="card-body">
+                                                <ul class="list-unstyled text-start">
+                                                    <li><i class="fas fa-check text-success me-2"></i>Full DSS Access</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>FAO-56 Calculations</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>3 User Experience Levels</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Irrigation Recommendations</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>Economic Analysis</li>
+                                                    <li><i class="fas fa-check text-success me-2"></i>PDF Reports</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100 border-primary">
+                                            <div class="card-header bg-primary text-white">
+                                                <h6 class="mb-0">Enterprise Tier</h6>
+                                                <small>$199/month</small>
+                                            </div>
+                                            <div class="card-body">
+                                                <ul class="list-unstyled text-start">
+                                                    <li><i class="fas fa-check text-primary me-2"></i>Everything in Professional</li>
+                                                    <li><i class="fas fa-check text-primary me-2"></i>Custom Branding</li>
+                                                    <li><i class="fas fa-check text-primary me-2"></i>API Access</li>
+                                                    <li><i class="fas fa-check text-primary me-2"></i>Multi-field Management</li>
+                                                    <li><i class="fas fa-check text-primary me-2"></i>Advanced Analytics</li>
+                                                    <li><i class="fas fa-check text-primary me-2"></i>Priority Support</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Current Tier:</strong> ${userTier.charAt(0).toUpperCase() + userTier.slice(1)}
+                                    - Upgrade to access the Advanced Decision Support System
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                                    <button class="btn btn-success btn-lg me-md-2" onclick="upgradeToProfessional()">
+                                        <i class="fas fa-arrow-up me-2"></i>Upgrade to Professional
+                                    </button>
+                                    <button class="btn btn-primary btn-lg" onclick="upgradeToEnterprise()">
+                                        <i class="fas fa-crown me-2"></i>Upgrade to Enterprise
+                                    </button>
+                                </div>
+
+                                <div class="mt-3">
+                                    <a href="index.html" class="btn btn-outline-secondary">
+                                        <i class="fas fa-arrow-left me-2"></i>Back to Soil Analysis
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Insert upgrade message after the header
+            const headerElement = document.querySelector('.dss-header');
+            if (headerElement) {
+                headerElement.insertAdjacentHTML('afterend', upgradeHTML);
+            }
+        }
+
+        // Show welcome message for subscribed users
+        function showTierWelcomeMessage() {
+            const tierName = userTier.charAt(0).toUpperCase() + userTier.slice(1);
+            const welcomeHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Welcome ${tierName} User!</strong> You have full access to the Advanced Decision Support System.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+
+            const container = document.querySelector('.container');
+            if (container) {
+                container.insertAdjacentHTML('afterbegin', welcomeHTML);
+            }
+        }
+
+        // Load latest soil analysis data
+        async function loadSoilData() {
+            try {
+                const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
+                const response = await fetch('/api/v1/soil/analyses', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.length > 0) {
+                        soilData = data.data[0]; // Get latest analysis
+                        displaySoilData(soilData);
+                        updateStepStatus(1, 'completed');
+                        enableStep(2);
+                    } else {
+                        showNoSoilDataMessage();
+                    }
+                } else {
+                    throw new Error('Failed to load soil data');
+                }
+            } catch (error) {
+                console.error('Error loading soil data:', error);
+                showNoSoilDataMessage();
+            }
+        }
+
+        // Display soil data summary
+        function displaySoilData(data) {
+            const display = document.getElementById('soil-data-display');
+            display.innerHTML = `
+                <div class="soil-summary">
+                    <h6><i class="fas fa-flask me-2"></i>Latest Soil Analysis</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Texture:</strong> ${data.textureClass}</p>
+                            <p><strong>Sand:</strong> ${data.sand}%</p>
+                            <p><strong>Clay:</strong> ${data.clay}%</p>
+                            <p><strong>Silt:</strong> ${data.silt}%</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Field Capacity:</strong> ${data.fieldCapacity}%</p>
+                            <p><strong>Wilting Point:</strong> ${data.wiltingPoint}%</p>
+                            <p><strong>PAW:</strong> ${data.plantAvailableWater}%</p>
+                            <p><strong>Ksat:</strong> ${data.saturatedConductivity} mm/hr</p>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button class="btn btn-flaha btn-sm" onclick="goToStep(2)">
+                            <i class="fas fa-arrow-right me-1"></i>Continue to Crop Selection
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Show message when no soil data is available
+        function showNoSoilDataMessage() {
+            const display = document.getElementById('soil-data-display');
+            display.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5>No Soil Analysis Found</h5>
+                    <p>You need to complete a soil analysis before using the DSS.</p>
+                    <a href="index.html" class="btn btn-flaha">
+                        <i class="fas fa-flask me-1"></i>Go to Soil Analysis
+                    </a>
+                </div>
+            `;
+        }
+
+        // Load available crops
+        async function loadCrops() {
+            try {
+                const response = await fetch('/api/v1/dss/crops');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        crops = data.data;
+                        populateCropSelect();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading crops:', error);
+            }
+        }
+
+        // Populate crop selection dropdown
+        function populateCropSelect() {
+            const select = document.getElementById('crop-select');
+            select.innerHTML = '<option value="">Select a crop...</option>';
+
+            crops.forEach(crop => {
+                const option = document.createElement('option');
+                option.value = crop.id;
+                option.textContent = `${crop.name} (${crop.type})`;
+                select.appendChild(option);
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Week 3: Setup crop search functionality
+            setupCropSearch();
+
+            // Crop selection change (fallback for simple select)
+            const cropSelect = document.getElementById('crop-select');
+            if (cropSelect) {
+                cropSelect.addEventListener('change', function () {
+                    const cropId = this.value;
+                    if (cropId) {
+                        const crop = crops.find(c => c.id === cropId);
+                        displayCropInfo(crop);
+                    }
+                });
+            }
+
+            // DSS configuration form submission
+            document.getElementById('dss-config-form').addEventListener('submit', function (e) {
+                e.preventDefault();
+                calculateRecommendations();
+            });
+        }
+
+        // Display crop information
+        function displayCropInfo(crop) {
+            const display = document.getElementById('crop-info-display');
+            display.innerHTML = `
+                <h6>${crop.name}</h6>
+                <p><em>${crop.scientificName}</em></p>
+                <p><strong>Type:</strong> ${crop.type}</p>
+                <p><strong>Growth Period:</strong> ${crop.growthPeriodMin}-${crop.growthPeriodMax} days</p>
+                <p><strong>Max Root Depth:</strong> ${crop.rootDepthMax}m</p>
+                <div class="alert alert-info">
+                    <small><i class="fas fa-info-circle me-1"></i>
+                    Climate zones: ${crop.climateZones.join(', ')}</small>
+                </div>
+            `;
+        }
+
+        // Calculate irrigation recommendations
+        async function calculateRecommendations() {
+            if (!soilData) {
+                alert('Please load soil analysis data first');
+                return;
+            }
+
+            const form = document.getElementById('dss-config-form');
+            const formData = new FormData(form);
+
+            const calculationData = {
+                soilAnalysisId: soilData.id,
+                cropId: document.getElementById('crop-select').value,
+                fieldArea: parseFloat(document.getElementById('field-area').value),
+                et0Value: parseFloat(document.getElementById('et0-value').value),
+                climateZone: document.getElementById('climate-zone').value,
+                irrigationMethod: document.getElementById('irrigation-method').value,
+                growthStage: document.getElementById('growth-stage').value
+            };
+
+            // Show loading
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const spinner = submitBtn.querySelector('.loading-spinner');
+            submitBtn.disabled = true;
+            spinner.classList.add('show');
+
+            try {
+                const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
+                const response = await fetch('/api/v1/dss/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(calculationData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        currentCalculation = result.data;
+                        displayResults(result.data);
+                        updateStepStatus(2, 'completed');
+                        updateStepStatus(3, 'completed');
+                        goToStep(3);
+                    } else {
+                        throw new Error(result.error || 'Calculation failed');
+                    }
+                } else {
+                    throw new Error('Server error during calculation');
+                }
+            } catch (error) {
+                console.error('Calculation error:', error);
+                alert('Error calculating recommendations: ' + error.message);
+            } finally {
+                // Hide loading
+                submitBtn.disabled = false;
+                spinner.classList.remove('show');
+            }
+        }
+
+        // Display calculation results
+        function displayResults(data) {
+            const display = document.getElementById('results-display');
+            display.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-tint me-2"></i>Irrigation Parameters</h6>
+                        <div class="result-card">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="metric-value">${data.etcCalculated}</div>
+                                    <small>ETc (mm/day)</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-value">${data.irrigationDepth}</div>
+                                    <small>Irrigation Depth (mm)</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="result-card">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="metric-value">${data.irrigationFrequency}</div>
+                                    <small>Frequency (days)</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-value">${data.maxApplicationRate}</div>
+                                    <small>Max Rate (mm/hr)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-cogs me-2"></i>System Recommendation</h6>
+                        <div class="result-card">
+                            <h5 class="text-capitalize">${data.systemRecommendation} Irrigation</h5>
+                            <p><strong>Efficiency:</strong> ${Math.round(data.systemEfficiency * 100)}%</p>
+                            <p><strong>Estimated Cost:</strong> $${data.systemCost.toLocaleString()}</p>
+                        </div>
+                        <h6><i class="fas fa-dollar-sign me-2"></i>Economic Analysis</h6>
+                        <div class="result-card">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="metric-value">${data.economicROI}%</div>
+                                    <small>ROI (10 years)</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-value">${data.paybackPeriod}</div>
+                                    <small>Payback (years)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6><i class="fas fa-lightbulb me-2"></i>Recommendations</h6>
+                        ${data.recommendations.map(rec => `
+                            <div class="recommendation-card priority-${rec.priority.toLowerCase()}">
+                                <h6>${rec.title}</h6>
+                                <p>${rec.description}</p>
+                                <small><strong>Implementation:</strong> ${rec.implementation}</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Navigation functions
+        function goToStep(step) {
+            // Hide all step contents
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`step-${i}-content`).classList.add('d-none');
+                updateStepStatus(i, 'inactive');
+            }
+
+            // Show target step
+            document.getElementById(`step-${step}-content`).classList.remove('d-none');
+            updateStepStatus(step, 'active');
+            currentStep = step;
+        }
+
+        function updateStepStatus(step, status) {
+            const stepElement = document.getElementById(`step-${step}`);
+            stepElement.classList.remove('active', 'completed');
+            if (status !== 'inactive') {
+                stepElement.classList.add(status);
+            }
+        }
+
+        function enableStep(step) {
+            const stepElement = document.getElementById(`step-${step}`);
+            stepElement.style.cursor = 'pointer';
+            stepElement.onclick = () => goToStep(step);
+        }
+
+        // Save calculation
+        function saveCalculation() {
+            if (currentCalculation) {
+                alert('Calculation saved successfully!');
+                // In a real implementation, you might want to show a success message
+                // or redirect to a calculations history page
+            }
+        }
+
+        // Week 3: FlahaCalc API Integration for Consultant Level
+        async function fetchFlahaCalcET0() {
+            try {
+                // Mock FlahaCalc API call - replace with actual API endpoint
+                const mockFlahaCalcData = {
+                    temperature: 36.95,
+                    windSpeed: 7.72,
+                    relativeHumidity: 15,
+                    atmosphericPressure: 100.1,
+                    elevation: 17,
+                    latitude: 25.2728,
+                    dayNumber: 153,
+                    sunshineDuration: 8,
+                    location: "Baladīyat ad Dawḩah, QA",
+                    et0: 16.29 // Reference ET₀: 16.29 mm/day
+                };
+
+                // Update form with FlahaCalc data
+                document.getElementById('et0-value').value = mockFlahaCalcData.et0;
+
+                // Update advanced fields if available
+                if (document.getElementById('temperature')) {
+                    document.getElementById('temperature').value = mockFlahaCalcData.temperature;
+                }
+                if (document.getElementById('wind-speed')) {
+                    document.getElementById('wind-speed').value = mockFlahaCalcData.windSpeed;
+                }
+                if (document.getElementById('humidity')) {
+                    document.getElementById('humidity').value = mockFlahaCalcData.relativeHumidity;
+                }
+
+                // Show success message
+                const button = event.target;
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-check text-success"></i>';
+                button.disabled = true;
+
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                }, 2000);
+
+                console.log('FlahaCalc data loaded:', mockFlahaCalcData);
+
+            } catch (error) {
+                console.error('Error fetching FlahaCalc data:', error);
+                alert('Failed to fetch ET₀ data from FlahaCalc. Please enter manually.');
+            }
+        }
+
+        // Week 3: Mobile Responsiveness Enhancements
+        function initializeMobileOptimizations() {
+            // Touch-friendly interactions
+            if ('ontouchstart' in window) {
+                document.body.classList.add('touch-device');
+
+                // Increase touch targets
+                const style = document.createElement('style');
+                style.textContent = `
+                    .touch-device .btn { min-height: 44px; }
+                    .touch-device .form-control { min-height: 44px; }
+                    .touch-device .form-select { min-height: 44px; }
+                    .touch-device .level-card { padding: 1.5rem; }
+                    .touch-device .search-result-item { padding: 1rem; }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // Responsive font scaling
+            function adjustFontSize() {
+                const viewportWidth = window.innerWidth;
+                const rootElement = document.documentElement;
+
+                if (viewportWidth < 576) {
+                    rootElement.style.fontSize = '14px';
+                } else if (viewportWidth < 768) {
+                    rootElement.style.fontSize = '15px';
+                } else {
+                    rootElement.style.fontSize = '16px';
+                }
+            }
+
+            // Initial adjustment and on resize
+            adjustFontSize();
+            window.addEventListener('resize', adjustFontSize);
+
+            // Optimize form layout for mobile
+            function optimizeMobileLayout() {
+                const isMobile = window.innerWidth < 768;
+                const userLevelSelector = document.querySelector('.user-level-selector');
+
+                if (isMobile && userLevelSelector) {
+                    // Stack level cards vertically on mobile
+                    userLevelSelector.classList.add('mobile-stacked');
+                }
+            }
+
+            optimizeMobileLayout();
+            window.addEventListener('resize', optimizeMobileLayout);
+        }
+
+        // Week 3: Performance Optimizations
+        function initializePerformanceOptimizations() {
+            // Lazy load non-critical elements
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('loaded');
+                    }
+                });
+            });
+
+            // Observe advanced configuration sections
+            document.querySelectorAll('.advanced-field-config').forEach(el => {
+                observer.observe(el);
+            });
+
+            // Debounce resize events
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    // Trigger any resize-dependent functions
+                    console.log('Window resized, optimizing layout...');
+                }, 250);
+            });
+        }
+
+        // Initialize mobile optimizations when DOM is ready
+        document.addEventListener('DOMContentLoaded', function () {
+            initializeMobileOptimizations();
+            initializePerformanceOptimizations();
+        });
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('flahasoil_token');
+            localStorage.removeItem('flahasoil_user');
+            localStorage.removeItem('dss-user-level'); // Clear user level preference
+            window.location.href = 'landing.html';
+        }
+    </script>
+</body>
+
+</html>

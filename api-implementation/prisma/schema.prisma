@@ -26,6 +26,9 @@ model User {
   // Enhanced features
   comparativeAnalyses ComparativeAnalysis[]
 
+  // DSS features
+  dssCalculations     DSSCalculation[]
+
   @@map("users")
 }
 
@@ -80,6 +83,9 @@ model SoilAnalysis {
 
   // Enhanced features relationship
   enhancedAnalysis     EnhancedSoilAnalysis?
+
+  // DSS features relationship
+  dssCalculations      DSSCalculation[]
 
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -263,3 +269,165 @@ model SoilManagementRecommendation {
   @@index([enhancedAnalysisId, priority])
   @@index([category])
 }
+
+// ========================================
+// DSS (DECISION SUPPORT SYSTEM) MODELS
+// ========================================
+
+// Crop database for irrigation calculations
+model Crop {
+  id                String @id @default(cuid())
+
+  // Basic crop information
+  name              String @unique // "Tomato", "Wheat", "Maize"
+  scientificName    String? // "Solanum lycopersicum"
+  type              String // "Cereal", "Vegetable", "Forage", "Field"
+  category          String? // "C3", "C4" for photosynthesis type
+
+  // Growth characteristics
+  growthPeriodMin   Int // minimum days from sowing to harvest
+  growthPeriodMax   Int // maximum days from sowing to harvest
+  rootDepthMax      Float // maximum rooting depth in meters
+
+  // Regional adaptations
+  climateZones      String? // JSON array of suitable climate zones
+  soilPreferences   String? // JSON object with soil preferences
+
+  // Administrative
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  bbchStages        BBCHStage[]
+  kcPeriods         KcPeriod[]
+  dssCalculations   DSSCalculation[]
+
+  @@map("crops")
+  @@index([type])
+  @@index([name])
+}
+
+// BBCH growth stages for precise phenology tracking
+model BBCHStage {
+  id                String @id @default(cuid())
+
+  // Crop relationship
+  cropId            String
+  crop              Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  // BBCH stage information
+  stageCode         String // "00", "10", "20", etc. (BBCH codes)
+  stageName         String // "Germination", "Leaf development", etc.
+  description       String? // Detailed description of the stage
+
+  // Timing information
+  typicalDaysFromSowing Int? // typical days from sowing to reach this stage
+  durationDays      Int? // typical duration of this stage
+
+  // Growth period classification
+  growthPeriod      String? // "initial", "development", "mid", "late"
+
+  @@map("bbch_stages")
+  @@index([cropId, stageCode])
+  @@index([growthPeriod])
+}
+
+// Crop coefficients (Kc) for different periods and conditions
+model KcPeriod {
+  id                String @id @default(cuid())
+
+  // Crop relationship
+  cropId            String
+  crop              Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  // Period information
+  periodName        String // "Kc_ini", "Kc_dev", "Kc_mid", "Kc_end"
+  periodStartDays   Int // days from sowing when period starts
+  periodEndDays     Int // days from sowing when period ends
+
+  // Kc values
+  kcValue           Float // base Kc value from FAO-56
+  kcMin             Float? // minimum Kc for the period
+  kcMax             Float? // maximum Kc for the period
+
+  // Environmental adjustments
+  climateZone       String @default("temperate") // "arid", "humid", "temperate"
+  irrigationMethod  String @default("sprinkler") // "drip", "sprinkler", "surface"
+
+  // Quality and source information
+  confidenceLevel   String @default("medium") // "high", "medium", "low"
+  referenceSource   String? // "FAO-56", "Local research", etc.
+  localCalibration  Boolean @default(false) // has been locally calibrated
+
+  // Regional adjustments (JSON stored as text)
+  climateAdjustments String? // JSON: climate-specific adjustments
+  soilAdjustments   String? // JSON: soil-specific adjustments
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("kc_periods")
+  @@index([cropId, periodName])
+  @@index([climateZone, irrigationMethod])
+}
+
+// DSS calculation results and recommendations
+model DSSCalculation {
+  id                String @id @default(cuid())
+
+  // User and analysis relationships
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  soilAnalysisId    String
+  soilAnalysis      SoilAnalysis @relation(fields: [soilAnalysisId], references: [id], onDelete: Cascade)
+  cropId            String
+  crop              Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  // Field configuration
+  fieldArea         Float // hectares
+  fieldSlope        Float? // percentage
+  fieldElevation    Float? // meters above sea level
+
+  // Environmental inputs
+  et0Value          Float? // reference evapotranspiration (mm/day)
+  weatherSource     String? // "manual", "api", "flahacalc"
+  climateZone       String? // for Kc adjustments
+
+  // Calculated irrigation parameters
+  etcCalculated     Float? // crop evapotranspiration (mm/day)
+  irrigationDepth   Float? // recommended irrigation depth (mm)
+  irrigationFrequency Int? // recommended frequency (days)
+  maxApplicationRate Float? // maximum application rate (mm/hr)
+
+  // System recommendations
+  systemRecommendation String? // "drip", "sprinkler", "surface"
+  systemEfficiency  Float? // estimated system efficiency (0-1)
+  systemCost        Float? // estimated system cost
+
+  // Economic analysis
+  economicROI       Float? // return on investment (percentage)
+  paybackPeriod     Float? // payback period (years)
+  annualWaterSavings Float? // estimated annual water savings (m³)
+  annualCostSavings Float? // estimated annual cost savings
+
+  // Calculation metadata
+  calculationMethod String @default("fao56") // "fao56", "enhanced", "ml"
+  calculationVersion String @default("1.0") // version of calculation algorithm
+
+  // Results storage (JSON for flexibility)
+  detailedResults   String? // JSON: detailed calculation breakdown
+  recommendations   String? // JSON: detailed recommendations
+  scheduleData      String? // JSON: irrigation schedule
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("dss_calculations")
+  @@index([userId, createdAt])
+  @@index([soilAnalysisId])
+  @@index([cropId])
+}
+
+// Add DSS relationship to existing SoilAnalysis model
+// (This will be added as a relationship field)
