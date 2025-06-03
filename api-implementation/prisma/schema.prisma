@@ -29,6 +29,11 @@ model User {
   // DSS features
   dssCalculations     DSSCalculation[]
 
+  // Salt management features
+  leachingCalculations LeachingCalculation[]
+  drainageAssessments  DrainageAssessment[]
+  saltBalanceRecords   SaltBalanceRecord[]
+
   @@map("users")
 }
 
@@ -86,6 +91,11 @@ model SoilAnalysis {
 
   // DSS features relationship
   dssCalculations      DSSCalculation[]
+
+  // Salt management relationships
+  leachingCalculations LeachingCalculation[]
+  drainageAssessments  DrainageAssessment[]
+  saltBalanceRecords   SaltBalanceRecord[]
 
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -303,6 +313,9 @@ model Crop {
   kcPeriods         KcPeriod[]
   dssCalculations   DSSCalculation[]
 
+  // Salt management relationships
+  saltToleranceThresholds SaltToleranceThreshold[]
+
   @@map("crops")
   @@index([type])
   @@index([name])
@@ -429,5 +442,240 @@ model DSSCalculation {
   @@index([cropId])
 }
 
-// Add DSS relationship to existing SoilAnalysis model
-// (This will be added as a relationship field)
+// ========================================
+// SALT MANAGEMENT & LEACHING/DRAINAGE MODELS
+// ========================================
+
+// Salt tolerance thresholds for crops (Gulf-specific)
+model SaltToleranceThreshold {
+  id                String @id @default(cuid())
+
+  // Crop relationship
+  cropId            String
+  crop              Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  // Standard FAO-29 values
+  thresholdEC       Float // dS/m - EC causing no yield reduction
+  slopePercent      Float // % yield loss per dS/m above threshold
+
+  // Gulf-specific adjustments
+  gulfAdjustedEC    Float? // Gulf climate adjusted threshold
+  climateAdjustment Float @default(1.0) // adjustment factor for climate
+  seasonalVariation String? // JSON: seasonal adjustment factors
+
+  // Classification
+  toleranceClass    String // "sensitive", "moderate", "tolerant", "highly_tolerant"
+  gulfSuitability   String // "challenging", "moderate", "good", "very_good", "excellent"
+
+  // Reference and validation
+  referenceSource   String @default("FAO-29") // "FAO-29", "Regional Studies", etc.
+  confidenceLevel   String @default("medium") // "high", "medium", "low"
+  lastValidated     DateTime?
+
+  // Administrative
+  isActive          Boolean @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  leachingCalculations LeachingCalculation[]
+
+  @@map("salt_tolerance_thresholds")
+  @@index([cropId])
+  @@index([toleranceClass])
+  @@index([gulfSuitability])
+}
+
+// Leaching requirement calculations
+model LeachingCalculation {
+  id                String @id @default(cuid())
+
+  // User and analysis relationships
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  soilAnalysisId    String
+  soilAnalysis      SoilAnalysis @relation(fields: [soilAnalysisId], references: [id], onDelete: Cascade)
+  saltThresholdId   String?
+  saltThreshold     SaltToleranceThreshold? @relation(fields: [saltThresholdId], references: [id], onDelete: SetNull)
+
+  // Input parameters
+  soilEC            Float // soil electrical conductivity (dS/m)
+  waterEC           Float // irrigation water EC (dS/m)
+  cropThresholdEC   Float // crop salt tolerance threshold (dS/m)
+  climateZone       String @default("gcc_arid") // "gcc_arid", "mena_mediterranean", etc.
+
+  // Environmental factors
+  evaporationRate   Float? // mm/day
+  temperature       Float? // °C
+  humidity          Float? // %
+  season            String? // "summer", "winter", "transition"
+
+  // Calculated results
+  leachingFraction  Float // calculated leaching fraction (0-1)
+  leachingDepth     Float // leaching depth per irrigation (mm)
+  totalWaterNeed    Float // irrigation + leaching water (mm)
+  leachingFrequency String? // "every_irrigation", "every_3_irrigations", etc.
+
+  // Gulf-specific adjustments
+  climateFactor     Float @default(1.0) // climate adjustment factor
+  seasonalFactor    Float @default(1.0) // seasonal adjustment factor
+  adjustedLF        Float // final adjusted leaching fraction
+
+  // Economic analysis
+  extraWaterCost    Float? // additional water cost for leaching
+  saltDamageRisk    Float? // economic risk of salt damage (0-1)
+  recommendedAction String? // "immediate_leaching", "monitor", "crop_change"
+
+  // Calculation metadata
+  calculationMethod String @default("fao29_gulf") // "fao29", "fao29_gulf", "enhanced"
+  calculationVersion String @default("1.0")
+
+  // Results storage (JSON for flexibility)
+  detailedResults   String? // JSON: detailed calculation breakdown
+  recommendations   String? // JSON: specific recommendations
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  drainageAssessments DrainageAssessment[]
+
+  @@map("leaching_calculations")
+  @@index([userId, createdAt])
+  @@index([soilAnalysisId])
+  @@index([climateZone, season])
+}
+
+// Drainage system assessments and recommendations
+model DrainageAssessment {
+  id                String @id @default(cuid())
+
+  // User and analysis relationships
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  soilAnalysisId    String
+  soilAnalysis      SoilAnalysis @relation(fields: [soilAnalysisId], references: [id], onDelete: Cascade)
+  leachingCalcId    String?
+  leachingCalculation LeachingCalculation? @relation(fields: [leachingCalcId], references: [id], onDelete: SetNull)
+
+  // Field characteristics
+  fieldArea         Float // hectares
+  fieldSlope        Float? // percentage
+  groundwaterDepth  Float? // meters below surface
+  seasonalWaterTable Boolean @default(false) // seasonal water table present
+
+  // Soil drainage properties
+  drainageClass     String? // "well_drained", "moderately_drained", "poorly_drained"
+  infiltrationRate  Float? // mm/hr
+  permeability      String? // "high", "moderate", "low", "very_low"
+
+  // Drainage requirements
+  drainageRequired  Boolean @default(false)
+  urgencyLevel      String? // "high", "medium", "low"
+  drainageCapacity  Float? // required drainage capacity (mm/day)
+
+  // System recommendations
+  primarySystem     String? // "subsurface_tile", "surface", "mole", "combination"
+  systemSpacing     String? // "15-30m", "50-100m", etc.
+  systemDepth       String? // "1.2-1.5m", "0.8-1.0m", etc.
+  materialType      String? // "perforated_pvc", "clay_tile", "gravel", etc.
+
+  // Installation specifications
+  installationCost  Float? // estimated cost in local currency
+  maintenanceCost   Float? // annual maintenance cost
+  expectedLifespan  Int? // years
+  installationTime  String? // "2-4 weeks", "1-2 months", etc.
+
+  // Economic analysis
+  costBenefitRatio  Float? // benefit/cost ratio
+  paybackPeriod     Float? // years
+  yieldProtection   Float? // % yield protection expected
+
+  // Assessment metadata
+  assessmentMethod  String @default("standard") // "standard", "advanced", "expert"
+  assessmentVersion String @default("1.0")
+
+  // Results storage (JSON for flexibility)
+  technicalSpecs    String? // JSON: detailed technical specifications
+  installationPlan  String? // JSON: step-by-step installation plan
+  maintenanceSchedule String? // JSON: maintenance schedule
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("drainage_assessments")
+  @@index([userId, createdAt])
+  @@index([soilAnalysisId])
+  @@index([drainageRequired, urgencyLevel])
+}
+
+// Salt balance monitoring for fields
+model SaltBalanceRecord {
+  id                String @id @default(cuid())
+
+  // User and field relationships
+  userId            String?
+  user              User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  soilAnalysisId    String
+  soilAnalysis      SoilAnalysis @relation(fields: [soilAnalysisId], references: [id], onDelete: Cascade)
+
+  // Monitoring period
+  monitoringDate    DateTime
+  season            String? // "spring", "summer", "fall", "winter"
+  cropGrowthStage   String? // current crop growth stage
+
+  // Salt inputs (kg/ha)
+  irrigationSalt    Float @default(0) // salt from irrigation water
+  fertilizerSalt    Float @default(0) // salt from fertilizers
+  atmosphericSalt   Float @default(0) // salt from dust/atmospheric deposition
+  groundwaterSalt   Float @default(0) // salt from groundwater intrusion
+
+  // Salt outputs (kg/ha)
+  leachingSalt      Float @default(0) // salt removed by leaching
+  drainageSalt      Float @default(0) // salt removed by drainage
+  cropUptakeSalt    Float @default(0) // salt uptake by crops
+  surfaceRunoffSalt Float @default(0) // salt lost in surface runoff
+
+  // Calculated balance
+  totalSaltInput    Float // sum of all inputs
+  totalSaltOutput   Float // sum of all outputs
+  netSaltBalance    Float // input - output
+  cumulativeBalance Float? // cumulative balance over time
+
+  // Soil measurements
+  currentSoilEC     Float? // measured soil EC (dS/m)
+  soilSalinityTrend String? // "increasing", "stable", "decreasing"
+  alertLevel        String? // "normal", "warning", "critical"
+
+  // Recommendations
+  actionRequired    Boolean @default(false)
+  recommendedActions String? // JSON: array of recommended actions
+  nextMonitoringDate DateTime?
+
+  // Metadata
+  dataSource        String @default("calculated") // "measured", "calculated", "estimated"
+  qualityScore      Float? // data quality score (0-1)
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("salt_balance_records")
+  @@index([userId, monitoringDate])
+  @@index([soilAnalysisId, monitoringDate])
+  @@index([alertLevel])
+  @@index([season])
+}
+
+// Add relationships to existing models
+// These will be added to the Crop model
+// saltToleranceThresholds SaltToleranceThreshold[]
+
+// These will be added to the SoilAnalysis model
+// leachingCalculations LeachingCalculation[]
+// drainageAssessments DrainageAssessment[]
+// saltBalanceRecords SaltBalanceRecord[]
+
+// These will be added to the User model
+// leachingCalculations LeachingCalculation[]
+// drainageAssessments DrainageAssessment[]
+// saltBalanceRecords SaltBalanceRecord[]

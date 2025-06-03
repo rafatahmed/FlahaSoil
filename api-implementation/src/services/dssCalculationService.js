@@ -6,12 +6,18 @@
  * - Advanced Kc coefficient adjustments
  * - Irrigation scheduling optimization
  * - Complete water balance calculations
+ * - Salt management integration (leaching and drainage)
  *
  * @format
  */
 
+const SaltManagementServiceEnhanced = require("./saltManagementServiceEnhanced");
+
 class DSSCalculationService {
 	constructor() {
+		// Initialize salt management service
+		this.saltManagementService = new SaltManagementServiceEnhanced();
+
 		// Enhanced constants for Week 2 features
 		this.constants = {
 			DEFAULT_APPLICATION_EFFICIENCY: 0.85, // 85% application efficiency
@@ -149,6 +155,14 @@ class DSSCalculationService {
 				fieldConfig
 			);
 
+			// Step 8: Salt management calculations (leaching and drainage)
+			const saltManagementResults = await this.calculateSaltManagement(
+				soilData,
+				irrigationResults,
+				environmentalData,
+				fieldConfig
+			);
+
 			// Combine all results
 			return {
 				// Core calculations
@@ -183,6 +197,9 @@ class DSSCalculationService {
 				paybackAnalysis: economicAnalysisBasic.paybackAnalysis,
 				waterSavingsAnalysis: economicAnalysisBasic.waterSavings,
 				costBenefitAnalysis: economicAnalysisBasic.costBenefitAnalysis,
+
+				// Salt management results
+				saltManagement: saltManagementResults,
 
 				// Detailed breakdown
 				detailedResults: {
@@ -1671,6 +1688,214 @@ class DSSCalculationService {
 	getLaborEfficiency(systemType) {
 		const efficiency = { drip: 90, sprinkler: 80, surface: 60 };
 		return efficiency[systemType] || 75;
+	}
+
+	/**
+	 * Calculate salt management requirements (leaching and drainage)
+	 * Integrates with enhanced salt management service
+	 */
+	async calculateSaltManagement(
+		soilData,
+		irrigationResults,
+		environmentalData,
+		fieldConfig
+	) {
+		try {
+			// Extract relevant data for salt management calculations
+			const { electricalConductivity, saturatedConductivity, clay } = soilData;
+			const { irrigationDepth } = irrigationResults;
+			const { climateZone } = environmentalData;
+			const { area } = fieldConfig;
+
+			// Estimate soil and water EC values if not provided
+			const soilEC = electricalConductivity || 2.0; // Default moderate salinity
+			const waterEC = 1.5; // Default irrigation water EC
+			const cropThresholdEC = 2.5; // Default crop tolerance
+
+			// Calculate leaching requirements
+			const leachingParams = {
+				soilEC,
+				waterEC,
+				cropThresholdEC,
+				climateZone: climateZone || "gcc_arid",
+				season: "summer",
+				temperature: 42,
+				humidity: 25,
+				evaporationRate: 12,
+			};
+
+			const leachingResults =
+				this.saltManagementService.calculateLeachingRequirement(leachingParams);
+
+			// Calculate drainage requirements
+			const drainageParams = {
+				soilData: {
+					saturatedConductivity: saturatedConductivity || 10,
+					textureClass: "loam",
+					clay: clay || 25,
+				},
+				fieldArea: area,
+				fieldSlope: 1.5,
+				groundwaterDepth: 3.0,
+				seasonalWaterTable: false,
+				leachingRequirement: leachingResults.results,
+			};
+
+			const drainageResults =
+				this.saltManagementService.assessDrainageRequirements(drainageParams);
+
+			// Calculate salt balance
+			const saltBalanceParams = {
+				irrigationVolume: irrigationDepth,
+				irrigationEC: waterEC,
+				fertilizerInputs: [{ amount: 200, saltIndex: 0.15 }],
+				precipitationVolume: 5,
+				leachingVolume: leachingResults.results.leachingDepth.value || 0,
+				drainageVolume: 5,
+				cropUptake: 2.0,
+				fieldArea: area,
+				timeperiod: "monthly",
+			};
+
+			const saltBalanceResults =
+				this.saltManagementService.calculateSaltBalance(saltBalanceParams);
+
+			return {
+				leaching: {
+					required: leachingResults.results.leachingFraction > 0.1,
+					leachingFraction: leachingResults.results.leachingFraction,
+					leachingDepth: leachingResults.results.leachingDepth,
+					totalWaterNeed: leachingResults.results.totalWaterNeed,
+					frequency: leachingResults.results.leachingFrequency,
+					economics: leachingResults.economics,
+					recommendations: leachingResults.recommendations,
+				},
+				drainage: {
+					required: drainageResults.assessment.drainageRequired,
+					urgency: drainageResults.assessment.urgencyLevel,
+					systemType: drainageResults.system.systemType,
+					costEstimate: drainageResults.system.costEstimate,
+					timeframe: drainageResults.system.timeframe,
+					economics: drainageResults.economics,
+					recommendations: drainageResults.recommendations,
+				},
+				saltBalance: {
+					status: saltBalanceResults.balance.balanceStatus,
+					netBalance: saltBalanceResults.balance.netBalance,
+					trend: saltBalanceResults.balance.trend,
+					inputs: saltBalanceResults.saltInputs,
+					outputs: saltBalanceResults.saltOutputs,
+					recommendations: saltBalanceResults.recommendations,
+				},
+				summary: {
+					overallRisk: this.assessOverallSaltRisk(
+						leachingResults,
+						drainageResults,
+						saltBalanceResults
+					),
+					priorityActions: this.getPrioritySaltActions(
+						leachingResults,
+						drainageResults,
+						saltBalanceResults
+					),
+					economicImpact: this.calculateSaltEconomicImpact(
+						leachingResults,
+						drainageResults,
+						area
+					),
+				},
+			};
+		} catch (error) {
+			console.error("Error in salt management calculations:", error);
+			// Return default/safe values if calculation fails
+			return {
+				leaching: { required: false, recommendations: [] },
+				drainage: { required: false, recommendations: [] },
+				saltBalance: { status: "stable", recommendations: [] },
+				summary: {
+					overallRisk: "low",
+					priorityActions: ["Monitor soil salinity regularly"],
+					economicImpact: { totalCost: 0, benefit: 0 },
+				},
+			};
+		}
+	}
+
+	/**
+	 * Assess overall salt management risk
+	 */
+	assessOverallSaltRisk(leachingResults, drainageResults, saltBalanceResults) {
+		let riskScore = 0;
+
+		// Leaching risk
+		if (leachingResults.results.leachingFraction > 0.3) riskScore += 3;
+		else if (leachingResults.results.leachingFraction > 0.2) riskScore += 2;
+		else if (leachingResults.results.leachingFraction > 0.1) riskScore += 1;
+
+		// Drainage risk
+		if (drainageResults.assessment.urgencyLevel === "high") riskScore += 3;
+		else if (drainageResults.assessment.urgencyLevel === "medium")
+			riskScore += 2;
+		else if (drainageResults.assessment.urgencyLevel === "low") riskScore += 1;
+
+		// Salt balance risk
+		if (saltBalanceResults.balance.balanceStatus === "critical") riskScore += 3;
+		else if (saltBalanceResults.balance.balanceStatus === "warning")
+			riskScore += 2;
+		else if (saltBalanceResults.balance.balanceStatus === "stable")
+			riskScore += 0;
+
+		if (riskScore >= 7) return "high";
+		if (riskScore >= 4) return "medium";
+		return "low";
+	}
+
+	/**
+	 * Get priority salt management actions
+	 */
+	getPrioritySaltActions(leachingResults, drainageResults, saltBalanceResults) {
+		const actions = [];
+
+		// Priority based on urgency
+		if (drainageResults.assessment.urgencyLevel === "high") {
+			actions.push("Install drainage system immediately");
+		}
+
+		if (leachingResults.results.leachingFraction > 0.25) {
+			actions.push("Implement intensive leaching program");
+		}
+
+		if (saltBalanceResults.balance.balanceStatus === "critical") {
+			actions.push("Apply emergency salt flushing irrigation");
+		}
+
+		// Add monitoring recommendations
+		actions.push("Monitor soil EC monthly");
+		actions.push("Test irrigation water quality quarterly");
+
+		return actions.slice(0, 5); // Limit to top 5 actions
+	}
+
+	/**
+	 * Calculate economic impact of salt management
+	 */
+	calculateSaltEconomicImpact(leachingResults, drainageResults, fieldArea) {
+		const leachingCost = leachingResults.economics?.extraWaterCost || 0;
+		const drainageCost = drainageResults.economics?.installationCost || 0;
+
+		const leachingBenefit = leachingResults.economics?.netBenefit || 0;
+		const drainageBenefit = drainageResults.economics?.annualBenefit || 0;
+
+		return {
+			totalCost: leachingCost + drainageCost,
+			totalBenefit: leachingBenefit + drainageBenefit,
+			netBenefit:
+				leachingBenefit + drainageBenefit - (leachingCost + drainageCost),
+			costPerHectare: (leachingCost + drainageCost) / fieldArea,
+			benefitCostRatio:
+				(leachingBenefit + drainageBenefit) /
+				Math.max(leachingCost + drainageCost, 1),
+		};
 	}
 }
 

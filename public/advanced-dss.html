@@ -678,12 +678,12 @@
                                         <!-- Week 3: Enhanced crop selection with search -->
                                         <div class="search-dropdown farmer-designer">
                                             <input type="text" class="form-control" id="crop-search"
-                                                placeholder="Type to search crops..." autocomplete="off" required>
+                                                placeholder="Type to search crops..." autocomplete="off">
                                             <div class="search-results" id="crop-search-results"></div>
-                                            <input type="hidden" id="selected-crop-id" required>
+                                            <input type="hidden" id="selected-crop-id">
                                         </div>
                                         <!-- Fallback simple select for basic users -->
-                                        <select class="form-select farmer-only" id="crop-select-simple" required>
+                                        <select class="form-select farmer-only" id="crop-select-simple">
                                             <option value="">Loading crops...</option>
                                         </select>
                                     </div>
@@ -697,7 +697,7 @@
                                                 0.01)</span>
                                         </label>
                                         <input type="number" class="form-control" id="field-area" min="0.1" max="1000"
-                                            step="0.1" required placeholder="Enter field area">
+                                            step="0.1" placeholder="Enter field area">
                                         <div class="form-text consultant-only">
                                             <i class="fas fa-info-circle me-1"></i>
                                             For irregular fields, calculate equivalent rectangular area
@@ -1215,24 +1215,60 @@
                 const options = select.querySelectorAll('option');
                 options.forEach(option => {
                     const classes = option.className;
-                    if (classes.includes('farmer-only') && level !== 'farmer') {
-                        option.style.display = 'none';
-                    } else if (classes.includes('designer-only') && level === 'farmer') {
-                        option.style.display = 'none';
-                    } else if (classes.includes('consultant-only') && level !== 'consultant') {
-                        option.style.display = 'none';
-                    } else {
-                        option.style.display = '';
+
+                    // Show all options by default
+                    option.style.display = '';
+
+                    // Hide based on level restrictions
+                    if (level === 'farmer') {
+                        // Farmers see only farmer-only options (hide designer-only and consultant-only)
+                        if (classes.includes('designer-only') || classes.includes('consultant-only')) {
+                            option.style.display = 'none';
+                        }
+                    } else if (level === 'designer') {
+                        // Designers see farmer-only and designer-only options (hide consultant-only)
+                        if (classes.includes('consultant-only')) {
+                            option.style.display = 'none';
+                        }
+                    } else if (level === 'consultant') {
+                        // Consultants see all options (hide farmer-only)
+                        if (classes.includes('farmer-only')) {
+                            option.style.display = 'none';
+                        }
                     }
                 });
+
+                // Ensure a valid option is selected after hiding options
+                if (select.selectedIndex === -1 || select.options[select.selectedIndex].style.display === 'none') {
+                    // Find first visible option and select it
+                    for (let i = 0; i < select.options.length; i++) {
+                        if (select.options[i].style.display !== 'none' && select.options[i].value) {
+                            select.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
             });
 
-            // Reset form values when switching levels
+            // Set appropriate default values based on level
             if (level === 'farmer') {
                 // Simplify for farmers
                 document.getElementById('et0-value').value = '5.0';
                 document.getElementById('climate-zone').value = 'temperate';
                 document.getElementById('irrigation-method').value = 'sprinkler';
+                document.getElementById('growth-stage').value = 'mid';
+            } else if (level === 'designer') {
+                // Designer defaults
+                document.getElementById('et0-value').value = '5.0';
+                document.getElementById('climate-zone').value = 'gcc_arid';
+                document.getElementById('irrigation-method').value = 'drip';
+                document.getElementById('growth-stage').value = 'mid';
+            } else if (level === 'consultant') {
+                // Consultant defaults
+                document.getElementById('et0-value').value = '5.0';
+                document.getElementById('climate-zone').value = 'gcc_arid';
+                document.getElementById('irrigation-method').value = 'drip';
+                document.getElementById('growth-stage').value = 'mid';
             }
         }
 
@@ -1685,6 +1721,63 @@
             `;
         }
 
+        // Form validation function
+        function validateForm() {
+            const form = document.getElementById('dss-config-form');
+            const requiredFields = [];
+
+            // Check crop selection based on user level
+            if (currentUserLevel === 'farmer') {
+                const cropSelect = document.getElementById('crop-select-simple');
+                if (!cropSelect.value) {
+                    requiredFields.push('Crop selection');
+                }
+            } else {
+                const cropId = document.getElementById('selected-crop-id');
+                const cropSearch = document.getElementById('crop-search');
+                if (!cropId.value || !cropSearch.value) {
+                    requiredFields.push('Crop selection');
+                }
+            }
+
+            // Check field area
+            const fieldArea = document.getElementById('field-area');
+            if (!fieldArea.value || parseFloat(fieldArea.value) <= 0) {
+                requiredFields.push('Field area');
+            }
+
+            // Check ET0 value
+            const et0Value = document.getElementById('et0-value');
+            if (!et0Value.value || parseFloat(et0Value.value) <= 0) {
+                requiredFields.push('ET₀ value');
+            }
+
+            // Check climate zone
+            const climateZone = document.getElementById('climate-zone');
+            if (!climateZone.value) {
+                requiredFields.push('Climate zone');
+            }
+
+            // Check irrigation method
+            const irrigationMethod = document.getElementById('irrigation-method');
+            if (!irrigationMethod.value) {
+                requiredFields.push('Irrigation method');
+            }
+
+            // Check growth stage
+            const growthStage = document.getElementById('growth-stage');
+            if (!growthStage.value) {
+                requiredFields.push('Growth stage');
+            }
+
+            if (requiredFields.length > 0) {
+                alert('Please fill in the following required fields:\n• ' + requiredFields.join('\n• '));
+                return false;
+            }
+
+            return true;
+        }
+
         // Calculate irrigation recommendations
         async function calculateRecommendations() {
             if (!soilData) {
@@ -1693,7 +1786,11 @@
             }
 
             const form = document.getElementById('dss-config-form');
-            const formData = new FormData(form);
+
+            // Validate form before proceeding
+            if (!validateForm()) {
+                return;
+            }
 
             const et0Source = document.getElementById('et0-source').value;
 
@@ -1703,6 +1800,12 @@
                 cropId = document.getElementById('crop-select-simple').value;
             } else {
                 cropId = document.getElementById('selected-crop-id').value;
+            }
+
+            // Additional validation for crop selection
+            if (!cropId) {
+                alert('Please select a crop before calculating recommendations');
+                return;
             }
 
             const calculationData = {
@@ -1835,6 +1938,75 @@
                         `).join('')}
                     </div>
                 </div>
+
+                <!-- Salt Management Section -->
+                ${data.saltManagement ? `
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6><i class="fas fa-flask me-2"></i>Salt Management Analysis</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="result-card ${data.saltManagement.leaching.required ? 'border-warning' : 'border-success'}">
+                                    <h6><i class="fas fa-tint me-2"></i>Leaching Requirements</h6>
+                                    <p><strong>Required:</strong> ${data.saltManagement.leaching.required ? 'Yes' : 'No'}</p>
+                                    ${data.saltManagement.leaching.required ? `
+                                        <p><strong>Leaching Fraction:</strong> ${(data.saltManagement.leaching.leachingFraction * 100).toFixed(1)}%</p>
+                                        <p><strong>Extra Water:</strong> ${data.saltManagement.leaching.leachingDepth?.value || 'N/A'} ${data.saltManagement.leaching.leachingDepth?.unit || 'mm'}</p>
+                                        <p><strong>Frequency:</strong> ${data.saltManagement.leaching.frequency?.description || 'As needed'}</p>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="result-card ${data.saltManagement.drainage.required ? 'border-warning' : 'border-success'}">
+                                    <h6><i class="fas fa-water me-2"></i>Drainage Assessment</h6>
+                                    <p><strong>Required:</strong> ${data.saltManagement.drainage.required ? 'Yes' : 'No'}</p>
+                                    ${data.saltManagement.drainage.required ? `
+                                        <p><strong>System Type:</strong> ${data.saltManagement.drainage.systemType}</p>
+                                        <p><strong>Urgency:</strong> ${data.saltManagement.drainage.urgency}</p>
+                                        <p><strong>Cost Estimate:</strong> $${data.saltManagement.drainage.costEstimate?.toLocaleString() || 'TBD'}</p>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="result-card border-info">
+                                    <h6><i class="fas fa-balance-scale me-2"></i>Salt Balance</h6>
+                                    <p><strong>Status:</strong> <span class="badge bg-${data.saltManagement.saltBalance.status === 'critical' ? 'danger' : data.saltManagement.saltBalance.status === 'warning' ? 'warning' : 'success'}">${data.saltManagement.saltBalance.status}</span></p>
+                                    <p><strong>Net Balance:</strong> ${data.saltManagement.saltBalance.netBalance?.value || 'N/A'} ${data.saltManagement.saltBalance.netBalance?.unit || 'kg/ha'}</p>
+                                    <p><strong>Trend:</strong> ${data.saltManagement.saltBalance.trend}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Salt Management Recommendations -->
+                        ${data.saltManagement.summary?.priorityActions?.length > 0 ? `
+                        <div class="mt-3">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Priority Salt Management Actions</h6>
+                            <div class="alert alert-warning">
+                                <ul class="mb-0">
+                                    ${data.saltManagement.summary.priorityActions.map(action => `<li>${action}</li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- Overall Risk Assessment -->
+                        ${data.saltManagement.summary?.overallRisk ? `
+                        <div class="mt-3">
+                            <div class="alert alert-${data.saltManagement.summary.overallRisk === 'high' ? 'danger' : data.saltManagement.summary.overallRisk === 'medium' ? 'warning' : 'info'}">
+                                <h6><i class="fas fa-shield-alt me-2"></i>Overall Salt Risk: ${data.saltManagement.summary.overallRisk.toUpperCase()}</h6>
+                                ${data.saltManagement.summary.economicImpact ? `
+                                <p class="mb-0"><strong>Economic Impact:</strong>
+                                    Cost: $${data.saltManagement.summary.economicImpact.totalCost?.toLocaleString() || '0'} |
+                                    Benefit: $${data.saltManagement.summary.economicImpact.totalBenefit?.toLocaleString() || '0'} |
+                                    Net: $${data.saltManagement.summary.economicImpact.netBenefit?.toLocaleString() || '0'}
+                                </p>
+                                ` : ''}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
             `;
 
             // Populate Step 4 (Recommendations Display)

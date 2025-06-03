@@ -24,6 +24,8 @@ app.use(
 			"http://127.0.0.1:3000",
 			"http://localhost:5000",
 			"http://127.0.0.1:5000",
+			"http://localhost:56474",
+			"http://127.0.0.1:56474",
 		],
 		methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 		allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
@@ -56,6 +58,7 @@ app.use("/api/v1/reports", require("./src/routes/reports"));
 app.use("/api/v1/dss", require("./src/routes/dss")); // DSS Decision Support System routes
 app.use("/api/v1/weather", require("./src/routes/weather")); // Weather API routes for DSS
 app.use("/api/v1/localization", require("./src/routes/localization")); // Localization routes for multi-language support
+app.use("/api/v1/salt-management", require("./src/routes/saltManagement")); // Salt Management & Leaching/Drainage routes
 
 // Health check
 app.get("/health", (req, res) => {

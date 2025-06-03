@@ -360,114 +360,201 @@
 
 ---
 
-## 🎯 **PHASE 3: OPTIMIZATION (Weeks 10-13)**
+## 🎯 **PHASE 3: OPTIMIZATION + SALT MANAGEMENT (Weeks 10-13)**
 
-**Deadline:** May 5, 2025  
-**Goal:** Advanced features and machine learning capabilities
+**Deadline:** May 5, 2025
+**Goal:** Advanced features, machine learning capabilities, and comprehensive salt management
+**🧂 NEW FOCUS:** Integrate leaching/drainage module for Gulf agricultural conditions
 
-### **Week 10: AI/ML Foundation**
+### **Week 10: AI/ML Foundation + Leaching/Drainage Foundation**
 
 #### **Monday - Tuesday (Apr 7-8)**
 
 - [ ] **Machine Learning Setup**
+
   - [ ] TensorFlow.js integration
   - [ ] Python ML service setup
   - [ ] Data preprocessing pipeline
   - [ ] Model training infrastructure
 
+- [ ] **🧂 Leaching/Drainage Database Schema**
+  - [ ] Create `leaching_calculations` table
+  - [ ] Create `drainage_assessments` table
+  - [ ] Create `salt_tolerance_thresholds` table
+  - [ ] Extend `crops` table with salt tolerance data
+  - [ ] Add Gulf-specific adjustment factors
+
 #### **Wednesday - Thursday (Apr 9-10)**
 
 - [ ] **Recommendation Engine**
+
   - [ ] Historical data analysis
   - [ ] Pattern recognition algorithms
   - [ ] Predictive modeling setup
   - [ ] A/B testing framework
 
+- [ ] **🧂 Salt Management API Endpoints**
+  - [ ] `/api/v1/salt-management/leaching-requirement`
+  - [ ] `/api/v1/salt-management/drainage-assessment`
+  - [ ] `/api/v1/salt-management/crop-salt-tolerance`
+  - [ ] `/api/v1/salt-management/recommendations`
+  - [ ] Integration with existing DSS workflow
+
 #### **Friday (Apr 11)**
 
 - [ ] **Smart Kc Calibration**
+
   - [ ] Local calibration algorithms
   - [ ] Field validation integration
   - [ ] Confidence interval calculations
   - [ ] Expert feedback system
 
-### **Week 11: Multi-Field Management**
+- [ ] **🧂 Leaching Calculation Engine**
+  - [ ] Implement FAO-29 leaching requirement formula
+  - [ ] Add Gulf climate adjustments (1.2-1.5x factor)
+  - [ ] Seasonal leaching variations
+  - [ ] Water quality assessment integration
+
+### **Week 11: Multi-Field Management + Salt Management Integration**
 
 #### **Monday - Tuesday (Apr 14-15)**
 
 - [ ] **Portfolio Dashboard**
+
   - [ ] Multi-field overview interface
   - [ ] Comparative analysis tools
   - [ ] Aggregate reporting system
   - [ ] Resource allocation optimizer
 
+- [ ] **🧂 Salt Balance Monitoring System**
+  - [ ] Multi-field salt accumulation tracking
+  - [ ] Cross-field salt management optimization
+  - [ ] Regional salinity trend analysis
+  - [ ] Alert system for salt threshold breaches
+
 #### **Wednesday - Thursday (Apr 16-17)**
 
 - [ ] **Advanced Analytics**
+
   - [ ] Trend analysis tools
   - [ ] Performance benchmarking
   - [ ] Efficiency metrics dashboard
   - [ ] Predictive maintenance alerts
 
+- [ ] **🧂 Drainage System Recommendations**
+  - [ ] Drainage adequacy assessment algorithm
+  - [ ] Subsurface/surface drainage design calculator
+  - [ ] Installation cost estimation (GCC pricing)
+  - [ ] Maintenance schedule generator
+
 #### **Friday (Apr 18)**
 
 - [ ] **Consultant Tools**
+
   - [ ] Client management system
   - [ ] Project tracking interface
   - [ ] Billing integration
   - [ ] White-label customization
 
-### **Week 12: Advanced Reporting**
+- [ ] **🧂 Salt-Tolerant Crop Recommendations**
+  - [ ] Crop selection by salinity level
+  - [ ] Gulf-specific crop suitability matrix
+  - [ ] Economic impact calculator for crop switching
+  - [ ] Halophyte crop database integration
+
+### **Week 12: Advanced Reporting + Leaching Reports**
 
 #### **Monday - Tuesday (Apr 21-22)**
 
 - [ ] **Custom Report Engine**
+
   - [ ] Template system implementation
   - [ ] Dynamic content generation
   - [ ] Multi-format export (PDF/Excel)
   - [ ] Automated report scheduling
 
+- [ ] **🧂 Salt Management Reports**
+  - [ ] Comprehensive leaching requirement reports
+  - [ ] Drainage system design specifications
+  - [ ] Salt balance monitoring reports
+  - [ ] Economic analysis for salt management
+
 #### **Wednesday - Thursday (Apr 23-24)**
 
 - [ ] **Professional Reports**
+
   - [ ] Technical specification reports
   - [ ] Economic analysis reports
   - [ ] Environmental impact reports
   - [ ] Compliance documentation
 
+- [ ] **🧂 Gulf-Specific Salt Reports**
+  - [ ] Regional salinity assessment reports
+  - [ ] Crop salt tolerance analysis
+  - [ ] Water quality management plans
+  - [ ] Seasonal leaching schedules
+
 #### **Friday (Apr 25)**
 
 - [ ] **Report Customization**
+
   - [ ] Brand customization options
   - [ ] Template editor interface
   - [ ] Logo and styling options
   - [ ] Export optimization
 
-### **Week 13: Mobile Application**
+- [ ] **🧂 Salt Management UI Components**
+  - [ ] Leaching calculator interface
+  - [ ] Drainage design wizard
+  - [ ] Salt balance dashboard
+  - [ ] Alert notification system
+
+### **Week 13: Mobile Application + Field Salt Monitoring**
 
 #### **Monday - Tuesday (Apr 28-29)**
 
 - [ ] **Mobile App Development**
+
   - [ ] Progressive Web App setup
   - [ ] Offline functionality
   - [ ] Push notification system
   - [ ] Mobile-specific UI components
 
+- [ ] **🧂 Mobile Salt Management Tools**
+  - [ ] Field salt monitoring interface
+  - [ ] Quick EC measurement input
+  - [ ] Photo documentation for salt damage
+  - [ ] GPS-tagged salt readings
+
 #### **Wednesday - Thursday (Apr 30 - May 1)**
 
 - [ ] **Field Operations Tools**
+
   - [ ] GPS integration
   - [ ] Photo documentation
   - [ ] Voice notes capability
   - [ ] Offline data sync
 
+- [ ] **🧂 Field Salt Assessment Tools**
+  - [ ] Visual salt damage assessment guide
+  - [ ] Offline salt calculation capability
+  - [ ] Emergency leaching recommendations
+  - [ ] Salt alert notification system
+
 #### **Friday (May 2)**
 
 - [ ] **Phase 3 Testing**
+
   - [ ] Mobile app testing
   - [ ] Advanced feature validation
   - [ ] Performance optimization
   - [ ] User experience testing
+
+- [ ] **🧂 Salt Management Testing**
+  - [ ] Leaching calculation accuracy validation
+  - [ ] Drainage recommendation testing
+  - [ ] Salt tolerance database verification
+  - [ ] Gulf climate adjustment validation
 
 ---
 
@@ -611,6 +698,10 @@
 - [ ] Mobile app 90% feature parity
 - [ ] Advanced reporting functional
 - [ ] Multi-field management operational
+- [ ] **🧂 Salt management module fully operational**
+- [ ] **🧂 Leaching calculations ±5% accuracy vs. field data**
+- [ ] **🧂 Drainage recommendations validated by experts**
+- [ ] **🧂 Gulf-specific adjustments calibrated**
 
 ### **Phase 4 Success Criteria:**
 
