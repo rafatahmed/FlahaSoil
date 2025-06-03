@@ -54,6 +54,8 @@ app.use("/api/v1/auth", require("./src/routes/auth"));
 app.use("/api/v1/integrations", require("./src/routes/integrations"));
 app.use("/api/v1/reports", require("./src/routes/reports"));
 app.use("/api/v1/dss", require("./src/routes/dss")); // DSS Decision Support System routes
+app.use("/api/v1/weather", require("./src/routes/weather")); // Weather API routes for DSS
+app.use("/api/v1/localization", require("./src/routes/localization")); // Localization routes for multi-language support
 
 // Health check
 app.get("/health", (req, res) => {

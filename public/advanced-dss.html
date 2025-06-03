@@ -736,28 +736,67 @@
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
+                                        <label for="et0-source" class="form-label">
+                                            <i class="fas fa-thermometer-half me-1"></i>Reference ET₀ Source
+                                        </label>
+                                        <select class="form-select" id="et0-source" onchange="handleET0SourceChange()">
+                                            <option value="manual">Manual Entry</option>
+                                            <option value="flahacalc" class="designer-only consultant-only">FlahaCalc
+                                                API</option>
+                                        </select>
+                                        <div class="form-text">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Choose how to provide ET₀ data for calculations
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
                                         <label for="et0-value" class="form-label">
-                                            <i class="fas fa-thermometer-half me-1"></i>Reference ET₀
-                                            <span class="farmer-only">(mm/day)</span>
-                                            <span class="designer-only consultant-only">(mm/day from FlahaCalc)</span>
+                                            <i class="fas fa-thermometer-half me-1"></i>Reference ET₀ Value
+                                            <span id="et0-unit-label">(mm/day)</span>
                                         </label>
                                         <div class="input-group">
                                             <input type="number" class="form-control" id="et0-value" min="1" max="20"
                                                 step="0.01" value="5.0" placeholder="5.0">
                                             <span class="input-group-text">mm/day</span>
-                                            <button class="btn btn-outline-secondary consultant-only" type="button"
-                                                onclick="fetchFlahaCalcET0()" title="Fetch from FlahaCalc API">
+                                            <button class="btn btn-outline-secondary" type="button" id="fetch-et0-btn"
+                                                onclick="fetchFlahaCalcET0()" title="Fetch from FlahaCalc API"
+                                                style="display: none;">
                                                 <i class="fas fa-download"></i>
                                             </button>
                                         </div>
                                         <div class="form-text">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            <span class="farmer-only">Default value works for most cases</span>
-                                            <span class="designer-only consultant-only">
-                                                Get accurate ET₀ from <a href="https://evapotran.flaha.org"
-                                                    target="_blank">FlahaCalc</a>
-                                                or use local weather station data
-                                            </span>
+                                            <span id="et0-help-text">Typical values: 3-8 mm/day for manual entry</span>
+                                        </div>
+                                        <!-- Location inputs for FlahaCalc (hidden by default) -->
+                                        <div id="location-inputs" style="display: none;" class="mt-2">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <label for="latitude" class="form-label">Latitude</label>
+                                                    <input type="number" class="form-control" id="latitude"
+                                                        step="0.000001" placeholder="25.276987" value="25.276987">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="longitude" class="form-label">Longitude</label>
+                                                    <input type="number" class="form-control" id="longitude"
+                                                        step="0.000001" placeholder="55.296249" value="55.296249">
+                                                </div>
+                                            </div>
+                                            <div class="row mt-2">
+                                                <div class="col-md-6">
+                                                    <label for="calculation-date" class="form-label">Date
+                                                        (Optional)</label>
+                                                    <input type="date" class="form-control" id="calculation-date">
+                                                </div>
+                                                <div class="col-md-6 d-flex align-items-end">
+                                                    <button type="button" class="btn btn-primary w-100"
+                                                        onclick="fetchFlahaCalcET0()">
+                                                        <i class="fas fa-cloud-download-alt me-1"></i>Fetch ET₀
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1463,15 +1502,27 @@
             const form = document.getElementById('dss-config-form');
             const formData = new FormData(form);
 
+            const et0Source = document.getElementById('et0-source').value;
             const calculationData = {
                 soilAnalysisId: soilData.id,
                 cropId: document.getElementById('crop-select').value,
                 fieldArea: parseFloat(document.getElementById('field-area').value),
                 et0Value: parseFloat(document.getElementById('et0-value').value),
+                et0Source: et0Source,
                 climateZone: document.getElementById('climate-zone').value,
                 irrigationMethod: document.getElementById('irrigation-method').value,
                 growthStage: document.getElementById('growth-stage').value
             };
+
+            // Add location data if using FlahaCalc
+            if (et0Source === 'flahacalc') {
+                calculationData.latitude = parseFloat(document.getElementById('latitude').value);
+                calculationData.longitude = parseFloat(document.getElementById('longitude').value);
+                const calculationDate = document.getElementById('calculation-date').value;
+                if (calculationDate) {
+                    calculationData.calculationDate = calculationDate;
+                }
+            }
 
             // Show loading
             const submitBtn = form.querySelector('button[type="submit"]');
@@ -1620,53 +1671,110 @@
             }
         }
 
-        // Week 3: FlahaCalc API Integration for Consultant Level
+        // Handle ET₀ source selection change
+        function handleET0SourceChange() {
+            const et0Source = document.getElementById('et0-source').value;
+            const locationInputs = document.getElementById('location-inputs');
+            const fetchBtn = document.getElementById('fetch-et0-btn');
+            const helpText = document.getElementById('et0-help-text');
+            const et0Value = document.getElementById('et0-value');
+
+            if (et0Source === 'flahacalc') {
+                // Show location inputs and fetch button
+                locationInputs.style.display = 'block';
+                fetchBtn.style.display = 'inline-block';
+                helpText.textContent = 'Enter coordinates and fetch ET₀ from FlahaCalc API';
+                et0Value.placeholder = 'Will be fetched from API';
+                et0Value.readOnly = true;
+            } else {
+                // Hide location inputs and fetch button
+                locationInputs.style.display = 'none';
+                fetchBtn.style.display = 'none';
+                helpText.textContent = 'Typical values: 3-8 mm/day for manual entry';
+                et0Value.placeholder = '5.0';
+                et0Value.readOnly = false;
+                et0Value.value = '5.0'; // Reset to default
+            }
+        }
+
+        // Week 3: Enhanced FlahaCalc API Integration
         async function fetchFlahaCalcET0() {
             try {
-                // Mock FlahaCalc API call - replace with actual API endpoint
-                const mockFlahaCalcData = {
-                    temperature: 36.95,
-                    windSpeed: 7.72,
-                    relativeHumidity: 15,
-                    atmosphericPressure: 100.1,
-                    elevation: 17,
-                    latitude: 25.2728,
-                    dayNumber: 153,
-                    sunshineDuration: 8,
-                    location: "Baladīyat ad Dawḩah, QA",
-                    et0: 16.29 // Reference ET₀: 16.29 mm/day
-                };
+                const latitude = document.getElementById('latitude').value;
+                const longitude = document.getElementById('longitude').value;
+                const calculationDate = document.getElementById('calculation-date').value;
 
-                // Update form with FlahaCalc data
-                document.getElementById('et0-value').value = mockFlahaCalcData.et0;
-
-                // Update advanced fields if available
-                if (document.getElementById('temperature')) {
-                    document.getElementById('temperature').value = mockFlahaCalcData.temperature;
-                }
-                if (document.getElementById('wind-speed')) {
-                    document.getElementById('wind-speed').value = mockFlahaCalcData.windSpeed;
-                }
-                if (document.getElementById('humidity')) {
-                    document.getElementById('humidity').value = mockFlahaCalcData.relativeHumidity;
+                if (!latitude || !longitude) {
+                    showAlert('error', 'Please enter latitude and longitude coordinates');
+                    return;
                 }
 
-                // Show success message
-                const button = event.target;
-                const originalHTML = button.innerHTML;
-                button.innerHTML = '<i class="fas fa-check text-success"></i>';
-                button.disabled = true;
+                // Show loading state
+                const fetchBtn = document.querySelector('button[onclick="fetchFlahaCalcET0()"]');
+                const originalText = fetchBtn.innerHTML;
+                fetchBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Fetching...';
+                fetchBtn.disabled = true;
 
-                setTimeout(() => {
-                    button.innerHTML = originalHTML;
-                    button.disabled = false;
-                }, 2000);
+                // Call the weather API endpoint
+                const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
+                const apiUrl = `/api/v1/weather/et0?lat=${latitude}&lon=${longitude}${calculationDate ? `&date=${calculationDate}` : ''}`;
 
-                console.log('FlahaCalc data loaded:', mockFlahaCalcData);
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    const et0Data = data.data;
+
+                    // Update form with FlahaCalc data
+                    document.getElementById('et0-value').value = et0Data.et0;
+
+                    // Update advanced fields if available
+                    if (document.getElementById('temperature') && et0Data.temperature) {
+                        document.getElementById('temperature').value = et0Data.temperature;
+                    }
+                    if (document.getElementById('wind-speed') && et0Data.windSpeed) {
+                        document.getElementById('wind-speed').value = et0Data.windSpeed;
+                    }
+                    if (document.getElementById('humidity') && et0Data.humidity) {
+                        document.getElementById('humidity').value = et0Data.humidity;
+                    }
+
+                    // Show success message with metadata
+                    let successMessage = `ET₀ data loaded successfully! ET₀: ${et0Data.et0} mm/day`;
+                    if (et0Data.location) {
+                        successMessage += ` for ${et0Data.location}`;
+                    }
+                    if (et0Data.dataSource) {
+                        successMessage += ` (Source: ${et0Data.dataSource})`;
+                    }
+
+                    showAlert('success', successMessage);
+
+                } else {
+                    throw new Error(data.error || 'Invalid response from API');
+                }
 
             } catch (error) {
                 console.error('Error fetching FlahaCalc data:', error);
-                alert('Failed to fetch ET₀ data from FlahaCalc. Please enter manually.');
+                showAlert('error', `Failed to fetch ET₀ data: ${error.message}. Please try again or enter ET₀ manually.`);
+            } finally {
+                // Restore button state
+                const fetchBtn = document.querySelector('button[onclick="fetchFlahaCalcET0()"]');
+                if (fetchBtn) {
+                    fetchBtn.innerHTML = '<i class="fas fa-cloud-download-alt me-1"></i>Fetch ET₀';
+                    fetchBtn.disabled = false;
+                }
             }
         }
 
