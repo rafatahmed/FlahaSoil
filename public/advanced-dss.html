@@ -124,6 +124,49 @@
             border-left-color: #28a745;
         }
 
+        /* Step 4: Irrigation Plan Styles */
+        .plan-metric {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin-bottom: 1rem;
+        }
+
+        .plan-metric .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+
+        .recommendation-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .recommendation-number .badge {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .priority-badge .badge {
+            font-size: 0.75rem;
+        }
+
+        .implementation-details {
+            background: #f8f9fa;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+        }
+
         /* Week 3: Progressive Disclosure UI Styles */
         .user-level-selector {
             background: var(--flaha-light-green);
@@ -953,11 +996,66 @@
                 </div>
             </div>
         </div>
+
+        <!-- Step 4: Recommendations & Irrigation Plan (Hidden initially) -->
+        <div class="row d-none" id="step-4-content">
+            <div class="col-12">
+                <div class="dss-card">
+                    <div class="dss-card-header">
+                        <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Irrigation Recommendations & Plan</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recommendations-display">
+                            <!-- Recommendations will be populated here -->
+                            <div class="text-center py-4">
+                                <i class="fas fa-calculator fa-3x text-muted mb-3"></i>
+                                <h5>Complete the calculation to see recommendations</h5>
+                                <p>Your personalized irrigation plan will appear here after processing.</p>
+                            </div>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
+                                        <i class="fas fa-arrow-left me-1"></i>Back to Results
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="cancelCalculation()">
+                                        <i class="fas fa-times me-1"></i>Cancel & Start Over
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-grid gap-2">
+                                    <button type="button" class="btn btn-success" onclick="saveCalculation()">
+                                        <i class="fas fa-save me-1"></i>Save Irrigation Plan
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="exportPlan()">
+                                        <i class="fas fa-download me-1"></i>Export Plan (PDF)
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Workflow completion message -->
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Complete Workflow:</strong> Save your irrigation plan to finish and unlock
+                            experience level switching.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:3001';
+
         // DSS JavaScript functionality
         let currentStep = 1;
         let soilData = null;
@@ -971,6 +1069,10 @@
         // Tier-based access control
         let userTier = null;
         let hasAccessToDSS = false;
+
+        // Workflow state management
+        let workflowInProgress = false;
+        let workflowStartStep = null;
 
         // Initialize DSS on page load
         document.addEventListener('DOMContentLoaded', function () {
@@ -1011,6 +1113,12 @@
                 return;
             }
 
+            // Prevent level switching during active workflow
+            if (workflowInProgress) {
+                showAlert('warning', 'Please complete or cancel the current calculation before changing experience level.');
+                return;
+            }
+
             currentUserLevel = level;
             localStorage.setItem('dss-user-level', level);
 
@@ -1029,7 +1137,75 @@
             // Update form elements based on level
             updateFormComplexity(level);
 
+            // Update level card visual state
+            updateLevelCardState();
+
             console.log(`User level set to: ${level} (${userTier} tier)`);
+        }
+
+        // Update level card visual state based on workflow status
+        function updateLevelCardState() {
+            const levelCards = document.querySelectorAll('.level-card');
+            levelCards.forEach(card => {
+                if (workflowInProgress) {
+                    card.style.opacity = '0.6';
+                    card.style.cursor = 'not-allowed';
+                    card.title = 'Complete current calculation to change level';
+                } else {
+                    card.style.opacity = '1';
+                    card.style.cursor = 'pointer';
+                    card.title = '';
+                }
+            });
+        }
+
+        // Workflow management functions
+        function startWorkflow(step) {
+            workflowInProgress = true;
+            workflowStartStep = step;
+            updateLevelCardState();
+            console.log(`Workflow started at step ${step} (${currentUserLevel} level)`);
+        }
+
+        function completeWorkflow() {
+            workflowInProgress = false;
+            workflowStartStep = null;
+            updateLevelCardState();
+            console.log('Workflow completed successfully');
+        }
+
+        function cancelWorkflow() {
+            workflowInProgress = false;
+            workflowStartStep = null;
+            currentCalculation = null;
+            updateLevelCardState();
+
+            // Reset to step 1
+            goToStep(1);
+            console.log('Workflow cancelled - reset to step 1');
+        }
+
+        // Show alert messages
+        function showAlert(type, message) {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            // Insert at top of container
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
         }
 
         function updateFormComplexity(level) {
@@ -1188,7 +1364,9 @@
                 console.log(`User tier: ${userTier}`);
 
                 // DSS is only available for Professional and Enterprise tiers
-                hasAccessToDSS = userTier === 'professional' || userTier === 'enterprise';
+                // Make comparison case-insensitive to handle both 'PROFESSIONAL' and 'professional'
+                const tierLower = userTier.toLowerCase();
+                hasAccessToDSS = tierLower === 'professional' || tierLower === 'enterprise';
 
                 if (hasAccessToDSS) {
                     // User has access to DSS - initialize normally
@@ -1354,24 +1532,36 @@
         async function loadSoilData() {
             try {
                 const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
-                const response = await fetch('/api/v1/soil/analyses', {
+                console.log('🔑 Token found:', token ? 'Yes' : 'No');
+                console.log('🔑 Token preview:', token ? token.substring(0, 20) + '...' : 'None');
+
+                const response = await fetch(`${API_BASE_URL}/api/v1/soil/history`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
 
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response ok:', response.ok);
+
                 if (response.ok) {
                     const data = await response.json();
+                    console.log('📊 API Response:', data);
+
                     if (data.success && data.data.length > 0) {
                         soilData = data.data[0]; // Get latest analysis
+                        console.log('✅ Soil data loaded:', soilData);
                         displaySoilData(soilData);
                         updateStepStatus(1, 'completed');
                         enableStep(2);
                     } else {
+                        console.log('❌ No soil data found in response');
                         showNoSoilDataMessage();
                     }
                 } else {
-                    throw new Error('Failed to load soil data');
+                    const errorText = await response.text();
+                    console.log('❌ API Error Response:', errorText);
+                    throw new Error(`Failed to load soil data: ${response.status} - ${errorText}`);
                 }
             } catch (error) {
                 console.error('Error loading soil data:', error);
@@ -1426,7 +1616,7 @@
         // Load available crops
         async function loadCrops() {
             try {
-                const response = await fetch('/api/v1/dss/crops');
+                const response = await fetch(`${API_BASE_URL}/api/v1/dss/crops`);
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
@@ -1441,15 +1631,18 @@
 
         // Populate crop selection dropdown
         function populateCropSelect() {
-            const select = document.getElementById('crop-select');
-            select.innerHTML = '<option value="">Select a crop...</option>';
+            // Populate the simple select for farmer level
+            const simpleSelect = document.getElementById('crop-select-simple');
+            if (simpleSelect) {
+                simpleSelect.innerHTML = '<option value="">Select a crop...</option>';
 
-            crops.forEach(crop => {
-                const option = document.createElement('option');
-                option.value = crop.id;
-                option.textContent = `${crop.name} (${crop.type})`;
-                select.appendChild(option);
-            });
+                crops.forEach(crop => {
+                    const option = document.createElement('option');
+                    option.value = crop.id;
+                    option.textContent = `${crop.name} (${crop.type})`;
+                    simpleSelect.appendChild(option);
+                });
+            }
         }
 
         // Setup event listeners
@@ -1457,10 +1650,10 @@
             // Week 3: Setup crop search functionality
             setupCropSearch();
 
-            // Crop selection change (fallback for simple select)
-            const cropSelect = document.getElementById('crop-select');
-            if (cropSelect) {
-                cropSelect.addEventListener('change', function () {
+            // Crop selection change (for simple select - farmer level)
+            const cropSelectSimple = document.getElementById('crop-select-simple');
+            if (cropSelectSimple) {
+                cropSelectSimple.addEventListener('change', function () {
                     const cropId = this.value;
                     if (cropId) {
                         const crop = crops.find(c => c.id === cropId);
@@ -1503,9 +1696,18 @@
             const formData = new FormData(form);
 
             const et0Source = document.getElementById('et0-source').value;
+
+            // Get crop ID from the appropriate element based on user level
+            let cropId;
+            if (currentUserLevel === 'farmer') {
+                cropId = document.getElementById('crop-select-simple').value;
+            } else {
+                cropId = document.getElementById('selected-crop-id').value;
+            }
+
             const calculationData = {
                 soilAnalysisId: soilData.id,
-                cropId: document.getElementById('crop-select').value,
+                cropId: cropId,
                 fieldArea: parseFloat(document.getElementById('field-area').value),
                 et0Value: parseFloat(document.getElementById('et0-value').value),
                 et0Source: et0Source,
@@ -1532,7 +1734,7 @@
 
             try {
                 const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
-                const response = await fetch('/api/v1/dss/calculate', {
+                const response = await fetch(`${API_BASE_URL}/api/v1/dss/calculate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1548,7 +1750,8 @@
                         displayResults(result.data);
                         updateStepStatus(2, 'completed');
                         updateStepStatus(3, 'completed');
-                        goToStep(3);
+                        enableStep(4);
+                        goToStep(4); // Go to Step 4 (Recommendations)
                     } else {
                         throw new Error(result.error || 'Calculation failed');
                     }
@@ -1567,6 +1770,7 @@
 
         // Display calculation results
         function displayResults(data) {
+            // Populate Step 3 (Results Display)
             const display = document.getElementById('results-display');
             display.innerHTML = `
                 <div class="row">
@@ -1632,20 +1836,109 @@
                     </div>
                 </div>
             `;
+
+            // Populate Step 4 (Recommendations Display)
+            const recommendationsDisplay = document.getElementById('recommendations-display');
+            recommendationsDisplay.innerHTML = `
+                <div class="irrigation-plan-summary mb-4">
+                    <h6><i class="fas fa-clipboard-list me-2"></i>Irrigation Plan Summary</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="plan-metric">
+                                <div class="metric-value text-primary">${data.etcCalculated}</div>
+                                <small>Daily Water Need (mm/day)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="plan-metric">
+                                <div class="metric-value text-success">${data.irrigationFrequency}</div>
+                                <small>Irrigation Every (days)</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="plan-metric">
+                                <div class="metric-value text-info">${data.irrigationDepth}</div>
+                                <small>Application Depth (mm)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="system-recommendation mb-4">
+                    <h6><i class="fas fa-tools me-2"></i>Recommended System</h6>
+                    <div class="alert alert-success">
+                        <h5 class="alert-heading text-capitalize">${data.systemRecommendation} Irrigation System</h5>
+                        <p class="mb-2"><strong>System Efficiency:</strong> ${Math.round(data.systemEfficiency * 100)}%</p>
+                        <p class="mb-2"><strong>Estimated Investment:</strong> $${data.systemCost.toLocaleString()}</p>
+                        <p class="mb-0"><strong>Expected ROI:</strong> ${data.economicROI}% over ${data.paybackPeriod} years</p>
+                    </div>
+                </div>
+
+                <div class="implementation-recommendations">
+                    <h6><i class="fas fa-tasks me-2"></i>Implementation Recommendations</h6>
+                    ${data.recommendations.map((rec, index) => `
+                        <div class="recommendation-item priority-${rec.priority.toLowerCase()} mb-3">
+                            <div class="d-flex align-items-start">
+                                <div class="recommendation-number me-3">
+                                    <span class="badge bg-primary">${index + 1}</span>
+                                </div>
+                                <div class="recommendation-content flex-grow-1">
+                                    <h6 class="mb-1">${rec.title}</h6>
+                                    <p class="mb-2">${rec.description}</p>
+                                    <div class="implementation-details">
+                                        <small class="text-muted">
+                                            <i class="fas fa-wrench me-1"></i>
+                                            <strong>Implementation:</strong> ${rec.implementation}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="priority-badge">
+                                    <span class="badge bg-${rec.priority.toLowerCase() === 'high' ? 'danger' : rec.priority.toLowerCase() === 'medium' ? 'warning' : 'secondary'}">
+                                        ${rec.priority}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="next-steps mt-4">
+                    <h6><i class="fas fa-forward me-2"></i>Next Steps</h6>
+                    <div class="alert alert-info">
+                        <ol class="mb-0">
+                            <li>Review the irrigation plan and system recommendations above</li>
+                            <li>Save this calculation for future reference</li>
+                            <li>Export as PDF for implementation planning</li>
+                            <li>Consult with irrigation specialists for detailed system design</li>
+                        </ol>
+                    </div>
+                </div>
+            `;
         }
 
         // Navigation functions
         function goToStep(step) {
+            // Start workflow when moving to step 2 or beyond
+            if (step >= 2 && !workflowInProgress) {
+                startWorkflow(step);
+            }
+
             // Hide all step contents
-            for (let i = 1; i <= 3; i++) {
-                document.getElementById(`step-${i}-content`).classList.add('d-none');
+            for (let i = 1; i <= 4; i++) {
+                const stepContent = document.getElementById(`step-${i}-content`);
+                if (stepContent) {
+                    stepContent.classList.add('d-none');
+                }
                 updateStepStatus(i, 'inactive');
             }
 
             // Show target step
-            document.getElementById(`step-${step}-content`).classList.remove('d-none');
-            updateStepStatus(step, 'active');
-            currentStep = step;
+            const targetStep = document.getElementById(`step-${step}-content`);
+            if (targetStep) {
+                targetStep.classList.remove('d-none');
+                updateStepStatus(step, 'active');
+                currentStep = step;
+            }
         }
 
         function updateStepStatus(step, status) {
@@ -1662,12 +1955,41 @@
             stepElement.onclick = () => goToStep(step);
         }
 
-        // Save calculation
+        // Save calculation and complete workflow
         function saveCalculation() {
             if (currentCalculation) {
-                alert('Calculation saved successfully!');
-                // In a real implementation, you might want to show a success message
-                // or redirect to a calculations history page
+                // Complete the workflow
+                completeWorkflow();
+
+                // Show success message
+                showAlert('success', 'Calculation saved successfully! You can now change experience level or start a new calculation.');
+
+                // Reset to step 1 for new calculation
+                setTimeout(() => {
+                    goToStep(1);
+                }, 2000);
+
+                console.log('Calculation saved:', currentCalculation);
+            } else {
+                showAlert('warning', 'No calculation to save. Please complete the DSS process first.');
+            }
+        }
+
+        // Cancel calculation and reset workflow
+        function cancelCalculation() {
+            if (confirm('Are you sure you want to cancel the current calculation? All progress will be lost.')) {
+                cancelWorkflow();
+                showAlert('info', 'Calculation cancelled. You can now change experience level or start over.');
+            }
+        }
+
+        // Export irrigation plan as PDF
+        function exportPlan() {
+            if (currentCalculation) {
+                showAlert('info', 'PDF export functionality will be implemented in the next phase.');
+                console.log('Exporting plan:', currentCalculation);
+            } else {
+                showAlert('warning', 'No calculation to export. Please complete the DSS process first.');
             }
         }
 
@@ -1717,7 +2039,7 @@
 
                 // Call the weather API endpoint
                 const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
-                const apiUrl = `/api/v1/weather/et0?lat=${latitude}&lon=${longitude}${calculationDate ? `&date=${calculationDate}` : ''}`;
+                const apiUrl = `${API_BASE_URL}/api/v1/weather/et0?lat=${latitude}&lon=${longitude}${calculationDate ? `&date=${calculationDate}` : ''}`;
 
                 const response = await fetch(apiUrl, {
                     method: 'GET',

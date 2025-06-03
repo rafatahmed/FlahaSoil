@@ -214,6 +214,7 @@ class SoilController {
 					fieldCapacity: true,
 					wiltingPoint: true,
 					plantAvailableWater: true,
+					saturatedConductivity: true,
 					textureClass: true,
 					createdAt: true,
 				},
