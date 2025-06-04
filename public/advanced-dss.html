@@ -233,6 +233,7 @@
             display: none;
         }
 
+        /* User level visibility - show elements based on user level */
         .user-level-farmer .farmer-only,
         .user-level-farmer .farmer-designer {
             display: block;
@@ -248,6 +249,15 @@
         .user-level-consultant .designer-consultant,
         .user-level-consultant .farmer-designer {
             display: block;
+        }
+
+        /* Ensure form controls are always visible - only hide options inside */
+        .form-select {
+            display: block !important;
+        }
+
+        .form-control {
+            display: block !important;
         }
 
         /* Enhanced interactive components */
@@ -947,6 +957,19 @@
                                 </div>
                             </div>
                             <div class="text-end">
+                                <button type="button" class="btn btn-info me-2" onclick="setUserLevel('farmer')">
+                                    <i class="fas fa-seedling me-1"></i>Test Farmer
+                                </button>
+                                <button type="button" class="btn btn-info me-2" onclick="setUserLevel('designer')">
+                                    <i class="fas fa-drafting-compass me-1"></i>Test Designer
+                                </button>
+                                <button type="button" class="btn btn-info me-2" onclick="setUserLevel('consultant')">
+                                    <i class="fas fa-user-tie me-1"></i>Test Consultant
+                                </button>
+                                <button type="button" class="btn btn-warning me-2"
+                                    onclick="updateFormComplexity(currentUserLevel)">
+                                    <i class="fas fa-sync me-1"></i>Fix Dropdowns
+                                </button>
                                 <button type="button" class="btn btn-secondary me-2" onclick="goToStep(1)">
                                     <i class="fas fa-arrow-left me-1"></i>Back
                                 </button>
@@ -1095,6 +1118,7 @@
 
         // Week 3: Progressive Disclosure UI Functions (only for Professional/Enterprise users)
         function initializeUserLevel() {
+            console.log('🔧 Initializing user level...');
             // Only initialize if user has DSS access
             if (!hasAccessToDSS) {
                 console.log('User level initialization skipped - no DSS access');
@@ -1103,10 +1127,12 @@
 
             // Load saved user level or default to designer
             const savedLevel = localStorage.getItem('dss-user-level') || 'designer';
+            console.log('🔧 Setting user level to:', savedLevel);
             setUserLevel(savedLevel);
         }
 
         function setUserLevel(level) {
+            console.log('🔧 setUserLevel called with:', level);
             // Only allow level setting for users with DSS access
             if (!hasAccessToDSS) {
                 console.log('User level setting denied - no DSS access');
@@ -1121,10 +1147,12 @@
 
             currentUserLevel = level;
             localStorage.setItem('dss-user-level', level);
+            console.log('🔧 Current user level set to:', currentUserLevel);
 
             // Update UI classes
             document.body.className = document.body.className.replace(/user-level-\w+/g, '');
             document.body.classList.add(`user-level-${level}`);
+            console.log('🔧 Body class updated to:', document.body.className);
 
             // Update active level card
             document.querySelectorAll('.level-card').forEach(card => {
@@ -1135,6 +1163,7 @@
             });
 
             // Update form elements based on level
+            console.log('🔧 Calling updateFormComplexity with:', level);
             updateFormComplexity(level);
 
             // Update level card visual state
@@ -1209,41 +1238,62 @@
         }
 
         function updateFormComplexity(level) {
+            console.log('🔧 Updating form complexity for level:', level);
+
             // Update select options visibility
             const selects = document.querySelectorAll('select');
-            selects.forEach(select => {
+            console.log('🔧 Found selects:', selects.length);
+
+            selects.forEach((select, index) => {
+                console.log(`🔧 Processing select ${index + 1}: ${select.id}`);
                 const options = select.querySelectorAll('option');
-                options.forEach(option => {
+                console.log(`🔧 Select ${select.id} has ${options.length} options`);
+
+                options.forEach((option, optIndex) => {
                     const classes = option.className;
+                    console.log(`🔧 Option ${optIndex}: "${option.textContent.trim()}" classes: "${classes}"`);
 
                     // Show all options by default
                     option.style.display = '';
 
                     // Hide based on level restrictions
+                    let shouldHide = false;
+
                     if (level === 'farmer') {
-                        // Farmers see only farmer-only options (hide designer-only and consultant-only)
+                        // Farmers see only farmer-only options and options with no class restrictions
                         if (classes.includes('designer-only') || classes.includes('consultant-only')) {
-                            option.style.display = 'none';
+                            shouldHide = true;
+                            console.log(`🔧 Hiding option for farmer: "${option.textContent.trim()}"`);
                         }
                     } else if (level === 'designer') {
-                        // Designers see farmer-only and designer-only options (hide consultant-only)
-                        if (classes.includes('consultant-only')) {
-                            option.style.display = 'none';
+                        // Designers see farmer-only, designer-only, and options with no class restrictions
+                        // Hide only pure consultant-only options (that don't also include designer-only)
+                        if (classes.includes('consultant-only') && !classes.includes('designer-only')) {
+                            shouldHide = true;
+                            console.log(`🔧 Hiding option for designer: "${option.textContent.trim()}"`);
                         }
                     } else if (level === 'consultant') {
-                        // Consultants see all options (hide farmer-only)
-                        if (classes.includes('farmer-only')) {
-                            option.style.display = 'none';
+                        // Consultants see designer-only, consultant-only, and options with no class restrictions
+                        // Hide only pure farmer-only options
+                        if (classes.includes('farmer-only') && !classes.includes('designer-only') && !classes.includes('consultant-only')) {
+                            shouldHide = true;
+                            console.log(`🔧 Hiding option for consultant: "${option.textContent.trim()}"`);
                         }
+                    }
+
+                    if (shouldHide) {
+                        option.style.display = 'none';
                     }
                 });
 
                 // Ensure a valid option is selected after hiding options
                 if (select.selectedIndex === -1 || select.options[select.selectedIndex].style.display === 'none') {
+                    console.log(`🔧 Current selection invalid for ${select.id}, finding new option`);
                     // Find first visible option and select it
                     for (let i = 0; i < select.options.length; i++) {
                         if (select.options[i].style.display !== 'none' && select.options[i].value) {
                             select.selectedIndex = i;
+                            console.log(`🔧 Selected option ${i}: "${select.options[i].textContent.trim()}" for ${select.id}`);
                             break;
                         }
                     }
@@ -1436,6 +1486,12 @@
             loadSoilData();
             loadCrops();
             setupEventListeners();
+
+            // Ensure form complexity is updated after DOM elements are ready
+            setTimeout(() => {
+                updateFormComplexity(currentUserLevel);
+                console.log('Form complexity updated for level:', currentUserLevel);
+            }, 100);
 
             // Show success message
             showTierWelcomeMessage();
@@ -2128,20 +2184,60 @@
         }
 
         // Save calculation and complete workflow
-        function saveCalculation() {
+        async function saveCalculation() {
             if (currentCalculation) {
-                // Complete the workflow
-                completeWorkflow();
+                try {
+                    // Save calculation to backend for Recent Analyses
+                    const token = localStorage.getItem('flahasoil_token') || localStorage.getItem('token');
 
-                // Show success message
-                showAlert('success', 'Calculation saved successfully! You can now change experience level or start a new calculation.');
+                    const saveData = {
+                        type: 'dss_calculation',
+                        userLevel: currentUserLevel,
+                        soilData: soilData,
+                        calculation: currentCalculation,
+                        timestamp: new Date().toISOString()
+                    };
 
-                // Reset to step 1 for new calculation
-                setTimeout(() => {
-                    goToStep(1);
-                }, 2000);
+                    const response = await fetch(`${API_BASE_URL}/api/v1/dss/save-calculation`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(saveData)
+                    });
 
-                console.log('Calculation saved:', currentCalculation);
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('Calculation saved to backend:', result);
+
+                        // Complete the workflow
+                        completeWorkflow();
+
+                        // Show success message
+                        showAlert('success', 'Calculation saved successfully to Recent Analyses! You can view it in your profile.');
+
+                        // Reset to step 1 for new calculation
+                        setTimeout(() => {
+                            goToStep(1);
+                        }, 2000);
+                    } else {
+                        throw new Error('Failed to save calculation to backend');
+                    }
+
+                } catch (error) {
+                    console.error('Error saving calculation:', error);
+
+                    // Still complete workflow locally even if save fails
+                    completeWorkflow();
+                    showAlert('warning', 'Calculation completed but may not be saved to Recent Analyses. Please check your connection.');
+
+                    setTimeout(() => {
+                        goToStep(1);
+                    }, 2000);
+                }
+
+                console.log('Calculation processed:', currentCalculation);
             } else {
                 showAlert('warning', 'No calculation to save. Please complete the DSS process first.');
             }
@@ -2158,8 +2254,15 @@
         // Export irrigation plan as PDF
         function exportPlan() {
             if (currentCalculation) {
-                showAlert('info', 'PDF export functionality will be implemented in the next phase.');
+                showAlert('info', 'PDF export functionality is coming in Phase 3! For now, you can save your calculation to Recent Analyses and view detailed results there.');
                 console.log('Exporting plan:', currentCalculation);
+
+                // Suggest alternative action
+                setTimeout(() => {
+                    if (confirm('Would you like to save this calculation to Recent Analyses instead?')) {
+                        saveCalculation();
+                    }
+                }, 2000);
             } else {
                 showAlert('warning', 'No calculation to export. Please complete the DSS process first.');
             }

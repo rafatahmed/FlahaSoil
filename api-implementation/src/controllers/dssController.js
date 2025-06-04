@@ -446,6 +446,69 @@ class DSSController {
 			});
 		}
 	}
+
+	/**
+	 * Save DSS calculation for Recent Analyses
+	 */
+	async saveCalculation(req, res) {
+		try {
+			const { type, userLevel, soilData, calculation, timestamp } = req.body;
+
+			// Validate required fields
+			if (!type || !userLevel || !calculation) {
+				return res.status(400).json({
+					success: false,
+					error: "Missing required fields: type, userLevel, calculation",
+				});
+			}
+
+			// Create a simplified calculation record for Recent Analyses
+			const savedCalculation = await prisma.dSSCalculation.create({
+				data: {
+					userId: req.user?.id,
+					soilAnalysisId: soilData?.id || null,
+					cropId: calculation.cropId || null,
+					fieldArea: calculation.fieldArea || 1.0,
+					et0Value: calculation.et0 || 5.0,
+					climateZone: calculation.climateZone || "temperate",
+					irrigationMethod: calculation.irrigationMethod || "drip",
+					growthStage: calculation.growthStage || "mid",
+					etcCalculated: calculation.etc || 0,
+					irrigationDepth: calculation.irrigationRequirement || 0,
+					irrigationFrequency: calculation.irrigationFrequency || 0,
+					maxApplicationRate: calculation.applicationRate || 0,
+					systemEfficiency: calculation.systemEfficiency || 0.9,
+					systemRecommendation: calculation.systemRecommendation || "drip",
+					calculationMethod: "dss_frontend",
+					calculationVersion: "1.0",
+					detailedResults: JSON.stringify(calculation),
+					recommendations: JSON.stringify(calculation.recommendations || {}),
+					metadata: JSON.stringify({
+						userLevel,
+						type,
+						timestamp: timestamp || new Date().toISOString(),
+						soilTexture: soilData?.textureClass || "Unknown",
+						cropName: calculation.cropName || "Unknown",
+					}),
+				},
+			});
+
+			res.json({
+				success: true,
+				data: {
+					calculationId: savedCalculation.id,
+					message: "Calculation saved successfully to Recent Analyses",
+				},
+			});
+		} catch (error) {
+			console.error("Error saving DSS calculation:", error);
+			res.status(500).json({
+				success: false,
+				error: "Failed to save calculation",
+				details: error.message,
+			});
+		}
+	}
 }
 
 module.exports = new DSSController();

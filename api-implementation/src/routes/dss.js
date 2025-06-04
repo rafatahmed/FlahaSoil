@@ -44,6 +44,13 @@ router.get(
 	dssController.getCalculation
 );
 
+// Save DSS calculation for Recent Analyses
+router.post(
+	"/save-calculation",
+	professionalLimit,
+	dssController.saveCalculation
+);
+
 // Professional tier features (require Professional or Enterprise plan)
 router.use(planAccess.requireFeature("advancedCalculations"));
 
