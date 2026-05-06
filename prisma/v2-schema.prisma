@@ -1,0 +1,362 @@
+// =============================================================================
+// FlahaSOIL v2 — Database Schema (DRAFT, Phase 3)
+// -----------------------------------------------------------------------------
+// This is a *design-only* draft. It MUST NOT be migrated, generated, or wired
+// into the legacy backend at this phase. The legacy schema in
+// api-implementation/prisma/schema.prisma remains the single source of truth
+// for runtime behaviour until the cutover phase.
+//
+// Target stack:    PostgreSQL + Prisma
+// Engines fed:     @flaha/soil-physics, @flaha/soil-chemistry,
+//                  @flaha/soil-interpretation
+// Coexistence:     Uses DATABASE_URL_V2 — never collides with legacy
+//                  DATABASE_URL.
+// Output dir:      ./generated/v2-client — segregated from any legacy client.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/v2-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_V2")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+/// Stratifies a SoilTest by which input fields are expected to be populated.
+/// PRELIMINARY = texture + pH/EC/TDS only; MODERATE adds base cations + macro
+/// nutrients + lab CEC; ADVANCED adds micronutrients, heavy metals, carbonate
+/// chemistry, SAR, ESP, and the full nutrient panel.
+enum SoilTestLevel {
+  PRELIMINARY
+  MODERATE
+  ADVANCED
+}
+
+/// Provenance of any user-supplied or system-derived value in the v2 pipeline.
+/// LAB        = measured in a laboratory.
+/// ESTIMATED  = inferred from texture / OM (e.g. CEC ≈ clay·0.5 + OM·2).
+/// DEFAULT    = system fallback / canned reference value.
+/// CALCULATED = produced by an engine (physics / chemistry / interpretation).
+enum SoilValueSource {
+  LAB
+  ESTIMATED
+  DEFAULT
+  CALCULATED
+}
+
+/// Lifecycle of a generated soil report.
+enum SoilReportStatus {
+  DRAFT
+  GENERATED
+  ARCHIVED
+}
+
+/// Output of @flaha/soil-interpretation `overallSoilRating`.
+enum SoilInterpretationRating {
+  GOOD
+  FAIR
+  POOR
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 1 — SoilSample
+// A physical sample collected at a location and depth. May be tested multiple
+// times (e.g. preliminary screening followed by an advanced lab panel).
+// -----------------------------------------------------------------------------
+model SoilSample {
+  id           String    @id @default(cuid())
+  /// FK to the v2 user table (to be defined in a later phase). String only at
+  /// this stage — no Prisma relation, deliberately, since the v2 user model
+  /// is out of scope for Phase 3.
+  userId       String
+  projectId    String?
+  locationName String?
+  latitude     Float?
+  longitude    Float?
+  depthFromCm  Float?
+  depthToCm    Float?
+  sampleDate   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tests        SoilTest[]
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([sampleDate])
+  @@map("soil_samples")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 2 — SoilTest
+// One lab/manual test event for a sample. Owns one input set per domain
+// (texture / chemistry) and one result set per engine (physics / chemistry /
+// interpretation), plus any number of generated reports and raw lab readings.
+// -----------------------------------------------------------------------------
+model SoilTest {
+  id           String        @id @default(cuid())
+  sampleId     String
+  testLevel    SoilTestLevel
+  labName      String?
+  labReference String?
+  testDate     DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  sample          SoilSample           @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  textureInput    SoilTextureInput?
+  chemistryInput  SoilChemistryInput?
+  physicsResult   SoilPhysicsResult?
+  chemistryResult SoilChemistryResult?
+  interpretation  SoilInterpretation?
+  reports         SoilReport[]
+  rawLabValues    SoilLabValue[]
+
+  @@index([sampleId])
+  @@index([testLevel])
+  @@index([testDate])
+  @@map("soil_tests")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 3 — SoilTextureInput
+// Preliminary physical inputs. Feeds @flaha/soil-physics. All percent fields
+// are 0–100; bulkDensity is g/cm³.
+// -----------------------------------------------------------------------------
+model SoilTextureInput {
+  id                   String          @id @default(cuid())
+  soilTestId           String          @unique
+  sandPercent          Float?
+  siltPercent          Float?
+  clayPercent          Float?
+  organicMatterPercent Float?
+  bulkDensity          Float?
+  gravelPercent        Float?
+  source               SoilValueSource
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  soilTest             SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@map("soil_texture_inputs")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 4 — SoilChemistryInput
+// Lab/manual chemistry inputs. Stores already-converted standard values; raw
+// per-field provenance (rawLabValue + unit + method) lives in SoilLabValue.
+// Units (post-conversion):
+//   pH               dimensionless
+//   ecDsM            dS/m
+//   tdsMgL           mg/L
+//   ca, mg, k, na    cmol(+)/kg     (or mg/kg if recorded so by source)
+//   cec              cmol(+)/kg
+//   cl, n, p         mg/kg
+//   fe, mn, zn,
+//   cu, b, mo, s     mg/kg
+//   carbonate,
+//   bicarbonate      meq/L
+//   sar              dimensionless
+//   esp              percent
+// -----------------------------------------------------------------------------
+model SoilChemistryInput {
+  id         String @id @default(cuid())
+  soilTestId String @unique
+
+  pH     Float?
+  ecDsM  Float?
+  tdsMgL Float?
+
+  cec Float?
+  ca  Float?
+  mg  Float?
+  k   Float?
+  na  Float?
+  cl  Float?
+  n   Float?
+  p   Float?
+
+  fe Float?
+  mn Float?
+  zn Float?
+  cu Float?
+  b  Float?
+  mo Float?
+  s  Float?
+
+  carbonate   Float?
+  bicarbonate Float?
+  sar         Float?
+  esp         Float?
+
+  heavyMetalsJson       Json?
+  fullNutrientPanelJson Json?
+
+  source    SoilValueSource
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  soilTest  SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@map("soil_chemistry_inputs")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 5 — SoilPhysicsResult
+// Output of @flaha/soil-physics `calculateSoilPhysics`. Numeric fields are
+// stored as Float (the engine emits stringified `toFixed(...)` values; the
+// API layer is responsible for the parseFloat round-trip on persistence).
+// `calculationTraceJson` may store intermediate equation outputs for audit.
+// -----------------------------------------------------------------------------
+model SoilPhysicsResult {
+  id         String @id @default(cuid())
+  soilTestId String @unique
+
+  fieldCapacity         Float
+  wiltingPoint          Float
+  plantAvailableWater   Float
+  saturation            Float
+  saturatedConductivity Float
+  textureClass          String
+
+  bulkDensity      Float?
+  porosity         Float?
+  voidRatio        Float?
+  particleDensity  Float?
+  soilQualityIndex Float?
+  drainageClass    String?
+  compactionRisk   String?
+  erosionRisk      String?
+
+  calculationVersion   String?
+  calculationTraceJson Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  soilTest             SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@index([textureClass])
+  @@map("soil_physics_results")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 6 — SoilChemistryResult
+// Output of @flaha/soil-chemistry `calculateSoilChemistry`. All percent fields
+// are clamped to [0, 100] by the engine. `calculationMode` mirrors the engine
+// input mode ("LAB" | "ESTIMATED").
+// -----------------------------------------------------------------------------
+model SoilChemistryResult {
+  id         String @id @default(cuid())
+  soilTestId String @unique
+
+  cec                Float
+  baseSaturation     Float
+  caPercent          Float
+  mgPercent          Float
+  kPercent           Float
+  naPercent          Float
+  esp                Float
+  sar                Float?
+  cationBalanceOther Float
+  calculationMode    String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  soilTest           SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@index([cec])
+  @@index([esp])
+  @@map("soil_chemistry_results")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 7 — SoilInterpretation
+// Output of @flaha/soil-interpretation `interpretSoil`. All category fields
+// are optional (a category is emitted only when the underlying input was
+// present); `overallSoilRating` and `warningsJson` are always populated.
+// -----------------------------------------------------------------------------
+model SoilInterpretation {
+  id         String @id @default(cuid())
+  soilTestId String @unique
+
+  phCategory             String?
+  salinityRisk           String?
+  cecLevel               String?
+  baseSaturationCategory String?
+  cationBalance          String?
+  sodiumRisk             String?
+  waterHoldingClass      String?
+  drainageClass          String?
+  overallSoilRating      SoilInterpretationRating
+  /// Array of warning strings emitted by the interpretation engine,
+  /// persisted as a JSON array (e.g. ["Severe salinity — ...", ...]).
+  warningsJson           Json
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  soilTest               SoilTest                 @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@index([overallSoilRating])
+  @@index([salinityRisk])
+  @@index([sodiumRisk])
+  @@map("soil_interpretations")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 8 — SoilReport
+// Generated artefact (PDF / HTML / JSON export) for a SoilTest.
+// -----------------------------------------------------------------------------
+model SoilReport {
+  id          String           @id @default(cuid())
+  soilTestId  String
+  status      SoilReportStatus @default(DRAFT)
+  reportType  String?
+  fileUrl     String?
+  generatedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  soilTest    SoilTest         @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@index([soilTestId])
+  @@index([status])
+  @@map("soil_reports")
+}
+
+// -----------------------------------------------------------------------------
+// SUPPORT MODEL — SoilLabValue
+// Per-field raw lab provenance. Satisfies the Phase-3 data rule that we must
+// store rawLabValue + convertedStandardValue + unit + method without
+// assuming all labs use identical units. The flat fields on
+// SoilChemistryInput hold the converted standard value; this table holds the
+// raw reading (Decimal for full precision), its native unit, the conversion
+// target unit, and the analytical method.
+// -----------------------------------------------------------------------------
+model SoilLabValue {
+  id         String @id @default(cuid())
+  soilTestId String
+
+  /// Logical key of the measured field (e.g. "ca", "mg", "ec", "ph").
+  fieldKey               String
+  rawLabValue            Decimal   @db.Decimal(20, 8)
+  rawUnit                String
+  convertedStandardValue Float?
+  standardUnit           String?
+  method                 String?
+  notes                  String?
+  measuredAt             DateTime?
+  createdAt              DateTime  @default(now())
+
+  soilTest               SoilTest  @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+
+  @@index([soilTestId])
+  @@index([fieldKey])
+  @@map("soil_lab_values")
+}
