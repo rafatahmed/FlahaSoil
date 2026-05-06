@@ -1,0 +1,42 @@
+{
+	"name": "@flaha/api",
+	"version": "1.0.0",
+	"private": true,
+	"description": "FlahaSOIL v2 backend — Express + Prisma v2. Composes the @flaha/soil-* engines and serves the /api/v2 contracts from @flaha/shared-types.",
+	"main": "src/index.ts",
+	"type": "commonjs",
+	"scripts": {
+		"dev": "tsx watch --env-file=.env src/server.ts",
+		"build": "tsc -p tsconfig.json",
+		"start": "node --env-file=.env dist/server.js",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"prisma:generate:v2": "prisma generate --schema ../prisma/v2-schema.prisma",
+		"prisma:db:push:v2": "prisma db push --schema ../prisma/v2-schema.prisma"
+	},
+	"dependencies": {
+		"@flaha/shared-types": "*",
+		"@flaha/soil-chemistry": "*",
+		"@flaha/soil-interpretation": "*",
+		"@flaha/soil-physics": "*",
+		"@prisma/client": "^5.22.0",
+		"cors": "^2.8.5",
+		"express": "^4.21.0",
+		"helmet": "^7.2.0",
+		"morgan": "^1.10.0",
+		"zod": "^3.23.8"
+	},
+	"devDependencies": {
+		"@types/cors": "^2.8.17",
+		"@types/express": "^4.17.21",
+		"@types/morgan": "^1.9.9",
+		"@types/node": "^20.14.0",
+		"@types/supertest": "^6.0.2",
+		"prisma": "^5.22.0",
+		"supertest": "^7.0.0",
+		"tsx": "^4.19.0",
+		"typescript": "^5.4.0",
+		"vitest": "^1.6.0"
+	}
+}
