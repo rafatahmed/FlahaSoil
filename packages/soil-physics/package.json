@@ -1,0 +1,17 @@
+{
+	"name": "@flaha/soil-physics",
+	"version": "1.0.0",
+	"private": true,
+	"description": "Saxton & Rawls (2006) soil-water physics engine — pure-function port of the legacy SoilCalculationService.",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"scripts": {
+		"build": "echo \"[packages/soil-physics] build placeholder — wired in Phase 3\"",
+		"test": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"typescript": "^5.4.0",
+		"vitest": "^1.6.0"
+	}
+}
