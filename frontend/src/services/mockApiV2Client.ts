@@ -9,6 +9,8 @@
 import {
 	type CalculateSoilTestRequest,
 	type CalculateSoilTestResponse,
+	type CreateProjectRequest,
+	type CreateProjectResponse,
 	type CreateSoilReportRequest,
 	type CreateSoilReportResponse,
 	type CreateSoilSampleRequest,
@@ -16,11 +18,17 @@ import {
 	type CreateSoilTestRequest,
 	type CreateSoilTestResponse,
 	type FlahaCalcExportResponse,
+	type GetProjectResponse,
 	type GetSoilInterpretationResponse,
 	type GetSoilSampleResponse,
 	type GetSoilTestReportResponse,
 	type GetSoilTestReportSummaryResponse,
 	type GetSoilTestResponse,
+	type ListProjectsQuery,
+	type ListProjectsResponse,
+	type ProjectDTO,
+	type ProjectSummaryDTO,
+	ProjectStatus,
 	SoilInterpretationRating,
 	SoilReportStatus,
 	SoilTestLevel,
@@ -32,8 +40,104 @@ import type { ApiV2Client } from "./apiV2Client";
 const NOW = "2026-05-05T08:00:00.000Z";
 const MOCK_SAMPLE_ID = "smpl_mock_001";
 const MOCK_TEST_ID = "test_mock_001";
+const MOCK_PROJECT_ID = "proj_mock_001";
+
+// In-memory project store so the wizard's "select project" dropdown and
+// the Projects pages stay consistent across navigations within a single
+// browser session. Seeded with one fixture so the empty-state can be
+// inspected by clearing it.
+const projectStore = new Map<string, ProjectDTO>();
+projectStore.set(MOCK_PROJECT_ID, {
+	id: MOCK_PROJECT_ID,
+	userId: "user_mock",
+	name: "Doha Demo Project",
+	code: "DOHA-01",
+	description: "Seed project used by the mock client.",
+	locationName: "Doha, Qatar",
+	status: ProjectStatus.ACTIVE,
+	createdAt: NOW,
+	updatedAt: NOW,
+});
+
+function nextProjectId(): string {
+	return `proj_mock_${(projectStore.size + 1).toString().padStart(3, "0")}`;
+}
+
+function projectSummary(p: ProjectDTO, sampleCount: number): ProjectSummaryDTO {
+	return {
+		id: p.id,
+		name: p.name,
+		code: p.code ?? null,
+		status: p.status,
+		sampleCount,
+		createdAt: p.createdAt,
+		updatedAt: p.updatedAt,
+	};
+}
 
 export const mockApiV2Client: ApiV2Client = {
+	async createProject(
+		body: CreateProjectRequest
+	): Promise<CreateProjectResponse> {
+		const id = nextProjectId();
+		const project: ProjectDTO = {
+			id,
+			userId: body.userId,
+			name: body.name,
+			code: body.code ?? null,
+			description: body.description ?? null,
+			locationName: body.locationName ?? null,
+			status: body.status ?? ProjectStatus.ACTIVE,
+			createdAt: NOW,
+			updatedAt: NOW,
+		};
+		projectStore.set(id, project);
+		return { project };
+	},
+
+	async listProjects(query: ListProjectsQuery): Promise<ListProjectsResponse> {
+		const rows = Array.from(projectStore.values()).filter((p) => {
+			if (p.userId !== query.userId) return false;
+			if (query.status !== undefined && p.status !== query.status) return false;
+			return true;
+		});
+		// One mock sample for the seed project, none for created-in-session.
+		return {
+			projects: rows.map((p) =>
+				projectSummary(p, p.id === MOCK_PROJECT_ID ? 1 : 0)
+			),
+		};
+	},
+
+	async getProjectById(
+		projectId: string,
+		userId: string
+	): Promise<GetProjectResponse> {
+		const project = projectStore.get(projectId);
+		if (!project || project.userId !== userId) {
+			throw new Error(`Mock project not found: ${projectId}`);
+		}
+		const samples =
+			projectId === MOCK_PROJECT_ID
+				? [
+						{
+							id: MOCK_SAMPLE_ID,
+							userId,
+							projectId,
+							locationName: "Mock Field A",
+							latitude: 25.276987,
+							longitude: 51.520008,
+							depthFromCm: 0,
+							depthToCm: 30,
+							sampleDate: NOW,
+							createdAt: NOW,
+							updatedAt: NOW,
+						},
+				  ]
+				: [];
+		return { project, samples };
+	},
+
 	async createSoilSample(
 		body: CreateSoilSampleRequest
 	): Promise<CreateSoilSampleResponse> {

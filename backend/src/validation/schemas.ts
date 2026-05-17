@@ -8,7 +8,7 @@
  * adds business rules (texture sum, test-level requirements).
  */
 
-import { SoilTestLevel, SoilValueSource } from "@flaha/shared-types";
+import { ProjectStatus, SoilTestLevel, SoilValueSource } from "@flaha/shared-types";
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,29 @@ const optionalIsoString = z.string().datetime({ offset: true }).nullable().optio
 
 const valueSourceSchema = z.nativeEnum(SoilValueSource);
 const testLevelSchema = z.nativeEnum(SoilTestLevel);
+const projectStatusSchema = z.nativeEnum(ProjectStatus);
+
+// ---------------------------------------------------------------------------
+// 0. POST /projects (Phase 8A)
+// ---------------------------------------------------------------------------
+
+export const createProjectSchema = z.object({
+	userId: z.string().min(1, "userId is required"),
+	name: z.string().min(1, "name is required").max(200),
+	code: z.string().min(1).max(80).nullable().optional(),
+	description: optionalNullableString,
+	locationName: optionalNullableString,
+	status: projectStatusSchema.optional(),
+});
+
+export type CreateProjectParsed = z.infer<typeof createProjectSchema>;
+
+export const listProjectsQuerySchema = z.object({
+	userId: z.string().min(1, "userId is required"),
+	status: projectStatusSchema.optional(),
+});
+
+export type ListProjectsQueryParsed = z.infer<typeof listProjectsQuerySchema>;
 
 // ---------------------------------------------------------------------------
 // 1. POST /soil-samples
@@ -29,7 +52,10 @@ const testLevelSchema = z.nativeEnum(SoilTestLevel);
 export const createSoilSampleSchema = z
 	.object({
 		userId: z.string().min(1, "userId is required"),
-		projectId: optionalNullableString,
+		// Phase 8A: projectId is required for newly created samples; the
+		// nullable variant is only kept on the read DTO for back-compat
+		// with rows created before the Project model existed.
+		projectId: z.string().min(1, "projectId is required"),
 		locationName: optionalNullableString,
 		latitude: z.number().gte(-90).lte(90).nullable().optional(),
 		longitude: z.number().gte(-180).lte(180).nullable().optional(),

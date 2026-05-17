@@ -68,7 +68,7 @@ describe("POST /api/v2/soil-samples — input validation", () => {
 	it("returns 400 with a path-keyed detail when latitude is out of range", async () => {
 		const res = await request(app)
 			.post("/api/v2/soil-samples")
-			.send({ userId: "u_1", latitude: 999 })
+			.send({ userId: "u_1", projectId: "p_1", latitude: 999 })
 			.set("Content-Type", "application/json");
 		expect(res.status).toBe(400);
 		expect(res.body.error.code).toBe("VALIDATION_ERROR");
@@ -81,7 +81,12 @@ describe("POST /api/v2/soil-samples — input validation", () => {
 	it("returns 400 with a depthToCm detail when depths are inverted", async () => {
 		const res = await request(app)
 			.post("/api/v2/soil-samples")
-			.send({ userId: "u_1", depthFromCm: 50, depthToCm: 10 })
+			.send({
+				userId: "u_1",
+				projectId: "p_1",
+				depthFromCm: 50,
+				depthToCm: 10,
+			})
 			.set("Content-Type", "application/json");
 		expect(res.status).toBe(400);
 		const paths: string[] = res.body.error.details.map(

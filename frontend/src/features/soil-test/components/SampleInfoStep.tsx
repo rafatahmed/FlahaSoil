@@ -2,12 +2,15 @@
  * FlahaSOIL v2 — wizard step: sample identity.
  *
  * Captures the fields needed to build a `CreateSoilSampleRequest`
- * (minus `userId`, which is supplied by the auth layer in Phase 6).
- * No validation here — Phase 5 collects values only.
+ * (minus `userId`, which is supplied by the active session). In
+ * Phase 8A the raw `projectId` text field was replaced with a
+ * `ProjectSelector` so the user only ever picks from real projects.
  */
 import { Grid, TextField, Typography } from "@mui/material";
 
+import { getCurrentUserId } from "../../../services/currentUser";
 import type { SoilTestDraftSampleInfo } from "../state/soilTestDraft";
+import { ProjectSelector } from "./ProjectSelector";
 
 interface SampleInfoStepProps {
 	value: SoilTestDraftSampleInfo;
@@ -26,20 +29,19 @@ export function SampleInfoStep({ value, onChange }: SampleInfoStepProps) {
 				Sample information
 			</Typography>
 			<Grid container spacing={2}>
+				<Grid item xs={12}>
+					<ProjectSelector
+						userId={getCurrentUserId()}
+						value={value.projectId ?? null}
+						onChange={(projectId) => set("projectId", projectId)}
+					/>
+				</Grid>
 				<Grid item xs={12} sm={6}>
 					<TextField
 						label="Location name"
 						fullWidth
 						value={value.locationName ?? ""}
 						onChange={(e) => set("locationName", e.target.value || null)}
-					/>
-				</Grid>
-				<Grid item xs={12} sm={6}>
-					<TextField
-						label="Project ID"
-						fullWidth
-						value={value.projectId ?? ""}
-						onChange={(e) => set("projectId", e.target.value || null)}
 					/>
 				</Grid>
 				<Grid item xs={6} sm={3}>

@@ -11,6 +11,11 @@
 import { Router } from "express";
 
 import {
+	getProject,
+	getProjects,
+	postProject,
+} from "../controllers/projects.controller";
+import {
 	getSoilSample,
 	postSoilSample,
 } from "../controllers/soilSamples.controller";
@@ -27,6 +32,11 @@ import { asyncHandler } from "../utils/asyncHandler";
 
 export function createV2Router(): Router {
 	const router = Router();
+
+	// 0. Projects (Phase 8A) — agronomic container for samples.
+	router.post("/projects", asyncHandler(postProject));
+	router.get("/projects", asyncHandler(getProjects));
+	router.get("/projects/:projectId", asyncHandler(getProject));
 
 	// 1. POST /soil-samples
 	router.post("/soil-samples", asyncHandler(postSoilSample));

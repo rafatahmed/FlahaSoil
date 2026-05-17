@@ -9,5 +9,6 @@
 export * from "./soil-domain";
 export * from "./api-contracts";
 export * from "./errors";
+export * from "./projects";
 export * from "./reports";
 export * from "./warnings";

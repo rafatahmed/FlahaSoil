@@ -10,6 +10,8 @@
 import type {
 	CalculateSoilTestRequest,
 	CalculateSoilTestResponse,
+	CreateProjectRequest,
+	CreateProjectResponse,
 	CreateSoilReportRequest,
 	CreateSoilReportResponse,
 	CreateSoilSampleRequest,
@@ -17,14 +19,27 @@ import type {
 	CreateSoilTestRequest,
 	CreateSoilTestResponse,
 	FlahaCalcExportResponse,
+	GetProjectResponse,
 	GetSoilInterpretationResponse,
 	GetSoilSampleResponse,
 	GetSoilTestReportResponse,
 	GetSoilTestReportSummaryResponse,
 	GetSoilTestResponse,
+	ListProjectsQuery,
+	ListProjectsResponse,
 } from "@flaha/shared-types";
 
 export interface ApiV2Client {
+	// Projects (Phase 8A) — agronomic container for samples.
+	createProject(body: CreateProjectRequest): Promise<CreateProjectResponse>;
+
+	listProjects(query: ListProjectsQuery): Promise<ListProjectsResponse>;
+
+	getProjectById(
+		projectId: string,
+		userId: string
+	): Promise<GetProjectResponse>;
+
 	createSoilSample(
 		body: CreateSoilSampleRequest
 	): Promise<CreateSoilSampleResponse>;

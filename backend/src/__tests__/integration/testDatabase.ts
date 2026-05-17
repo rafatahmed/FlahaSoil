@@ -114,6 +114,7 @@ export async function resetIntegrationDb(
 		"soilTextureInput",
 		"soilTest",
 		"soilSample",
+		"project",
 	] as const;
 	for (const model of orderedDeletes) {
 		try {

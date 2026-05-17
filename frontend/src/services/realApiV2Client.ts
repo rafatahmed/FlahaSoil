@@ -17,6 +17,8 @@
 import {
 	type CalculateSoilTestRequest,
 	type CalculateSoilTestResponse,
+	type CreateProjectRequest,
+	type CreateProjectResponse,
 	type CreateSoilReportRequest,
 	type CreateSoilReportResponse,
 	type CreateSoilSampleRequest,
@@ -24,11 +26,14 @@ import {
 	type CreateSoilTestRequest,
 	type CreateSoilTestResponse,
 	type FlahaCalcExportResponse,
+	type GetProjectResponse,
 	type GetSoilInterpretationResponse,
 	type GetSoilSampleResponse,
 	type GetSoilTestReportResponse,
 	type GetSoilTestReportSummaryResponse,
 	type GetSoilTestResponse,
+	type ListProjectsQuery,
+	type ListProjectsResponse,
 	isApiErrorResponse,
 } from "@flaha/shared-types";
 import type { ApiErrorCode } from "@flaha/shared-types";
@@ -115,6 +120,23 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const realApiV2Client: ApiV2Client = {
+	createProject(body: CreateProjectRequest) {
+		return postJson<CreateProjectResponse>("/projects", body);
+	},
+
+	listProjects(query: ListProjectsQuery) {
+		const params = new URLSearchParams({ userId: query.userId });
+		if (query.status !== undefined) params.set("status", query.status);
+		return getJson<ListProjectsResponse>(`/projects?${params.toString()}`);
+	},
+
+	getProjectById(projectId: string, userId: string) {
+		const params = new URLSearchParams({ userId });
+		return getJson<GetProjectResponse>(
+			`/projects/${encodeURIComponent(projectId)}?${params.toString()}`
+		);
+	},
+
 	createSoilSample(body: CreateSoilSampleRequest) {
 		return postJson<CreateSoilSampleResponse>("/soil-samples", body);
 	},

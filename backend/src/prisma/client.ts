@@ -61,6 +61,7 @@ export interface PrismaClientLike {
 	$connect(): Promise<void>;
 	$disconnect(): Promise<void>;
 	$transaction<R>(fn: (tx: PrismaClientLike) => Promise<R>): Promise<R>;
+	project: PrismaModelDelegate<Record<string, unknown>>;
 	soilSample: PrismaModelDelegate<Record<string, unknown>>;
 	soilTest: PrismaModelDelegate<Record<string, unknown>>;
 	soilTextureInput: PrismaModelDelegate<Record<string, unknown>>;

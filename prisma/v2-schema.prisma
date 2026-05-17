@@ -64,10 +64,46 @@ enum SoilInterpretationRating {
   POOR
 }
 
+/// Lifecycle of a Project. ACTIVE projects appear in the default
+/// dashboard; ARCHIVED projects are hidden behind an explicit filter.
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 0 — Project (Phase 8A)
+// Agronomic container for samples. Every SoilSample created in v2 belongs to
+// exactly one Project (samples created in earlier phases keep `projectId =
+// null` and surface in the UI under a synthetic "Unassigned" project).
+// -----------------------------------------------------------------------------
+model Project {
+  id           String        @id @default(cuid())
+  /// FK to the v2 user table (string-only until the v2 user model lands).
+  userId       String
+  name         String
+  /// Optional short code (e.g. "AL-FARM-01") for human cross-reference.
+  code         String?
+  description  String?
+  locationName String?
+  status       ProjectStatus @default(ACTIVE)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  samples SoilSample[]
+
+  @@unique([userId, code])
+  @@index([userId])
+  @@index([status])
+  @@map("projects")
+}
+
 // -----------------------------------------------------------------------------
 // MODEL 1 — SoilSample
 // A physical sample collected at a location and depth. May be tested multiple
 // times (e.g. preliminary screening followed by an advanced lab panel).
+// Phase 8A: belongs to a Project (nullable for back-compat with rows created
+// before the Project model existed).
 // -----------------------------------------------------------------------------
 model SoilSample {
   id           String    @id @default(cuid())
@@ -75,6 +111,8 @@ model SoilSample {
   /// this stage — no Prisma relation, deliberately, since the v2 user model
   /// is out of scope for Phase 3.
   userId       String
+  /// FK to Project. Nullable so historical samples remain readable; the v2
+  /// API rejects new samples without a project (enforced at service layer).
   projectId    String?
   locationName String?
   latitude     Float?
@@ -85,7 +123,8 @@ model SoilSample {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  tests        SoilTest[]
+  project Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  tests   SoilTest[]
 
   @@index([userId])
   @@index([projectId])
@@ -143,7 +182,7 @@ model SoilTextureInput {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
-  soilTest             SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@map("soil_texture_inputs")
 }
@@ -203,7 +242,7 @@ model SoilChemistryInput {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  soilTest  SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@map("soil_chemistry_inputs")
 }
@@ -240,7 +279,7 @@ model SoilPhysicsResult {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  soilTest             SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([textureClass])
   @@map("soil_physics_results")
@@ -269,7 +308,7 @@ model SoilChemistryResult {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  soilTest           SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([cec])
   @@index([esp])
@@ -301,7 +340,7 @@ model SoilInterpretation {
   createdAt              DateTime                 @default(now())
   updatedAt              DateTime                 @updatedAt
 
-  soilTest               SoilTest                 @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([overallSoilRating])
   @@index([salinityRisk])
@@ -323,7 +362,7 @@ model SoilReport {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  soilTest    SoilTest         @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([soilTestId])
   @@index([status])
@@ -354,7 +393,7 @@ model SoilLabValue {
   measuredAt             DateTime?
   createdAt              DateTime  @default(now())
 
-  soilTest               SoilTest  @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([soilTestId])
   @@index([fieldKey])

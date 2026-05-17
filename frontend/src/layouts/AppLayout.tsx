@@ -2,8 +2,8 @@
  * FlahaSOIL v2 — application chrome.
  *
  * Permanent left drawer on desktop, AppBar with the page title, and
- * an `<Outlet />` for the active route. Navigation items are static
- * for Phase 5; an active-link indicator is provided via NavLink.
+ * an `<Outlet />` for the active route. Navigation mirrors the
+ * Phase 8A workflow hierarchy: Project → Soil Test → Report → Export.
  */
 import {
 	AppBar,
@@ -18,6 +18,7 @@ import {
 } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import DashboardIcon from "@mui/icons-material/Dashboard";
+import FolderIcon from "@mui/icons-material/Folder";
 import IosShareIcon from "@mui/icons-material/IosShare";
 import ScienceIcon from "@mui/icons-material/Science";
 import type { ReactNode } from "react";
@@ -33,7 +34,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
 	{ label: "Dashboard", to: "/", icon: <DashboardIcon /> },
-	{ label: "New Soil Test", to: "/soil-tests/new", icon: <ScienceIcon /> },
+	{ label: "Projects", to: "/projects", icon: <FolderIcon /> },
+	{ label: "Soil Tests", to: "/soil-tests/new", icon: <ScienceIcon /> },
 	{ label: "Reports", to: "/reports", icon: <AssessmentIcon /> },
 	{
 		label: "FlahaCalc Export",

@@ -1,9 +1,8 @@
 /**
  * FlahaSOIL v2 — Soil-test detail page.
  *
- * Loads a soil test through whichever client `getApiClient()` returns
- * (mock by default, real when `VITE_USE_MOCK_API="false"`) and renders
- * its summary, physics, chemistry, interpretation, and reports sections.
+ * Loads a soil test through the active API client and renders its
+ * summary, physics, chemistry, interpretation, and reports sections.
  */
 import {
 	Alert,
@@ -25,13 +24,12 @@ import { ChemistryResultCard } from "../features/results/components/ChemistryRes
 import { InterpretationCard } from "../features/results/components/InterpretationCard";
 import { PhysicsResultCard } from "../features/results/components/PhysicsResultCard";
 import { WarningList } from "../features/results/components/WarningList";
-import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
+import { getApiClient } from "../services/apiClientProvider";
 
 export function SoilTestDetailPage() {
 	const { soilTestId = "" } = useParams<{ soilTestId: string }>();
 	const [data, setData] = useState<GetSoilTestResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
-	const apiMode = getApiClientMode();
 
 	useEffect(() => {
 		let cancelled = false;
@@ -80,8 +78,7 @@ export function SoilTestDetailPage() {
 					</Typography>
 					<Typography color="text.secondary">
 						Sample {data.soilTest.sampleId} · {data.soilTest.testLevel} ·{" "}
-						{data.soilTest.labName ?? "Lab unknown"} · API mode:{" "}
-						<strong>{apiMode}</strong>
+						{data.soilTest.labName ?? "Lab unknown"}
 					</Typography>
 				</Box>
 				<Button

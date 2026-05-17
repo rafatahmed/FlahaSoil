@@ -25,6 +25,11 @@ import type {
 	SoilTextureInputDTO,
 	SoilValueSource,
 } from "./soil-domain";
+import type {
+	CreateProjectResponse,
+	GetProjectResponse,
+	ListProjectsResponse,
+} from "./projects";
 import type { SoilReportEnvelope, SoilReportSummary } from "./reports";
 import type { SystemWarning } from "./warnings";
 
@@ -238,6 +243,9 @@ export interface FlahaCalcExportResponse {
 
 /** All v2 success response shapes, keyed by route id. */
 export interface ApiV2RouteResponseMap {
+	"POST /api/v2/projects": CreateProjectResponse;
+	"GET /api/v2/projects": ListProjectsResponse;
+	"GET /api/v2/projects/:projectId": GetProjectResponse;
 	"POST /api/v2/soil-samples": CreateSoilSampleResponse;
 	"GET /api/v2/soil-samples/:sampleId": GetSoilSampleResponse;
 	"POST /api/v2/soil-tests": CreateSoilTestResponse;

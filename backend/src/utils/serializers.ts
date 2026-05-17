@@ -9,6 +9,9 @@
 
 import {
 	type IsoDateString,
+	type ProjectDTO,
+	type ProjectSummaryDTO,
+	ProjectStatus,
 	type SoilChemistryInputDTO,
 	type SoilChemistryResultDTO,
 	type SoilInterpretationDTO,
@@ -76,6 +79,35 @@ function numNullable(value: unknown): number | null {
 // ---------------------------------------------------------------------------
 // Row → DTO converters
 // ---------------------------------------------------------------------------
+
+export function toProjectDTO(row: Record<string, unknown>): ProjectDTO {
+	return {
+		id: row["id"] as string,
+		userId: row["userId"] as string,
+		name: row["name"] as string,
+		code: asNullable(row["code"] as string | null | undefined),
+		description: asNullable(row["description"] as string | null | undefined),
+		locationName: asNullable(row["locationName"] as string | null | undefined),
+		status: row["status"] as ProjectStatus,
+		createdAt: toIso(row["createdAt"] as Date),
+		updatedAt: toIso(row["updatedAt"] as Date),
+	};
+}
+
+export function toProjectSummaryDTO(
+	row: Record<string, unknown>,
+	sampleCount: number
+): ProjectSummaryDTO {
+	return {
+		id: row["id"] as string,
+		name: row["name"] as string,
+		code: asNullable(row["code"] as string | null | undefined),
+		status: row["status"] as ProjectStatus,
+		sampleCount,
+		createdAt: toIso(row["createdAt"] as Date),
+		updatedAt: toIso(row["updatedAt"] as Date),
+	};
+}
 
 export function toSoilSampleDTO(row: Record<string, unknown>): SoilSampleDTO {
 	return {

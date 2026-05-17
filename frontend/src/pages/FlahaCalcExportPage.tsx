@@ -2,11 +2,10 @@
  * FlahaSOIL v2 — FlahaCalc export page.
  *
  * Lets the user enter a soil-test id and fetches the FlahaCalc export
- * projection through the active API client (mock by default, real when
- * `VITE_USE_MOCK_API="false"`). Shows the raw JSON envelope plus the
- * key hydraulic and chemistry-risk fields.
+ * projection through the active API client. Shows the raw JSON
+ * envelope plus the key hydraulic and chemistry-risk fields.
  *
- * Phase 7 only PREPARES the export — cross-app transfer to the
+ * This page only PREPARES the export — cross-app transfer to the
  * FlahaCalc application is out of scope.
  */
 import {
@@ -22,16 +21,13 @@ import {
 import { useState } from "react";
 import type { FlahaCalcExportResponse } from "@flaha/shared-types";
 
-import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
-
-const DEFAULT_TEST_ID = "test_mock_001";
+import { getApiClient } from "../services/apiClientProvider";
 
 export function FlahaCalcExportPage() {
-	const [soilTestId, setSoilTestId] = useState<string>(DEFAULT_TEST_ID);
+	const [soilTestId, setSoilTestId] = useState<string>("");
 	const [preview, setPreview] = useState<FlahaCalcExportResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
-	const apiMode = getApiClientMode();
 
 	const handlePreview = async () => {
 		setLoading(true);
@@ -53,8 +49,8 @@ export function FlahaCalcExportPage() {
 				FlahaCalc Export
 			</Typography>
 			<Typography color="text.secondary" sx={{ mb: 3 }}>
-				This page exports soil hydraulic and chemistry parameters to
-				FlahaCalc. API mode: <strong>{apiMode}</strong>.
+				Export soil hydraulic and chemistry parameters to FlahaCalc.
+				Paste a soil-test id from a project to preview the export.
 			</Typography>
 
 			<Alert severity="info" sx={{ mb: 3 }}>

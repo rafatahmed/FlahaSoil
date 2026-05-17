@@ -57,12 +57,21 @@ const describeIfDb = () =>
 	availability?.available ? describe : describe.skip;
 
 describeIfDb()("v2 end-to-end flow (DB-backed)", () => {
-	it("creates sample → test → calculation → fetch → flahacalc-export", async () => {
-		// 1. Create sample.
+	it("creates project → sample → test → calculation → fetch → flahacalc-export", async () => {
+		// 0. Create the owning project (Phase 8A — required parent).
+		const projectRes = await request(app)
+			.post("/api/v2/projects")
+			.send({ userId: "user_e2e", name: "E2E Project" })
+			.set("Content-Type", "application/json");
+		expect(projectRes.status).toBe(201);
+		const projectId = projectRes.body.project.id as string;
+
+		// 1. Create sample bound to the project.
 		const sampleRes = await request(app)
 			.post("/api/v2/soil-samples")
 			.send({
 				userId: "user_e2e",
+				projectId,
 				locationName: "E2E Field",
 				latitude: 25.276987,
 				longitude: 51.520008,
