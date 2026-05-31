@@ -1,14 +1,25 @@
 /**
  * FlahaSOIL v2 — wizard step: preliminary inputs.
  *
- * Texture + organic matter + basic salinity. Renders a grid of
- * MUI TextFields driven by `PRELIMINARY_FIELDS`. Phase 5 has no
- * validation; raw user values flow into the draft.
+ * Grouped sections: texture, organic matter, reaction & salinity.
+ * Two live, non-blocking validators sit alongside the inputs:
+ *
+ *   - Texture sum-to-100 chip (`validateTextureSum`)
+ *   - EC / TDS consistency caption (`checkSalinityConsistency`)
+ *
+ * Submission is not gated here — the backend zod schema and
+ * salinity-normalization layer remain the authoritative guards.
  */
-import { Grid, TextField, Typography } from "@mui/material";
+import { Box, Chip, Stack, Typography } from "@mui/material";
 
 import type { SoilTestDraft } from "../state/soilTestDraft";
-import { PRELIMINARY_FIELDS } from "../utils/soilTestDefaults";
+import {
+	PRELIMINARY_GROUPS,
+	type FieldGroup,
+} from "../utils/soilTestDefaults";
+import { checkSalinityConsistency } from "../utils/salinityConsistency";
+import { validateTextureSum } from "../utils/textureValidator";
+import { FieldSection } from "./FieldSection";
 
 interface PreliminaryInputStepProps {
 	draft: SoilTestDraft;
@@ -49,27 +60,81 @@ export function PreliminaryInputStep({
 		return v === null || v === undefined ? "" : String(v);
 	};
 
+	const texture = validateTextureSum(draft.textureInput);
+	const salinity = checkSalinityConsistency(draft.chemistryInput);
+
 	return (
-		<>
+		<Box>
 			<Typography variant="h6" gutterBottom>
-				Preliminary inputs
+				Texture & basic chemistry
 			</Typography>
-			<Grid container spacing={2}>
-				{PRELIMINARY_FIELDS.map((field) => (
-					<Grid item xs={12} sm={6} md={4} key={field.key}>
-						<TextField
-							label={
-								field.unit ? `${field.label} (${field.unit})` : field.label
+			<Typography color="text.secondary" sx={{ mb: 3 }}>
+				Capture the inputs that every soil test needs. Sand, silt and clay
+				drive the physics engine; pH and salinity drive the preliminary
+				interpretation.
+			</Typography>
+
+			{PRELIMINARY_GROUPS.map((group: FieldGroup) => (
+				<Box key={group.title}>
+					<FieldSection
+						group={group}
+						valueOf={valueOf}
+						onChange={setField}
+					/>
+					{group.title === "Texture" ? (
+						<Stack
+							direction="row"
+							spacing={1}
+							alignItems="center"
+							sx={{ mt: -1, mb: 3 }}
+						>
+							<Chip
+								size="small"
+								label={
+									texture.sum !== null
+										? `Sum: ${texture.sum.toFixed(1)} %`
+										: "Sum: \u2014"
+								}
+								color={chipColorFor(texture.status)}
+								variant={
+									texture.status === "valid" ? "filled" : "outlined"
+								}
+							/>
+							<Typography variant="caption" color="text.secondary">
+								{texture.message}
+							</Typography>
+						</Stack>
+					) : null}
+					{group.title === "Reaction & salinity" && salinity.message ? (
+						<Typography
+							variant="caption"
+							color={
+								salinity.status === "inconsistent"
+									? "warning.main"
+									: "text.secondary"
 							}
-							type="number"
-							fullWidth
-							value={valueOf(field.key)}
-							onChange={(e) => setField(field.key, e.target.value)}
-							helperText={field.helperText}
-						/>
-					</Grid>
-				))}
-			</Grid>
-		</>
+							sx={{ display: "block", mt: -1, mb: 2 }}
+						>
+							{salinity.message}
+						</Typography>
+					) : null}
+				</Box>
+			))}
+		</Box>
 	);
+}
+
+function chipColorFor(
+	status: ReturnType<typeof validateTextureSum>["status"]
+): "default" | "success" | "warning" | "error" {
+	switch (status) {
+		case "valid":
+			return "success";
+		case "off-by-a-little":
+			return "warning";
+		case "invalid":
+			return "error";
+		default:
+			return "default";
+	}
 }

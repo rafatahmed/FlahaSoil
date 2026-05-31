@@ -333,6 +333,80 @@ role-gated routing, multi-tenant orgs, audit log of mutations.
 
 ---
 
+## Phase 8C — Professional soil-test UX ✅ COMPLETE
+
+**Goal:** Transform the soil-test wizard and results pages from a
+developer-facing form into a guided agronomic workflow. Scientific
+packages (`packages/soil-*`) and legacy code (`api-implementation/`)
+were **not** touched; this phase is purely presentational.
+
+Tasks (P8C.1 → P8C.8):
+
+1. **Helper utilities** (`frontend/src/features/.../utils/`)
+   - `textureValidator.ts` — sand+silt+clay sum-to-100 check with a
+     0.1 % tolerance and a per-component missing detector.
+   - `salinityConsistency.ts` — pure EC vs. TDS consistency hint
+     (~640 mg/L per dS/m); never blocks submission.
+   - `interpretationStatus.ts` — categorical-string → tri-state
+     visual status (`good | fair | poor`) + MUI chip color. The
+     mappings mirror exactly the strings emitted by
+     `@flaha/soil-interpretation/rules.ts`.
+   - `agronomicCopy.ts` — short plain-language captions per
+     interpretation field, per physics number, per chemistry number,
+     and per overall rating.
+2. **Wizard stepper** (`SoilTestStepper`) — vertical orientation on
+   small screens, optional per-step description, and an at-a-glance
+   "Step N of M" indicator.
+3. **Wizard steps** (`SampleInfoStep`, `TestLevelStep`,
+   `PreliminaryInputStep`, `ModerateInputStep`, `AdvancedInputStep`)
+   - Refactored into grouped `FieldSection`s with explanatory
+     captions per group.
+   - `TestLevelStep` rendered as three selectable cards showing what
+     each level captures and which scenarios it suits.
+   - `PreliminaryInputStep` surfaces a live texture-sum chip and an
+     EC/TDS consistency hint without blocking progress.
+4. **Review step** (`ReviewStep`) — human-readable summary first
+   (sample, test level, populated panels), a pre-submit checklist
+   (project selected, texture sums valid, EC/TDS consistent), and
+   the raw `CreateSoilTestRequest` payload tucked behind a
+   "Developer details" accordion.
+5. **Results header** (`SoilTestSummaryHeader`) — at-a-glance banner
+   with overall rating chip, test-level + texture-class + lab
+   chips, and a "critical alerts" strip generated from
+   `categoryToStatus(...) === poor` interpretation rows.
+6. **Interpretation card** (`InterpretationCard`) — per-row status
+   chip (good / fair / poor) and an agronomic snippet under each
+   field. No thresholds live in the UI; only mappings.
+7. **Physics card** (`PhysicsResultCard`) — emphasised
+   plant-available water / field capacity / wilting point block,
+   then a compact "structure & conductivity" table. Plain-language
+   captions per number.
+8. **Chemistry card** (`ChemistryResultCard`) — grouped layout:
+   a CEC / base-saturation highlight pair, a cation-share row
+   (Ca / Mg / K / Na as % of CEC), and a sodicity indicators
+   block (ESP, SAR). Calculation mode is shown as a small chip in
+   the header.
+
+Exit criteria: `npm run typecheck` and `npm run build` green for
+`@flaha/web` (vitest is not configured for the frontend — see
+P8C.7 below); no scientific package edited; all wizard steps
+rendered through the new `FieldSection`; results detail page
+mounts `SoilTestSummaryHeader` and the redesigned cards;
+agronomic copy lives in `agronomicCopy.ts` and is reused by the
+header and the interpretation card.
+
+Out of scope (deferred):
+
+- **P8C.7 — Vitest coverage for helper utilities** was cancelled:
+  the frontend has no Vitest runner configured and adding one is a
+  separate task. The new helpers are small pure functions and are
+  exercised through TypeScript types at the call sites.
+- Charts / visualisations of physics or chemistry values.
+- i18n of the new agronomic copy.
+- Print stylesheet for the results page.
+
+---
+
 ## Phase 8 — Reports, audit trace, production hardening
 
 **Goal:** Round out the v2 surface with the report generation pipeline,
