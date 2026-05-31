@@ -24,19 +24,20 @@ import { useNavigate } from "react-router-dom";
 import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
 import { getApiClient } from "../services/apiClientProvider";
-import { getCurrentUserId } from "../services/currentUser";
+import { useSession } from "../session";
 
 export function ReportsPage() {
 	const navigate = useNavigate();
-	const userId = getCurrentUserId();
+	const { status: sessionStatus } = useSession();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		if (sessionStatus !== "ready") return;
 		let cancelled = false;
 		setError(null);
 		getApiClient()
-			.listProjects({ userId })
+			.listProjects({})
 			.then((res) => {
 				if (!cancelled) setProjects(res.projects);
 			})
@@ -48,7 +49,7 @@ export function ReportsPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [userId]);
+	}, [sessionStatus]);
 
 	return (
 		<Box>

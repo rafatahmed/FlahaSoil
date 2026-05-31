@@ -12,13 +12,14 @@ import type {
 } from "@flaha/shared-types";
 import { type SoilTestLevel } from "@flaha/shared-types";
 
+import { assertProjectOwnership } from "../auth/ownership";
 import { getPrismaClient } from "../prisma/client";
 import { ApiError } from "../utils/apiError";
 import { toIso, toSoilSampleDTO } from "../utils/serializers";
 import type { CreateSoilSampleParsed } from "../validation/schemas";
-import { assertProjectOwnership } from "./projects.service";
 
 export async function createSoilSample(
+	userId: string,
 	input: CreateSoilSampleParsed
 ): Promise<CreateSoilSampleResponse> {
 	const prisma = getPrismaClient();
@@ -26,10 +27,10 @@ export async function createSoilSample(
 	// Phase 8A: every newly created sample must belong to a Project owned
 	// by the same user. Reject before touching the soil_samples table so
 	// we don't rely on the database FK to produce a clean 404.
-	await assertProjectOwnership(input.projectId, input.userId);
+	await assertProjectOwnership(input.projectId, userId);
 
 	const data: Record<string, unknown> = {
-		userId: input.userId,
+		userId,
 		projectId: input.projectId,
 	};
 	if (input.locationName !== undefined) data["locationName"] = input.locationName;

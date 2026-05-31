@@ -249,6 +249,90 @@ Exit criteria: all of the above verified and recorded in
 
 ---
 
+## Phase 8A — Product workflow correction ✅ COMPLETE
+
+**Goal:** Make the Project the primary container of the product. Every
+soil sample must belong to a project; every soil test belongs to a
+sample; every report belongs to a test. No orphan samples, no orphan
+tests, no orphan reports.
+
+Tasks:
+
+- Promote `Project` to a required parent for `SoilSample` in the v2
+  Prisma schema (`SoilSample.projectId` non-null, FK to `Project.id`).
+- Add `POST /api/v2/projects`, `GET /api/v2/projects`,
+  `GET /api/v2/projects/:id` and project-scoped sample listing.
+- Add the Projects list, Project detail, and "new project" UI; gate
+  the soil-test wizard on a selected project.
+- Update report/export flows to surface the parent project on every
+  artefact.
+
+Exit criteria: every sample, test, and report in the v2 stack is
+reachable via a project; the Phase 7A runtime flow still passes
+end-to-end through the project-scoped routes; no legacy code touched.
+
+---
+
+## Phase 8B — User + project ownership foundation ✅ COMPLETE
+
+**Goal:** Replace the temporary `user_mock` literal that Phase 8A used
+as a placeholder owner with a real `User` model, a centralised
+dev-session layer, and consistent ownership enforcement on every
+project-scoped route. This is **not** production authentication — no
+passwords, JWT, OAuth, or email verification — only the boundaries
+and types needed so a real auth layer can be slotted in later.
+
+Tasks:
+
+- Add `User` (id, email, displayName, role, createdAt, updatedAt,
+  archivedAt) and `UserRole` (`ADMIN | AGRONOMIST | CLIENT | VIEWER`)
+  to the v2 Prisma schema; turn `Project.userId` into an FK to
+  `User.id`. Seed `user_dev_admin` via `backend/src/bootstrap.ts` so
+  cold starts always have one resolvable owner.
+- Introduce `backend/src/auth/devSession.middleware.ts` (resolves
+  `req.currentUser` from the `x-dev-user-id` header, falls back to the
+  seeded dev user) and `backend/src/auth/ownership.ts`
+  (`assertProjectOwnership`, `assertSampleOwnership`,
+  `assertSoilTestOwnership` — all return `404` on cross-user access).
+- Refactor `projects`, `soil-samples`, `soil-tests`, `reports`, and
+  the FlahaCalc export controller/service to take `currentUser` from
+  the resolver instead of a `userId` field on the request body/query.
+  Remove `userId` from the matching shared-types DTOs
+  (`CreateProjectRequest`, `ListProjectsQuery`,
+  `CreateSoilSampleRequest`).
+- Add `GET /api/v2/me` returning `{ session: { mode, user } }` for the
+  frontend bootstrap.
+- Add `frontend/src/session/{SessionContext, SessionProvider,
+useSession, devSessionStorage, SessionUserChip}.tsx`; call
+  `GET /api/v2/me` on mount, persist the resolved id in
+  `localStorage` (`flahasoil.v2.devUserId`), and have
+  `realApiV2Client` inject it as `x-dev-user-id` on every request.
+  `mockApiV2Client` mirrors the same shape against an in-memory
+  fixture.
+- Sweep the frontend for `user_mock` / `getCurrentUserId()` literals;
+  every page (`DashboardPage`, `ProjectDetailPage`, `ProjectsListPage`,
+  `ReportsPage`, `SoilTestWizardPage`) and component (`SampleInfoStep`,
+  `ProjectSelector`, `NewProjectDialog`) now reads identity from the
+  session.
+- UX: AppBar shows `SessionUserChip` (avatar + name + role); the
+  dashboard greets the current user; the projects list is now
+  "My projects".
+- Document the layer in `docs/v2-user-ownership.md` (hierarchy,
+  session flow, resolver, future-auth migration strategy, and what is
+  intentionally NOT done yet).
+
+Exit criteria: backend `typecheck` / `test` green; frontend
+`typecheck` green; no hardcoded `user_mock` literal remains in the
+frontend or in production backend code; every project-scoped route
+goes through an ownership assertion; the Phase 8A
+project → sample → test → report flow still runs end-to-end with the
+seeded dev user. Recorded in `docs/v2-user-ownership.md`.
+
+Out of scope (deferred): login screen, password storage, JWT/OAuth,
+role-gated routing, multi-tenant orgs, audit log of mutations.
+
+---
+
 ## Phase 8 — Reports, audit trace, production hardening
 
 **Goal:** Round out the v2 surface with the report generation pipeline,

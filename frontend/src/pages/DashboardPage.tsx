@@ -33,7 +33,7 @@ import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
 import { SystemStatusCard } from "../features/dashboard/components/SystemStatusCard";
 import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
-import { getCurrentUserId } from "../services/currentUser";
+import { useSession } from "../session";
 
 interface QuickAction {
 	title: string;
@@ -73,16 +73,19 @@ const MAX_RECENT_PROJECTS = 5;
 
 export function DashboardPage() {
 	const navigate = useNavigate();
-	const userId = getCurrentUserId();
+	const { status: sessionStatus, user } = useSession();
 	const apiMode = getApiClientMode();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
+	// Wait for the session to resolve before issuing project queries so
+	// the `x-dev-user-id` header is populated for the very first request.
 	useEffect(() => {
+		if (sessionStatus !== "ready") return;
 		let cancelled = false;
 		setError(null);
 		getApiClient()
-			.listProjects({ userId })
+			.listProjects({})
 			.then((res) => {
 				if (!cancelled) setProjects(res.projects);
 			})
@@ -94,14 +97,16 @@ export function DashboardPage() {
 		return () => {
 			cancelled = true;
 		};
-	}, [userId]);
+	}, [sessionStatus]);
 
 	const recent = (projects ?? []).slice(0, MAX_RECENT_PROJECTS);
 
 	return (
 		<Box>
 			<Typography variant="h4" gutterBottom>
-				FlahaSOIL workspace
+				{user
+					? `Welcome back, ${user.displayName.split(" ")[0]}`
+					: "FlahaSOIL workspace"}
 			</Typography>
 			<Typography color="text.secondary" sx={{ mb: 4 }}>
 				Manage agronomic projects, run soil tests, and generate reports.

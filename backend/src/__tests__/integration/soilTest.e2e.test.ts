@@ -59,9 +59,12 @@ const describeIfDb = () =>
 describeIfDb()("v2 end-to-end flow (DB-backed)", () => {
 	it("creates project → sample → test → calculation → fetch → flahacalc-export", async () => {
 		// 0. Create the owning project (Phase 8A — required parent).
+		// Phase 8B: the API resolves the owning user from the dev-session
+		// middleware (seeded `user_dev_admin` fallback when no header is
+		// sent), so we no longer pass `userId` in the body.
 		const projectRes = await request(app)
 			.post("/api/v2/projects")
-			.send({ userId: "user_e2e", name: "E2E Project" })
+			.send({ name: "E2E Project" })
 			.set("Content-Type", "application/json");
 		expect(projectRes.status).toBe(201);
 		const projectId = projectRes.body.project.id as string;
@@ -70,7 +73,6 @@ describeIfDb()("v2 end-to-end flow (DB-backed)", () => {
 		const sampleRes = await request(app)
 			.post("/api/v2/soil-samples")
 			.send({
-				userId: "user_e2e",
 				projectId,
 				locationName: "E2E Field",
 				latitude: 25.276987,

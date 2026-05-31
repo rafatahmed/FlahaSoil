@@ -26,12 +26,12 @@ import type { GetProjectResponse } from "@flaha/shared-types";
 
 import { ProjectSampleRow } from "../features/projects/components/ProjectSampleRow";
 import { getApiClient } from "../services/apiClientProvider";
-import { getCurrentUserId } from "../services/currentUser";
+import { useSession } from "../session";
 
 export function ProjectDetailPage() {
 	const { projectId = "" } = useParams<{ projectId: string }>();
 	const navigate = useNavigate();
-	const userId = getCurrentUserId();
+	const { status: sessionStatus } = useSession();
 	const [data, setData] = useState<GetProjectResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
@@ -39,16 +39,19 @@ export function ProjectDetailPage() {
 		setError(null);
 		setData(null);
 		getApiClient()
-			.getProjectById(projectId, userId)
+			.getProjectById(projectId)
 			.then(setData)
 			.catch((err: unknown) =>
 				setError(err instanceof Error ? err.message : String(err))
 			);
-	}, [projectId, userId]);
+	}, [projectId]);
 
 	useEffect(() => {
+		// Defer until the dev-session is resolved; otherwise the very
+		// first request would race the `x-dev-user-id` header write.
+		if (sessionStatus !== "ready") return;
 		load();
-	}, [load]);
+	}, [load, sessionStatus]);
 
 	if (error) {
 		return (

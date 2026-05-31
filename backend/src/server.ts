@@ -8,9 +8,15 @@
  */
 
 import { createApp } from "./app";
+import { runBootstrap } from "./bootstrap";
 import { env } from "./config/env";
 
 const app = createApp();
+
+// Phase 8B: ensure the seeded dev user exists before accepting traffic
+// in non-production environments. Bootstrap errors are non-fatal so a
+// transient DB issue at boot does not block restarts.
+void runBootstrap();
 
 const server = app.listen(env.port, () => {
 	// eslint-disable-next-line no-console

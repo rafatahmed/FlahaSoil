@@ -48,8 +48,14 @@ export interface ProjectSummaryDTO {
 // Request / response shapes — POST /api/v2/projects
 // ---------------------------------------------------------------------------
 
+/**
+ * Wire-format request for `POST /api/v2/projects`. Ownership is resolved
+ * server-side from the dev-session (see backend `auth/devSession.middleware`),
+ * NOT from a body field — Phase 8B intentionally removed `userId` from the
+ * client-supplied payload so the API never trusts the client to declare
+ * its own user identity.
+ */
 export interface CreateProjectRequest {
-	userId: string;
 	name: string;
 	code?: string | null;
 	description?: string | null;
@@ -66,12 +72,12 @@ export interface CreateProjectResponse {
 // ---------------------------------------------------------------------------
 
 /**
- * Read-side filters. `userId` is required so v2 cannot accidentally
- * leak cross-user projects; `status` is optional and defaults to
- * `ACTIVE` server-side when omitted.
+ * Read-side filters for `GET /api/v2/projects`. Ownership scoping is
+ * resolved server-side from the dev-session (see Phase 8B); the client
+ * does not supply a user identifier. `status` is optional; the server
+ * returns all statuses when omitted.
  */
 export interface ListProjectsQuery {
-	userId: string;
 	status?: ProjectStatus;
 }
 

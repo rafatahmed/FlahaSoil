@@ -19,6 +19,7 @@ import type {
 	CreateSoilTestRequest,
 	CreateSoilTestResponse,
 	FlahaCalcExportResponse,
+	GetCurrentUserResponse,
 	GetProjectResponse,
 	GetSoilInterpretationResponse,
 	GetSoilSampleResponse,
@@ -30,15 +31,18 @@ import type {
 } from "@flaha/shared-types";
 
 export interface ApiV2Client {
+	// Identity (Phase 8B) — resolve the dev-session user the API thinks
+	// the client is. Used by SessionProvider on boot.
+	getMe(): Promise<GetCurrentUserResponse>;
+
 	// Projects (Phase 8A) — agronomic container for samples.
+	// Phase 8B: `userId` was removed from these signatures; the owning
+	// user is resolved server-side from the dev-session.
 	createProject(body: CreateProjectRequest): Promise<CreateProjectResponse>;
 
 	listProjects(query: ListProjectsQuery): Promise<ListProjectsResponse>;
 
-	getProjectById(
-		projectId: string,
-		userId: string
-	): Promise<GetProjectResponse>;
+	getProjectById(projectId: string): Promise<GetProjectResponse>;
 
 	createSoilSample(
 		body: CreateSoilSampleRequest

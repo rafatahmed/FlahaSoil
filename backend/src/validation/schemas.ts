@@ -27,8 +27,9 @@ const projectStatusSchema = z.nativeEnum(ProjectStatus);
 // 0. POST /projects (Phase 8A)
 // ---------------------------------------------------------------------------
 
+// Phase 8B: `userId` was removed from the body — the controller now
+// pulls the owning user from `req.currentUser` (dev-session middleware).
 export const createProjectSchema = z.object({
-	userId: z.string().min(1, "userId is required"),
 	name: z.string().min(1, "name is required").max(200),
 	code: z.string().min(1).max(80).nullable().optional(),
 	description: optionalNullableString,
@@ -39,7 +40,6 @@ export const createProjectSchema = z.object({
 export type CreateProjectParsed = z.infer<typeof createProjectSchema>;
 
 export const listProjectsQuerySchema = z.object({
-	userId: z.string().min(1, "userId is required"),
 	status: projectStatusSchema.optional(),
 });
 
@@ -49,12 +49,12 @@ export type ListProjectsQueryParsed = z.infer<typeof listProjectsQuerySchema>;
 // 1. POST /soil-samples
 // ---------------------------------------------------------------------------
 
+// Phase 8B: `userId` was removed from the body — the owning user is
+// pulled from `req.currentUser` (dev-session middleware). `projectId`
+// remains required for newly created samples; the nullable variant on
+// the read DTO is kept for back-compat with pre-Project-model rows.
 export const createSoilSampleSchema = z
 	.object({
-		userId: z.string().min(1, "userId is required"),
-		// Phase 8A: projectId is required for newly created samples; the
-		// nullable variant is only kept on the read DTO for back-compat
-		// with rows created before the Project model existed.
 		projectId: z.string().min(1, "projectId is required"),
 		locationName: optionalNullableString,
 		latitude: z.number().gte(-90).lte(90).nullable().optional(),

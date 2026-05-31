@@ -35,12 +35,13 @@ function isPrismaUniqueConstraintError(err: unknown): boolean {
 }
 
 export async function createProject(
+	userId: string,
 	input: CreateProjectParsed
 ): Promise<CreateProjectResponse> {
 	const prisma = getPrismaClient();
 
 	const data: Record<string, unknown> = {
-		userId: input.userId,
+		userId,
 		name: input.name,
 		status: input.status ?? ProjectStatus.ACTIVE,
 	};
@@ -68,11 +69,12 @@ export async function createProject(
 }
 
 export async function listProjects(
+	userId: string,
 	query: ListProjectsQueryParsed
 ): Promise<ListProjectsResponse> {
 	const prisma = getPrismaClient();
 
-	const where: Record<string, unknown> = { userId: query.userId };
+	const where: Record<string, unknown> = { userId };
 	if (query.status !== undefined) where["status"] = query.status;
 
 	const rows = await prisma.project.findMany({
@@ -111,22 +113,5 @@ export async function getProjectById(
 	return { project: toProjectDTO(row), samples };
 }
 
-/**
- * Confirms a project exists for the given user. Used by
- * `soilSamples.service` to refuse samples that would create a dangling
- * agronomic context. Throws `ApiError.notFound` when no row matches.
- */
-export async function assertProjectOwnership(
-	projectId: string,
-	userId: string
-): Promise<void> {
-	const prisma = getPrismaClient();
-	const row = await prisma.project.findFirst({
-		where: { id: projectId, userId },
-	});
-	if (!row) {
-		throw ApiError.notFound(
-			`Project not found for this user: ${projectId}`
-		);
-	}
-}
+// `assertProjectOwnership` was moved to `auth/ownership.ts` in Phase 8B
+// so every owning-row check lives next to the dev-session resolver.

@@ -26,6 +26,7 @@ import {
 	type CreateSoilTestRequest,
 	type CreateSoilTestResponse,
 	type FlahaCalcExportResponse,
+	type GetCurrentUserResponse,
 	type GetProjectResponse,
 	type GetSoilInterpretationResponse,
 	type GetSoilSampleResponse,
@@ -39,8 +40,10 @@ import {
 import type { ApiErrorCode } from "@flaha/shared-types";
 
 import type { ApiV2Client } from "./apiV2Client";
+import { getStoredDevUserId } from "../session/devSessionStorage";
 
 const DEFAULT_BASE_URL = "http://localhost:3002/api/v2";
+const DEV_USER_HEADER = "x-dev-user-id";
 
 function getBaseUrl(): string {
 	const fromEnv = import.meta.env.VITE_API_BASE_URL;
@@ -49,6 +52,23 @@ function getBaseUrl(): string {
 			? fromEnv
 			: DEFAULT_BASE_URL;
 	return url.replace(/\/+$/, "");
+}
+
+/**
+ * Phase 8B: every request includes the persisted dev-user id so the
+ * backend's `devSessionMiddleware` resolves the same session across
+ * reloads. The header is omitted on the very first boot (before
+ * /me has populated it) — the backend falls back to the seeded
+ * `user_dev_admin` in that case.
+ */
+function buildHeaders(extra?: Record<string, string>): HeadersInit {
+	const headers: Record<string, string> = {
+		Accept: "application/json",
+		...(extra ?? {}),
+	};
+	const devUserId = getStoredDevUserId();
+	if (devUserId) headers[DEV_USER_HEADER] = devUserId;
+	return headers;
 }
 
 export class ApiClientError extends Error {
@@ -102,7 +122,7 @@ async function parseJsonOrThrow<T>(res: Response): Promise<T> {
 async function getJson<T>(path: string): Promise<T> {
 	const res = await fetch(`${getBaseUrl()}${path}`, {
 		method: "GET",
-		headers: { Accept: "application/json" },
+		headers: buildHeaders(),
 	});
 	return parseJsonOrThrow<T>(res);
 }
@@ -110,30 +130,33 @@ async function getJson<T>(path: string): Promise<T> {
 async function postJson<T>(path: string, body: unknown): Promise<T> {
 	const res = await fetch(`${getBaseUrl()}${path}`, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			Accept: "application/json",
-		},
+		headers: buildHeaders({ "Content-Type": "application/json" }),
 		body: JSON.stringify(body),
 	});
 	return parseJsonOrThrow<T>(res);
 }
 
 export const realApiV2Client: ApiV2Client = {
+	getMe() {
+		return getJson<GetCurrentUserResponse>("/me");
+	},
+
 	createProject(body: CreateProjectRequest) {
 		return postJson<CreateProjectResponse>("/projects", body);
 	},
 
 	listProjects(query: ListProjectsQuery) {
-		const params = new URLSearchParams({ userId: query.userId });
+		const params = new URLSearchParams();
 		if (query.status !== undefined) params.set("status", query.status);
-		return getJson<ListProjectsResponse>(`/projects?${params.toString()}`);
+		const qs = params.toString();
+		return getJson<ListProjectsResponse>(
+			qs.length > 0 ? `/projects?${qs}` : "/projects"
+		);
 	},
 
-	getProjectById(projectId: string, userId: string) {
-		const params = new URLSearchParams({ userId });
+	getProjectById(projectId: string) {
 		return getJson<GetProjectResponse>(
-			`/projects/${encodeURIComponent(projectId)}?${params.toString()}`
+			`/projects/${encodeURIComponent(projectId)}`
 		);
 	},
 

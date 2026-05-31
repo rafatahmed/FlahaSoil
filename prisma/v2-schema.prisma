@@ -71,15 +71,55 @@ enum ProjectStatus {
   ARCHIVED
 }
 
+/// Coarse-grained role for the v2 user model. The dev-session layer
+/// seeds an ADMIN user; AGRONOMIST is the default operator role for
+/// real users; CLIENT is for read-only customer access; VIEWER is the
+/// most restrictive (read of own data only). Production auth (JWT /
+/// password / OAuth) is deliberately out of scope for Phase 8B — these
+/// roles are stored now so the upgrade in a later phase is additive.
+enum UserRole {
+  ADMIN
+  AGRONOMIST
+  CLIENT
+  VIEWER
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -1 — User (Phase 8B)
+// Owner of Projects (and, transitively, samples / tests / reports). The v2
+// dev-session layer reads a seeded ADMIN user out of this table so the API
+// can enforce ownership without depending on production auth (JWT / OAuth)
+// yet. `archivedAt` is a soft-delete marker; archived users keep their
+// rows so historical ownership chains remain resolvable.
+// -----------------------------------------------------------------------------
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  displayName String
+  role        UserRole  @default(AGRONOMIST)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+
+  projects Project[]
+
+  @@index([role])
+  @@index([archivedAt])
+  @@map("users")
+}
+
 // -----------------------------------------------------------------------------
 // MODEL 0 — Project (Phase 8A)
 // Agronomic container for samples. Every SoilSample created in v2 belongs to
 // exactly one Project (samples created in earlier phases keep `projectId =
 // null` and surface in the UI under a synthetic "Unassigned" project).
+// Phase 8B: `userId` is now a real FK to `User.id`.
 // -----------------------------------------------------------------------------
 model Project {
   id           String        @id @default(cuid())
-  /// FK to the v2 user table (string-only until the v2 user model lands).
+  /// FK to the v2 user that owns this project. Cascade-deleting a User
+  /// is intentionally NOT enabled — archival is the supported delete
+  /// path (see `User.archivedAt`).
   userId       String
   name         String
   /// Optional short code (e.g. "AL-FARM-01") for human cross-reference.
@@ -90,6 +130,7 @@ model Project {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  owner   User         @relation(fields: [userId], references: [id])
   samples SoilSample[]
 
   @@unique([userId, code])
@@ -107,9 +148,10 @@ model Project {
 // -----------------------------------------------------------------------------
 model SoilSample {
   id           String    @id @default(cuid())
-  /// FK to the v2 user table (to be defined in a later phase). String only at
-  /// this stage — no Prisma relation, deliberately, since the v2 user model
-  /// is out of scope for Phase 3.
+  /// Denormalized owner id. Kept as a plain string (no relation) because
+  /// authoritative ownership is resolved through `project.owner` in
+  /// Phase 8B; this column is retained for fast per-user sample queries
+  /// and back-compat with rows created before the Project model existed.
   userId       String
   /// FK to Project. Nullable so historical samples remain readable; the v2
   /// API rejects new samples without a project (enforced at service layer).

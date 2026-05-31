@@ -27,11 +27,11 @@ import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
 import { NewProjectDialog } from "../features/projects/components/NewProjectDialog";
 import { getApiClient } from "../services/apiClientProvider";
-import { getCurrentUserId } from "../services/currentUser";
+import { useSession } from "../session";
 
 export function ProjectsListPage() {
 	const navigate = useNavigate();
-	const userId = getCurrentUserId();
+	const { status: sessionStatus } = useSession();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,16 +40,17 @@ export function ProjectsListPage() {
 		setError(null);
 		setProjects(null);
 		getApiClient()
-			.listProjects({ userId })
+			.listProjects({})
 			.then((res) => setProjects(res.projects))
 			.catch((err: unknown) =>
 				setError(err instanceof Error ? err.message : String(err))
 			);
-	}, [userId]);
+	}, []);
 
 	useEffect(() => {
+		if (sessionStatus !== "ready") return;
 		load();
-	}, [load]);
+	}, [load, sessionStatus]);
 
 	const handleCreated = (projectId: string) => {
 		setDialogOpen(false);
@@ -65,7 +66,7 @@ export function ProjectsListPage() {
 				sx={{ mb: 3 }}
 			>
 				<Box>
-					<Typography variant="h4">Projects</Typography>
+					<Typography variant="h4">My projects</Typography>
 					<Typography color="text.secondary">
 						Every soil sample belongs to a project. Start here to organise
 						your field work.
@@ -151,7 +152,6 @@ export function ProjectsListPage() {
 				open={dialogOpen}
 				onClose={() => setDialogOpen(false)}
 				onCreated={handleCreated}
-				userId={userId}
 			/>
 		</Box>
 	);

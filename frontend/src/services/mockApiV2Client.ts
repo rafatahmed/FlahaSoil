@@ -18,6 +18,7 @@ import {
 	type CreateSoilTestRequest,
 	type CreateSoilTestResponse,
 	type FlahaCalcExportResponse,
+	type GetCurrentUserResponse,
 	type GetProjectResponse,
 	type GetSoilInterpretationResponse,
 	type GetSoilSampleResponse,
@@ -33,6 +34,7 @@ import {
 	SoilReportStatus,
 	SoilTestLevel,
 	SoilValueSource,
+	UserRole,
 } from "@flaha/shared-types";
 
 import type { ApiV2Client } from "./apiV2Client";
@@ -42,6 +44,12 @@ const MOCK_SAMPLE_ID = "smpl_mock_001";
 const MOCK_TEST_ID = "test_mock_001";
 const MOCK_PROJECT_ID = "proj_mock_001";
 
+// Phase 8B: the mock client mirrors the dev-session model — every
+// fixture is owned by a single seeded user that matches the backend's
+// `user_dev_admin`. The mock no longer accepts a user id from the
+// caller; all ownership filtering uses MOCK_USER_ID internally.
+const MOCK_USER_ID = "user_dev_admin";
+
 // In-memory project store so the wizard's "select project" dropdown and
 // the Projects pages stay consistent across navigations within a single
 // browser session. Seeded with one fixture so the empty-state can be
@@ -49,7 +57,7 @@ const MOCK_PROJECT_ID = "proj_mock_001";
 const projectStore = new Map<string, ProjectDTO>();
 projectStore.set(MOCK_PROJECT_ID, {
 	id: MOCK_PROJECT_ID,
-	userId: "user_mock",
+	userId: MOCK_USER_ID,
 	name: "Doha Demo Project",
 	code: "DOHA-01",
 	description: "Seed project used by the mock client.",
@@ -76,13 +84,30 @@ function projectSummary(p: ProjectDTO, sampleCount: number): ProjectSummaryDTO {
 }
 
 export const mockApiV2Client: ApiV2Client = {
+	async getMe(): Promise<GetCurrentUserResponse> {
+		return {
+			session: {
+				mode: "dev",
+				user: {
+					id: MOCK_USER_ID,
+					email: "dev@flahasoil.local",
+					displayName: "Development User",
+					role: UserRole.ADMIN,
+					createdAt: NOW,
+					updatedAt: NOW,
+					archivedAt: null,
+				},
+			},
+		};
+	},
+
 	async createProject(
 		body: CreateProjectRequest
 	): Promise<CreateProjectResponse> {
 		const id = nextProjectId();
 		const project: ProjectDTO = {
 			id,
-			userId: body.userId,
+			userId: MOCK_USER_ID,
 			name: body.name,
 			code: body.code ?? null,
 			description: body.description ?? null,
@@ -97,7 +122,7 @@ export const mockApiV2Client: ApiV2Client = {
 
 	async listProjects(query: ListProjectsQuery): Promise<ListProjectsResponse> {
 		const rows = Array.from(projectStore.values()).filter((p) => {
-			if (p.userId !== query.userId) return false;
+			if (p.userId !== MOCK_USER_ID) return false;
 			if (query.status !== undefined && p.status !== query.status) return false;
 			return true;
 		});
@@ -109,12 +134,9 @@ export const mockApiV2Client: ApiV2Client = {
 		};
 	},
 
-	async getProjectById(
-		projectId: string,
-		userId: string
-	): Promise<GetProjectResponse> {
+	async getProjectById(projectId: string): Promise<GetProjectResponse> {
 		const project = projectStore.get(projectId);
-		if (!project || project.userId !== userId) {
+		if (!project || project.userId !== MOCK_USER_ID) {
 			throw new Error(`Mock project not found: ${projectId}`);
 		}
 		const samples =
@@ -122,7 +144,7 @@ export const mockApiV2Client: ApiV2Client = {
 				? [
 						{
 							id: MOCK_SAMPLE_ID,
-							userId,
+							userId: MOCK_USER_ID,
 							projectId,
 							locationName: "Mock Field A",
 							latitude: 25.276987,
@@ -144,8 +166,8 @@ export const mockApiV2Client: ApiV2Client = {
 		return {
 			sample: {
 				id: MOCK_SAMPLE_ID,
-				userId: body.userId,
-				projectId: body.projectId ?? null,
+				userId: MOCK_USER_ID,
+				projectId: body.projectId,
 				locationName: body.locationName ?? "Mock Field A",
 				latitude: body.latitude ?? 25.276987,
 				longitude: body.longitude ?? 51.520008,
@@ -162,7 +184,7 @@ export const mockApiV2Client: ApiV2Client = {
 		return {
 			sample: {
 				id: sampleId,
-				userId: "user_mock",
+				userId: MOCK_USER_ID,
 				projectId: null,
 				locationName: "Mock Field A",
 				latitude: 25.276987,
@@ -290,7 +312,7 @@ export const mockApiV2Client: ApiV2Client = {
 		return {
 			sample: {
 				id: full.soilTest.sampleId,
-				userId: "user_mock",
+				userId: MOCK_USER_ID,
 				projectId: null,
 				locationName: "Mock Field A",
 				latitude: 25.276987,

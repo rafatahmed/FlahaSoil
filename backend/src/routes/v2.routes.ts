@@ -10,6 +10,8 @@
 
 import { Router } from "express";
 
+import { devSessionMiddleware } from "../auth/devSession.middleware";
+import { getMe } from "../controllers/me.controller";
 import {
 	getProject,
 	getProjects,
@@ -32,6 +34,13 @@ import { asyncHandler } from "../utils/asyncHandler";
 
 export function createV2Router(): Router {
 	const router = Router();
+
+	// Phase 8B: every /api/v2 request flows through the dev-session
+	// resolver so downstream handlers can rely on `req.currentUser`.
+	router.use(asyncHandler(devSessionMiddleware));
+
+	// Session — GET /api/v2/me returns the current dev session.
+	router.get("/me", asyncHandler(getMe));
 
 	// 0. Projects (Phase 8A) — agronomic container for samples.
 	router.post("/projects", asyncHandler(postProject));

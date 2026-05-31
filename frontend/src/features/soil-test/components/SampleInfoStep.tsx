@@ -1,14 +1,14 @@
 /**
  * FlahaSOIL v2 — wizard step: sample identity.
  *
- * Captures the fields needed to build a `CreateSoilSampleRequest`
- * (minus `userId`, which is supplied by the active session). In
- * Phase 8A the raw `projectId` text field was replaced with a
+ * Captures the fields needed to build a `CreateSoilSampleRequest`.
+ * Ownership is resolved server-side from the dev-session (Phase 8B),
+ * so this step no longer reads or forwards a user id. The raw
+ * `projectId` text field was replaced in Phase 8A with a
  * `ProjectSelector` so the user only ever picks from real projects.
  */
 import { Grid, TextField, Typography } from "@mui/material";
 
-import { getCurrentUserId } from "../../../services/currentUser";
 import type { SoilTestDraftSampleInfo } from "../state/soilTestDraft";
 import { ProjectSelector } from "./ProjectSelector";
 
@@ -31,7 +31,6 @@ export function SampleInfoStep({ value, onChange }: SampleInfoStepProps) {
 			<Grid container spacing={2}>
 				<Grid item xs={12}>
 					<ProjectSelector
-						userId={getCurrentUserId()}
 						value={value.projectId ?? null}
 						onChange={(projectId) => set("projectId", projectId)}
 					/>

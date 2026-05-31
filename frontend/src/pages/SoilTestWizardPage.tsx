@@ -30,13 +30,11 @@ import {
 } from "../features/soil-test/state/soilTestDraft";
 import { visibleStepsForLevel } from "../features/soil-test/utils/soilTestDefaults";
 import { getApiClient } from "../services/apiClientProvider";
-import { getCurrentUserId } from "../services/currentUser";
 
 export function SoilTestWizardPage() {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 	const preselectedProjectId = searchParams.get("projectId");
-	const userId = getCurrentUserId();
 
 	const [draft, setDraft] = useState<SoilTestDraft>(() => ({
 		...EMPTY_DRAFT,
@@ -86,7 +84,6 @@ export function SoilTestWizardPage() {
 		try {
 			const client = getApiClient();
 			const sample = await client.createSoilSample({
-				userId,
 				...draft.sampleInfo,
 				projectId: draft.sampleInfo.projectId,
 			});

@@ -24,6 +24,8 @@ import ScienceIcon from "@mui/icons-material/Science";
 import type { ReactNode } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
+import { SessionUserChip } from "../session";
+
 const DRAWER_WIDTH = 240;
 
 interface NavItem {
@@ -55,6 +57,7 @@ export function AppLayout() {
 					<Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
 						FlahaSOIL v2
 					</Typography>
+					<SessionUserChip />
 				</Toolbar>
 			</AppBar>
 

@@ -24,11 +24,10 @@ interface NewProjectDialogProps {
 	open: boolean;
 	onClose: () => void;
 	onCreated: (projectId: string) => void;
-	userId: string;
 }
 
 export function NewProjectDialog(props: NewProjectDialogProps) {
-	const { open, onClose, onCreated, userId } = props;
+	const { open, onClose, onCreated } = props;
 	const [name, setName] = useState("");
 	const [code, setCode] = useState("");
 	const [locationName, setLocationName] = useState("");
@@ -60,7 +59,6 @@ export function NewProjectDialog(props: NewProjectDialogProps) {
 		setError(null);
 		try {
 			const res = await getApiClient().createProject({
-				userId,
 				name: name.trim(),
 				code: code.trim() || null,
 				locationName: locationName.trim() || null,

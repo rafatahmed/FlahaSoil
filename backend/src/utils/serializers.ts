@@ -25,6 +25,8 @@ import {
 	SoilTestLevel,
 	type SoilTextureInputDTO,
 	SoilValueSource,
+	type UserDTO,
+	UserRole,
 } from "@flaha/shared-types";
 
 /** Date | string | null → ISO string | null. Throws on invalid Date. */
@@ -79,6 +81,18 @@ function numNullable(value: unknown): number | null {
 // ---------------------------------------------------------------------------
 // Row → DTO converters
 // ---------------------------------------------------------------------------
+
+export function toUserDTO(row: Record<string, unknown>): UserDTO {
+	return {
+		id: row["id"] as string,
+		email: row["email"] as string,
+		displayName: row["displayName"] as string,
+		role: row["role"] as UserRole,
+		createdAt: toIso(row["createdAt"] as Date),
+		updatedAt: toIso(row["updatedAt"] as Date),
+		archivedAt: toIsoNullable(row["archivedAt"] as Date | null | undefined),
+	};
+}
 
 export function toProjectDTO(row: Record<string, unknown>): ProjectDTO {
 	return {

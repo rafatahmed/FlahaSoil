@@ -13,7 +13,8 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"prisma:generate:v2": "prisma generate --schema ../prisma/v2-schema.prisma",
-		"prisma:db:push:v2": "prisma db push --schema ../prisma/v2-schema.prisma"
+		"prisma:db:push:v2": "prisma db push --schema ../prisma/v2-schema.prisma",
+		"prisma:seed:v2": "tsx --env-file=.env prisma/seed.ts"
 	},
 	"dependencies": {
 		"@flaha/shared-types": "*",

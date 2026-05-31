@@ -26,14 +26,13 @@ import { getApiClient } from "../../../services/apiClientProvider";
 import { NewProjectDialog } from "../../projects/components/NewProjectDialog";
 
 interface ProjectSelectorProps {
-	userId: string;
 	value: string | null;
 	onChange: (projectId: string) => void;
 	disabled?: boolean;
 }
 
 export function ProjectSelector(props: ProjectSelectorProps) {
-	const { userId, value, onChange, disabled } = props;
+	const { value, onChange, disabled } = props;
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,12 +40,12 @@ export function ProjectSelector(props: ProjectSelectorProps) {
 	const load = useCallback(() => {
 		setError(null);
 		getApiClient()
-			.listProjects({ userId })
+			.listProjects({})
 			.then((res) => setProjects(res.projects))
 			.catch((err: unknown) =>
 				setError(err instanceof Error ? err.message : String(err))
 			);
-	}, [userId]);
+	}, []);
 
 	useEffect(() => {
 		load();
@@ -107,7 +106,6 @@ export function ProjectSelector(props: ProjectSelectorProps) {
 				open={dialogOpen}
 				onClose={() => setDialogOpen(false)}
 				onCreated={handleCreated}
-				userId={userId}
 			/>
 		</>
 	);

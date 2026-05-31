@@ -31,6 +31,7 @@ import type {
 	ListProjectsResponse,
 } from "./projects";
 import type { SoilReportEnvelope, SoilReportSummary } from "./reports";
+import type { GetCurrentUserResponse } from "./users";
 import type { SystemWarning } from "./warnings";
 
 // ---------------------------------------------------------------------------
@@ -58,9 +59,16 @@ export type CreateSoilLabValuePayload = Omit<
 // 1. POST /api/v2/soil-samples
 // ===========================================================================
 
+/**
+ * Wire-format request for `POST /api/v2/soil-samples`. As of Phase 8B,
+ * `userId` is no longer carried in the body — the API derives the
+ * owning user from the dev-session attached by the auth middleware. A
+ * `projectId` is required for newly created samples; the nullable
+ * variant on the read DTO is kept only for back-compat with legacy
+ * rows that pre-date the Project model.
+ */
 export interface CreateSoilSampleRequest {
-	userId: string;
-	projectId?: string | null;
+	projectId: string;
 	locationName?: string | null;
 	latitude?: number | null;
 	longitude?: number | null;
@@ -243,6 +251,7 @@ export interface FlahaCalcExportResponse {
 
 /** All v2 success response shapes, keyed by route id. */
 export interface ApiV2RouteResponseMap {
+	"GET /api/v2/me": GetCurrentUserResponse;
 	"POST /api/v2/projects": CreateProjectResponse;
 	"GET /api/v2/projects": ListProjectsResponse;
 	"GET /api/v2/projects/:projectId": GetProjectResponse;

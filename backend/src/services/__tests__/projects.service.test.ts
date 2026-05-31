@@ -1,28 +1,33 @@
 /**
- * FlahaSOIL v2 API — Project service unit tests (Phase 8A).
+ * FlahaSOIL v2 API — Project service unit tests (Phase 8A → 8B).
  *
  * Pure unit tests against a stub Prisma client injected via
  * `setPrismaClientForTesting`. They lock in the read/write contract
- * documented in `docs/v2-api-contracts.md` (Phase 8A addendum):
+ * documented in `docs/v2-api-contracts.md`:
  *
  *   - createProject persists exactly the columns it should and rejects
  *     a duplicate (userId, code) with a typed 400 instead of a 500.
  *   - listProjects scopes by userId and exposes _count.samples.
  *   - getProjectById refuses to leak across users.
- *   - assertProjectOwnership throws 404 when the project does not
- *     belong to the calling user — the gate used by soilSamples.service.
+ *   - assertProjectOwnership (now in `auth/ownership`) throws 404 when
+ *     the project does not belong to the calling user — the gate used
+ *     by soilSamples.service.
+ *
+ * Phase 8B moved `userId` from a body/query field to a first positional
+ * parameter resolved server-side from the dev-session middleware. The
+ * tests below reflect that signature change.
  */
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ProjectStatus } from "@flaha/shared-types";
 
+import { assertProjectOwnership } from "../../auth/ownership";
 import {
 	type PrismaClientLike,
 	setPrismaClientForTesting,
 } from "../../prisma/client";
 import { ApiError } from "../../utils/apiError";
 import {
-	assertProjectOwnership,
 	createProject,
 	getProjectById,
 	listProjects,
@@ -92,8 +97,7 @@ describe("createProject", () => {
 		const { client, calls } = makeProjectStub();
 		setPrismaClientForTesting(client);
 
-		const res = await createProject({
-			userId: "u_1",
+		const res = await createProject("u_1", {
 			name: "Doha Pilot",
 			code: "DOHA-01",
 		});
@@ -121,7 +125,7 @@ describe("createProject", () => {
 		setPrismaClientForTesting(client);
 
 		await expect(
-			createProject({ userId: "u_1", name: "Dup", code: "DOHA-01" })
+			createProject("u_1", { name: "Dup", code: "DOHA-01" })
 		).rejects.toBeInstanceOf(ApiError);
 	});
 });
@@ -143,7 +147,7 @@ describe("listProjects", () => {
 		});
 		setPrismaClientForTesting(client);
 
-		const res = await listProjects({ userId: "u_1" });
+		const res = await listProjects("u_1", {});
 
 		expect(calls.findMany[0]!["where"]).toEqual({ userId: "u_1" });
 		expect(res.projects).toHaveLength(1);
