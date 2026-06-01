@@ -25,12 +25,26 @@ import { InterpretationCard } from "../features/results/components/Interpretatio
 import { PhysicsResultCard } from "../features/results/components/PhysicsResultCard";
 import { SoilTestSummaryHeader } from "../features/results/components/SoilTestSummaryHeader";
 import { WarningList } from "../features/results/components/WarningList";
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
 
 export function SoilTestDetailPage() {
 	const { soilTestId = "" } = useParams<{ soilTestId: string }>();
 	const [data, setData] = useState<GetSoilTestResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
+
+	usePageHeader({
+		title: "Soil test results",
+		subtitle: data
+			? `Test ${data.soilTest.id} · sample ${data.soilTest.sampleId}`
+			: "Loading test…",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "Projects", to: "/projects" },
+			{ label: "Soil test" },
+		],
+	});
 
 	useEffect(() => {
 		let cancelled = false;
@@ -68,20 +82,10 @@ export function SoilTestDetailPage() {
 	return (
 		<Box>
 			<Stack
-				direction={{ xs: "column", sm: "row" }}
-				justifyContent="space-between"
-				alignItems={{ xs: "flex-start", sm: "flex-start" }}
-				spacing={2}
+				direction="row"
+				justifyContent="flex-end"
 				sx={{ mb: 3 }}
 			>
-				<Box>
-					<Typography variant="h4" gutterBottom>
-						Soil test results
-					</Typography>
-					<Typography variant="body2" color="text.secondary">
-						Sample {data.soilTest.sampleId} · Test id {data.soilTest.id}
-					</Typography>
-				</Box>
 				<Button
 					component={RouterLink}
 					to={`/soil-tests/${data.soilTest.id}/report`}

@@ -51,7 +51,7 @@ export function SystemStatusCard({ apiMode }: SystemStatusCardProps) {
 	const [health, setHealth] = useState<HealthState>(
 		apiMode === "real"
 			? { status: "loading", detail: "Checking backend…" }
-			: { status: "skipped", detail: "Mock client — no backend call." }
+			: { status: "skipped", detail: "Demonstration mode — sample data only." }
 	);
 
 	useEffect(() => {
@@ -96,7 +96,7 @@ export function SystemStatusCard({ apiMode }: SystemStatusCardProps) {
 				<Stack spacing={2}>
 					<Row label="API mode">
 						<Chip
-							label={apiMode === "real" ? "Live backend" : "In-memory mock"}
+							label={apiMode === "real" ? "Live backend" : "Demonstration mode"}
 							color={apiMode === "real" ? "primary" : "default"}
 							size="small"
 						/>

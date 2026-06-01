@@ -29,6 +29,7 @@ import type {
 import { ChemistryResultCard } from "../features/results/components/ChemistryResultCard";
 import { InterpretationCard } from "../features/results/components/InterpretationCard";
 import { PhysicsResultCard } from "../features/results/components/PhysicsResultCard";
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
 
 function severityToMui(
@@ -44,6 +45,19 @@ export function SoilTestReportPage() {
 	const [data, setData] = useState<GetSoilTestReportResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const apiMode = getApiClientMode();
+
+	usePageHeader({
+		title: "Soil report",
+		subtitle: data
+			? `Test ${data.test.id} · ${data.metadata.testLevel} · v${data.metadata.version}`
+			: "Loading report…",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "Soil test", to: `/soil-tests/${soilTestId}` },
+			{ label: "Report" },
+		],
+	});
 
 	useEffect(() => {
 		let cancelled = false;
@@ -83,14 +97,9 @@ export function SoilTestReportPage() {
 				alignItems="center"
 				sx={{ mb: 2 }}
 			>
-				<Box>
-					<Typography variant="h4">Soil report</Typography>
-					<Typography color="text.secondary">
-						Test {data.test.id} · Sample {data.sample.id} ·{" "}
-						{data.metadata.testLevel} · v{data.metadata.version} · API mode:{" "}
-						<strong>{apiMode}</strong>
-					</Typography>
-				</Box>
+				<Typography variant="caption" color="text.secondary">
+					Sample {data.sample.id} · API mode: <strong>{apiMode}</strong>
+				</Typography>
 				<Button
 					component={RouterLink}
 					to={`/soil-tests/${data.test.id}`}

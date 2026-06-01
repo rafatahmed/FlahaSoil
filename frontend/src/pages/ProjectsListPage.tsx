@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
 import { NewProjectDialog } from "../features/projects/components/NewProjectDialog";
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
 import { useSession } from "../session";
 
@@ -35,6 +36,16 @@ export function ProjectsListPage() {
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
+
+	usePageHeader({
+		title: "My projects",
+		subtitle: "Agronomic containers for soil samples and tests",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "Projects" },
+		],
+	});
 
 	const load = useCallback(() => {
 		setError(null);
@@ -61,17 +72,10 @@ export function ProjectsListPage() {
 		<Box>
 			<Stack
 				direction="row"
-				justifyContent="space-between"
+				justifyContent="flex-end"
 				alignItems="center"
 				sx={{ mb: 3 }}
 			>
-				<Box>
-					<Typography variant="h4">My projects</Typography>
-					<Typography color="text.secondary">
-						Every soil sample belongs to a project. Start here to organise
-						your field work.
-					</Typography>
-				</Box>
 				<Button
 					variant="contained"
 					startIcon={<AddIcon />}

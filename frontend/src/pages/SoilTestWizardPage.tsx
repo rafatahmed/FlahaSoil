@@ -29,6 +29,7 @@ import {
 	toCreateSoilTestRequest,
 } from "../features/soil-test/state/soilTestDraft";
 import { visibleStepsForLevel } from "../features/soil-test/utils/soilTestDefaults";
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
 
 export function SoilTestWizardPage() {
@@ -46,6 +47,24 @@ export function SoilTestWizardPage() {
 	const [activeStep, setActiveStep] = useState(0);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	usePageHeader({
+		title: "New soil test",
+		subtitle: preselectedProjectId
+			? "Guided wizard · project preselected"
+			: "Guided wizard · capture sample, analyse, interpret",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			...(preselectedProjectId
+				? [
+						{ label: "Projects", to: "/projects" },
+						{ label: "Project", to: `/projects/${preselectedProjectId}` },
+					]
+				: [{ label: "Projects", to: "/projects" }]),
+			{ label: "New soil test" },
+		],
+	});
 
 	// Keep the draft in sync if the user lands on the wizard with a
 	// different `?projectId` query (e.g. from a different project).
@@ -118,15 +137,6 @@ export function SoilTestWizardPage() {
 
 	return (
 		<Box>
-			<Typography variant="h4" gutterBottom>
-				New Soil Test
-			</Typography>
-			{preselectedProjectId && (
-				<Typography color="text.secondary" sx={{ mb: 2 }}>
-					Project preselected from project detail page.
-				</Typography>
-			)}
-
 			{error && (
 				<Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
 					{error}

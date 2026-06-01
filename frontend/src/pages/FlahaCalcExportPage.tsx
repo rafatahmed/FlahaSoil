@@ -21,6 +21,7 @@ import {
 import { useState } from "react";
 import type { FlahaCalcExportResponse } from "@flaha/shared-types";
 
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
 
 export function FlahaCalcExportPage() {
@@ -28,6 +29,16 @@ export function FlahaCalcExportPage() {
 	const [preview, setPreview] = useState<FlahaCalcExportResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
+
+	usePageHeader({
+		title: "FlahaCalc export",
+		subtitle: "Hand off hydraulic and chemistry parameters for irrigation planning",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "FlahaCalc export" },
+		],
+	});
 
 	const handlePreview = async () => {
 		setLoading(true);
@@ -45,9 +56,6 @@ export function FlahaCalcExportPage() {
 
 	return (
 		<Box>
-			<Typography variant="h4" gutterBottom>
-				FlahaCalc Export
-			</Typography>
 			<Typography color="text.secondary" sx={{ mb: 3 }}>
 				Export soil hydraulic and chemistry parameters to FlahaCalc.
 				Paste a soil-test id from a project to preview the export.

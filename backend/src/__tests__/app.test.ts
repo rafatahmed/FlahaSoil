@@ -11,14 +11,98 @@
  * Tests that exercise success paths through Prisma are intentionally
  * out of scope — they require the v2 client to be generated against a
  * live PostgreSQL datasource and belong to a future integration suite.
+ *
+ * Phase 8B wired `devSessionMiddleware` in front of every `/api/v2/*`
+ * route; that middleware calls `ensureDevUser()` which hits Prisma.
+ * The suite below injects a minimal stub Prisma client via
+ * `setPrismaClientForTesting` so the validation + 404 paths stay
+ * exercisable without a live database.
  */
 
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 
+import { UserRole } from "@flaha/shared-types";
+
 import { createApp } from "../app";
+import { DEV_USER_ID } from "../auth/currentUser";
+import {
+	type PrismaClientLike,
+	setPrismaClientForTesting,
+} from "../prisma/client";
 
 const app = createApp();
+
+const devUserRow = {
+	id: DEV_USER_ID,
+	email: "dev@flahasoil.local",
+	displayName: "Development User",
+	role: UserRole.ADMIN,
+	createdAt: new Date("2024-01-01T00:00:00.000Z"),
+	updatedAt: new Date("2024-01-01T00:00:00.000Z"),
+	archivedAt: null,
+};
+
+function notImplemented(name: string): never {
+	throw new Error(`stub prisma client: ${name} not implemented in app.test.ts`);
+}
+
+const stubPrisma: PrismaClientLike = {
+	$connect: async () => undefined,
+	$disconnect: async () => undefined,
+	$transaction: async (fn) => fn(stubPrisma),
+	user: {
+		upsert: async () => devUserRow,
+		findUnique: async () => devUserRow,
+		findFirst: async () => devUserRow,
+		findMany: async () => [devUserRow],
+		create: async () => devUserRow,
+		update: async () => devUserRow,
+		delete: async () => devUserRow,
+	},
+	project: {
+		upsert: () => notImplemented("project.upsert"),
+		findUnique: async () => null,
+		findFirst: async () => null,
+		findMany: async () => [],
+		create: () => notImplemented("project.create"),
+		update: () => notImplemented("project.update"),
+		delete: () => notImplemented("project.delete"),
+	},
+	soilSample: {
+		upsert: () => notImplemented("soilSample.upsert"),
+		findUnique: async () => null,
+		findFirst: async () => null,
+		findMany: async () => [],
+		create: () => notImplemented("soilSample.create"),
+		update: () => notImplemented("soilSample.update"),
+		delete: () => notImplemented("soilSample.delete"),
+	},
+	soilTest: {
+		upsert: () => notImplemented("soilTest.upsert"),
+		findUnique: async () => null,
+		findFirst: async () => null,
+		findMany: async () => [],
+		create: () => notImplemented("soilTest.create"),
+		update: () => notImplemented("soilTest.update"),
+		delete: () => notImplemented("soilTest.delete"),
+	},
+	soilTextureInput: {} as PrismaClientLike["soilTextureInput"],
+	soilChemistryInput: {} as PrismaClientLike["soilChemistryInput"],
+	soilPhysicsResult: {} as PrismaClientLike["soilPhysicsResult"],
+	soilChemistryResult: {} as PrismaClientLike["soilChemistryResult"],
+	soilInterpretation: {} as PrismaClientLike["soilInterpretation"],
+	soilReport: {} as PrismaClientLike["soilReport"],
+	soilLabValue: {} as PrismaClientLike["soilLabValue"],
+};
+
+beforeAll(() => {
+	setPrismaClientForTesting(stubPrisma);
+});
+
+afterAll(() => {
+	setPrismaClientForTesting(null);
+});
 
 describe("liveness probes", () => {
 	it("GET /health returns 200 with the service identifier", async () => {

@@ -23,6 +23,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
 import { useSession } from "../session";
 
@@ -31,6 +32,16 @@ export function ReportsPage() {
 	const { status: sessionStatus } = useSession();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
+
+	usePageHeader({
+		title: "Reports",
+		subtitle: "Browse projects to open per-test reports",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "Reports" },
+		],
+	});
 
 	useEffect(() => {
 		if (sessionStatus !== "ready") return;
@@ -53,9 +64,6 @@ export function ReportsPage() {
 
 	return (
 		<Box>
-			<Typography variant="h4" gutterBottom>
-				Reports
-			</Typography>
 			<Typography color="text.secondary" sx={{ mb: 3 }}>
 				Reports are generated per soil test. Choose a project to browse
 				its samples and tests, then open a test to generate or download

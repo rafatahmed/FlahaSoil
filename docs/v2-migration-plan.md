@@ -407,6 +407,76 @@ Out of scope (deferred):
 
 ---
 
+## Phase 8C-A — App shell, navigation, branding ✅ COMPLETE
+
+**Goal:** Lift FlahaSOIL from a developer-style single-pane app into a
+coherent professional platform: brand-driven theme, persistent app
+shell with sidebar + top bar + breadcrumbs, a marketing-style landing
+page distinct from the operational dashboard, a profile workspace, and
+honest stubs for the platform surfaces still on the roadmap. No
+scientific packages or legacy code were modified.
+
+Outputs:
+
+- `frontend/src/theme/flahaSoilTheme.ts` — palette tokens (Deep Soil
+  Brown, Clay Earth, Sand Beige, Organic Green, Analytical Cream,
+  Mineral Warning, Critical Salinity Red, Neutral Background) and an
+  MUI theme override (typography scale, surface treatments). Wired
+  through `App.tsx`.
+- `frontend/src/layouts/AppLayout.tsx` — persistent shell on `md+`,
+  drawer on mobile, with three regions: `TopAppBar`, `SidebarNav`,
+  `PageContextBar`. Header state flows through `PageHeaderContext`
+  so each route declares its own title / subtitle / breadcrumbs via
+  the `usePageHeader` hook.
+- Route hierarchy (`AppRoutes.tsx`): `/` (Landing), `/dashboard`,
+  `/projects`, `/projects/:id`, `/soil-tests/new`, `/soil-tests/:id`,
+  `/soil-tests/:id/report`, `/reports`, `/flahacalc-export`,
+  `/profile`, `/settings` (stub), `/standards` (stub).
+- `LandingPage.tsx` — hero, five-pillar platform overview, workflow
+  strip, Flaha ecosystem (SOIL / Calc / FAST), footer with runtime
+  mode + platform status. Does not load API data.
+- `DashboardPage.tsx` — operational workspace with a Soil Health
+  Overview (Projects / Samples / Active / Archived KPIs), recent
+  projects, alerts panel (archived + empty-active signals today),
+  system-status card, and quick actions.
+- `ProfilePage.tsx` — identity card (avatar, role, dev-session chip),
+  platform activity (project / sample counts), session information,
+  and planned-feature cards (account security, organisation
+  settings, API access).
+- `SettingsPage.tsx`, `StandardsPage.tsx` — honest stubs with
+  "Planned" / "Reference in preparation" chips so the sidebar entries
+  do not lead to 404s.
+- Page-context integration: `ProjectsListPage`, `ProjectDetailPage`,
+  `SoilTestWizardPage`, `SoilTestDetailPage`, `SoilTestReportPage`,
+  `ReportsPage`, `FlahaCalcExportPage`, `ProfilePage` all call
+  `usePageHeader(...)`. The shell's top bar shows the page title and
+  the optional project context; the breadcrumb strip shows the path
+  from Home / Dashboard down to the active record.
+- Copywriting cleanup: `In-memory mock` → `Demonstration mode`,
+  `Mock client — no backend call.` → `Demonstration mode — sample
+data only.`, `Coming soon` / `Soon` → `Planned`. Redundant in-page
+  H4 titles removed where the shell already shows the same title.
+- `docs/v2-app-shell.md` — shell architecture, theme tokens, route
+  hierarchy, page-header contract, responsive behaviour, deferred
+  items.
+
+Exit criteria: `npm run typecheck` + `npm run build` green for
+`@flaha/web`; `npm run typecheck` green for `@flaha/api`; no
+scientific package or legacy file touched; every route in the
+hierarchy renders inside the shell and updates the top bar +
+breadcrumbs via `usePageHeader`.
+
+Out of scope (deferred to later phases):
+
+- Real Settings (units, locale, notifications, theme) — UI shell
+  only, no persistence.
+- Real Standards reference content — descriptive index only.
+- Frontend Vitest setup (already deferred from Phase 8C).
+- Authentication beyond the dev-session header (Phase 9+).
+- Print / PDF stylesheet for the report page.
+
+---
+
 ## Phase 8 — Reports, audit trace, production hardening
 
 **Goal:** Round out the v2 surface with the report generation pipeline,

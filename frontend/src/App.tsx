@@ -9,11 +9,11 @@ import { BrowserRouter } from "react-router-dom";
 
 import { AppRoutes } from "./routes/AppRoutes";
 import { SessionProvider } from "./session";
-import { theme } from "./theme/theme";
+import { flahaSoilTheme } from "./theme/flahaSoilTheme";
 
 export default function App() {
 	return (
-		<ThemeProvider theme={theme}>
+		<ThemeProvider theme={flahaSoilTheme}>
 			<CssBaseline />
 			<SessionProvider>
 				<BrowserRouter>

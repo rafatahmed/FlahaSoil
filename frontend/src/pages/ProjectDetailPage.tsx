@@ -12,7 +12,6 @@ import {
 	Button,
 	Card,
 	CardContent,
-	Chip,
 	Divider,
 	Paper,
 	Stack,
@@ -25,6 +24,7 @@ import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import type { GetProjectResponse } from "@flaha/shared-types";
 
 import { ProjectSampleRow } from "../features/projects/components/ProjectSampleRow";
+import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
 import { useSession } from "../session";
 
@@ -34,6 +34,28 @@ export function ProjectDetailPage() {
 	const { status: sessionStatus } = useSession();
 	const [data, setData] = useState<GetProjectResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
+
+	usePageHeader({
+		title: data?.project.name ?? "Project",
+		subtitle: data
+			? `${data.project.status} · ${data.samples.length} sample${data.samples.length === 1 ? "" : "s"}`
+			: "Loading project…",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "Projects", to: "/projects" },
+			{ label: data?.project.name ?? "…" },
+		],
+		...(data
+			? {
+					projectContext: {
+						id: data.project.id,
+						name: data.project.name,
+						...(data.project.code ? { code: data.project.code } : {}),
+					},
+				}
+			: {}),
+	});
 
 	const load = useCallback(() => {
 		setError(null);
@@ -69,18 +91,14 @@ export function ProjectDetailPage() {
 	return (
 		<Box>
 			<Stack
-				direction="row"
+				direction={{ xs: "column", sm: "row" }}
 				justifyContent="space-between"
-				alignItems="flex-start"
+				alignItems={{ xs: "flex-start", sm: "flex-start" }}
+				spacing={2}
 				sx={{ mb: 3 }}
 			>
 				<Box>
-					<Stack direction="row" spacing={1} alignItems="center">
-						<Typography variant="h4">{project.name}</Typography>
-						<Chip label={project.status} size="small" />
-					</Stack>
-					<Typography color="text.secondary">
-						{project.code ? `${project.code} · ` : ""}
+					<Typography variant="body2" color="text.secondary">
 						{project.locationName ?? "No location set"}
 					</Typography>
 					{project.description && (
