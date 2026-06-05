@@ -345,3 +345,13 @@ export const loginSchema = z.object({
 });
 
 export type LoginParsed = z.infer<typeof loginSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 9A-H — POST /api/v2/auth/switch-organization
+// ---------------------------------------------------------------------------
+
+export const switchOrganizationSchema = z.object({
+	organizationId: z.string().trim().min(1, "organizationId is required").max(60),
+});
+
+export type SwitchOrganizationParsed = z.infer<typeof switchOrganizationSchema>;

@@ -94,6 +94,17 @@ function makeStub(): { prisma: PrismaClientLike; state: StubState } {
 				state.usersByEmail.set(row["email"] as string, id);
 				return row;
 			},
+			update: async (args: {
+				where: { id: string };
+				data: Record<string, unknown>;
+			}) => {
+				const existing = state.users.get(args.where.id);
+				if (!existing) throw new Error("user not found");
+				const now = new Date();
+				const row = { ...existing, ...args.data, updatedAt: now };
+				state.users.set(args.where.id, row);
+				return row;
+			},
 		},
 		organization: {
 			upsert: async (args: {
@@ -159,6 +170,15 @@ function makeStub(): { prisma: PrismaClientLike; state: StubState } {
 						...m,
 						organization: state.orgs.get(m["organizationId"] as string),
 					}));
+			},
+			findFirst: async (args: { where: Record<string, unknown> }) => {
+				const match = state.memberships.find(
+					(m) =>
+						m["userId"] === args.where["userId"] &&
+						m["organizationId"] === args.where["organizationId"] &&
+						m["status"] === (args.where["status"] ?? "ACTIVE")
+				);
+				return match ?? null;
 			},
 		},
 		refreshToken: {
@@ -375,3 +395,228 @@ describe("POST /api/v2/auth/login — wrong credentials", () => {
 		TEST_TIMEOUT * 3
 	);
 });
+
+// ---------------------------------------------------------------------------
+// Phase 9A-H — organization listing + switching
+// ---------------------------------------------------------------------------
+
+/**
+ * Helper: inject a second organization + ACTIVE membership for the
+ * given user directly into the in-memory stub state. Mirrors what the
+ * Phase 9A-K seed produces in PG so the switch + list endpoints have
+ * two memberships to operate on.
+ */
+function injectSecondaryOrg(
+	state: StubState,
+	userId: string,
+	{ name = "Flaha Demo Organization", role = "AGRONOMIST" }: {
+		name?: string;
+		role?: string;
+	} = {}
+): { orgId: string; membershipId: string } {
+	const now = new Date();
+	const orgId = nextId(state, "org");
+	state.orgs.set(orgId, {
+		id: orgId,
+		name,
+		slug: `${orgId}-slug`,
+		type: "COMPANY",
+		status: "ACTIVE",
+		createdAt: now,
+		updatedAt: now,
+	});
+	const membershipId = nextId(state, "mbr");
+	state.memberships.push({
+		id: membershipId,
+		organizationId: orgId,
+		userId,
+		role,
+		status: "ACTIVE",
+		invitedById: null,
+		invitedAt: null,
+		acceptedAt: now,
+		createdAt: now,
+		updatedAt: now,
+	});
+	return { orgId, membershipId };
+}
+
+describe("GET /api/v2/me/organizations", () => {
+	it(
+		"returns only the caller's ACTIVE memberships, scoped by user",
+		async () => {
+			// Register two distinct accounts; each gets a personal org
+			// + OWNER membership courtesy of `registerUser`.
+			const aliceReg = await request(app)
+				.post("/api/v2/auth/register")
+				.send({
+					email: "eve@example.com",
+					password: VALID_PASSWORD,
+					displayName: "Eve",
+				});
+			expect(aliceReg.status).toBe(201);
+			const aliceUserId = aliceReg.body.session.user.id as string;
+			const aliceAccess = aliceReg.body.session.accessToken as string;
+
+			const bobReg = await request(app)
+				.post("/api/v2/auth/register")
+				.send({
+					email: "frank@example.com",
+					password: VALID_PASSWORD,
+					displayName: "Frank",
+				});
+			expect(bobReg.status).toBe(201);
+			const bobAccess = bobReg.body.session.accessToken as string;
+
+			// Give Eve a second membership so the response actually
+			// exercises the multi-org branch.
+			injectSecondaryOrg(currentState, aliceUserId);
+
+			const eveRes = await request(app)
+				.get("/api/v2/me/organizations")
+				.set("Authorization", `Bearer ${aliceAccess}`);
+			expect(eveRes.status).toBe(200);
+			expect(Array.isArray(eveRes.body.memberships)).toBe(true);
+			expect(eveRes.body.memberships).toHaveLength(2);
+			expect(typeof eveRes.body.activeOrganizationId).toBe("string");
+			// Every returned membership must belong to Eve — no leakage.
+			for (const m of eveRes.body.memberships) {
+				expect(m.userId).toBe(aliceUserId);
+				expect(m.status).toBe("ACTIVE");
+				expect(m.organization).toBeDefined();
+			}
+
+			const frankRes = await request(app)
+				.get("/api/v2/me/organizations")
+				.set("Authorization", `Bearer ${bobAccess}`);
+			expect(frankRes.status).toBe(200);
+			expect(frankRes.body.memberships).toHaveLength(1);
+			expect(frankRes.body.memberships[0].userId).not.toBe(aliceUserId);
+		},
+		TEST_TIMEOUT * 3
+	);
+
+	it("rejects an unauthenticated request with 401", async () => {
+		const res = await request(app).get("/api/v2/me/organizations");
+		expect(res.status).toBe(401);
+		expect(res.body.error.code).toBe("UNAUTHORIZED");
+	});
+});
+
+describe("POST /api/v2/auth/switch-organization", () => {
+	it(
+		"rotates the access token and persists the new active org",
+		async () => {
+			const reg = await request(app).post("/api/v2/auth/register").send({
+				email: "gina@example.com",
+				password: VALID_PASSWORD,
+				displayName: "Gina",
+			});
+			expect(reg.status).toBe(201);
+			const userId = reg.body.session.user.id as string;
+			const access = reg.body.session.accessToken as string;
+			const personalOrgId = reg.body.session.activeOrganization.id as string;
+
+			const { orgId: secondaryOrgId } = injectSecondaryOrg(
+				currentState,
+				userId
+			);
+
+			const res = await request(app)
+				.post("/api/v2/auth/switch-organization")
+				.set("Authorization", `Bearer ${access}`)
+				.send({ organizationId: secondaryOrgId });
+
+			expect(res.status).toBe(200);
+			expect(res.body.session.activeOrganization.id).toBe(secondaryOrgId);
+			expect(res.body.session.user.id).toBe(userId);
+			// The access token must rotate (new `oid` claim).
+			expect(typeof res.body.session.accessToken).toBe("string");
+			expect(res.body.session.memberships).toHaveLength(2);
+
+			// Sanity: the user row in the stub now points at the new org.
+			const userRow = currentState.users.get(userId);
+			expect(userRow?.["activeOrganizationId"]).toBe(secondaryOrgId);
+			// And the personal org is still one of the returned memberships.
+			const orgIds = (
+				res.body.session.memberships as Array<{ organizationId: string }>
+			).map((m) => m.organizationId);
+			expect(orgIds).toContain(personalOrgId);
+			expect(orgIds).toContain(secondaryOrgId);
+
+			// Audit event was written.
+			const switched = currentState.auditLogs.filter(
+				(a) => a["action"] === "ORG_SWITCHED"
+			);
+			expect(switched).toHaveLength(1);
+			expect(switched[0]?.["organizationId"]).toBe(secondaryOrgId);
+		},
+		TEST_TIMEOUT * 3
+	);
+
+	it(
+		"returns 404 when the caller is not a member of the target org",
+		async () => {
+			const reg = await request(app).post("/api/v2/auth/register").send({
+				email: "henry@example.com",
+				password: VALID_PASSWORD,
+				displayName: "Henry",
+			});
+			expect(reg.status).toBe(201);
+			const access = reg.body.session.accessToken as string;
+
+			// Create an org that Henry has NO membership in.
+			const now = new Date();
+			const foreignOrgId = nextId(currentState, "org");
+			currentState.orgs.set(foreignOrgId, {
+				id: foreignOrgId,
+				name: "Foreign Org",
+				slug: "foreign-org",
+				type: "COMPANY",
+				status: "ACTIVE",
+				createdAt: now,
+				updatedAt: now,
+			});
+
+			const res = await request(app)
+				.post("/api/v2/auth/switch-organization")
+				.set("Authorization", `Bearer ${access}`)
+				.send({ organizationId: foreignOrgId });
+
+			expect(res.status).toBe(404);
+			expect(res.body.error.code).toBe("NOT_FOUND");
+
+			// No audit event was written for the rejected switch.
+			const switched = currentState.auditLogs.filter(
+				(a) => a["action"] === "ORG_SWITCHED"
+			);
+			expect(switched).toHaveLength(0);
+		},
+		TEST_TIMEOUT * 3
+	);
+
+	it("rejects an unauthenticated switch with 401", async () => {
+		const res = await request(app)
+			.post("/api/v2/auth/switch-organization")
+			.send({ organizationId: "org_anything" });
+		expect(res.status).toBe(401);
+		expect(res.body.error.code).toBe("UNAUTHORIZED");
+	});
+
+	it("rejects a malformed body with 400", async () => {
+		const reg = await request(app).post("/api/v2/auth/register").send({
+			email: "iris@example.com",
+			password: VALID_PASSWORD,
+			displayName: "Iris",
+		});
+		const access = reg.body.session.accessToken as string;
+
+		const res = await request(app)
+			.post("/api/v2/auth/switch-organization")
+			.set("Authorization", `Bearer ${access}`)
+			.send({});
+		expect(res.status).toBe(400);
+		expect(res.body.error.code).toBe("VALIDATION_ERROR");
+	});
+});
+

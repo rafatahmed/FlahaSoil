@@ -13,8 +13,12 @@
 
 import type { Request, Response } from "express";
 
-import type { GetCurrentUserResponse } from "@flaha/shared-types";
+import type {
+	GetCurrentUserResponse,
+	UserMembershipsResponse,
+} from "@flaha/shared-types";
 
+import { listUserMemberships } from "../services/auth.service";
 import { ApiError } from "../utils/apiError";
 
 export async function getMe(req: Request, res: Response): Promise<void> {
@@ -31,6 +35,32 @@ export async function getMe(req: Request, res: Response): Promise<void> {
 			mode: session.mode === "jwt" ? "authenticated" : "dev",
 			user: session.user,
 		},
+	};
+	res.status(200).json(payload);
+}
+
+/**
+ * Phase 9A-H — GET /api/v2/me/organizations.
+ *
+ * Returns every ACTIVE membership the caller has, with hydrated
+ * organizations, plus the user's current `activeOrganizationId` so the
+ * frontend tenant switcher can highlight the right entry without a
+ * second `GET /auth/me` round-trip.
+ */
+export async function getMyOrganizations(
+	req: Request,
+	res: Response
+): Promise<void> {
+	const session = req.authSession;
+	if (!session) {
+		throw ApiError.internal(
+			"req.authSession is missing — resolveAuthSession must be mounted before this handler."
+		);
+	}
+	const result = await listUserMemberships(session.userId);
+	const payload: UserMembershipsResponse = {
+		activeOrganizationId: result.activeOrganizationId,
+		memberships: result.memberships,
 	};
 	res.status(200).json(payload);
 }

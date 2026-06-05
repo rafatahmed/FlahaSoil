@@ -38,6 +38,17 @@ export interface AuthActions {
 	logout: () => Promise<void>;
 	/** Manually re-hydrate from the refresh cookie. Returns true on success. */
 	refresh: () => Promise<boolean>;
+	/**
+	 * Phase 9A-H — rotate the active organization for the current
+	 * session. Calls `POST /auth/switch-organization`, which mints a new
+	 * access token carrying the chosen `oid` claim and returns a fresh
+	 * `AuthSessionDTO`. The provider feeds that payload through the same
+	 * `applySession` reducer used by login/refresh, so the SPA's tenant-
+	 * aware UI re-renders in one tick. Throws on failure so the caller
+	 * (the TenantSwitcher) can surface an error toast without leaving
+	 * the picker in a stale loading state.
+	 */
+	switchOrganization: (organizationId: string) => Promise<void>;
 }
 
 export interface AuthContextValue {

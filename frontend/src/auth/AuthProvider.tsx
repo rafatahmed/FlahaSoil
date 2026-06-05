@@ -135,6 +135,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 		[applySession]
 	);
 
+	const switchOrganization = useCallback(
+		async (organizationId: string) => {
+			const client = getApiClient();
+			const res = await client.switchOrganization({ organizationId });
+			applySession(res.session);
+		},
+		[applySession]
+	);
+
 	const logout = useCallback(async () => {
 		const client = getApiClient();
 		try {
@@ -178,9 +187,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 			activeOrganization: state.activeOrganization,
 			memberships: state.memberships,
 			error: state.error,
-			actions: { register, login, logout, refresh },
+			actions: { register, login, logout, refresh, switchOrganization },
 		}),
-		[state, register, login, logout, refresh]
+		[state, register, login, logout, refresh, switchOrganization]
 	);
 
 	return (

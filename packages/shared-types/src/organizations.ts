@@ -132,3 +132,27 @@ export interface AuthMeResponse {
 	activeOrganization: OrganizationDTO | null;
 	memberships: OrganizationMembershipDTO[];
 }
+
+// ---------------------------------------------------------------------------
+// Phase 9A-H — Organization management & switching
+//
+// `GET /api/v2/me/organizations` lists the caller's ACTIVE memberships
+// with hydrated organizations and surfaces the active org id so the
+// frontend tenant switcher can highlight it without a second call.
+//
+// `POST /api/v2/auth/switch-organization` rotates the access token by
+// re-issuing a JWT with the new `oid` claim. The response shape mirrors
+// the login/refresh flow so the frontend can reuse its existing
+// `applySession` reducer.
+// ---------------------------------------------------------------------------
+
+export interface UserMembershipsResponse {
+	activeOrganizationId: string | null;
+	memberships: OrganizationMembershipDTO[];
+}
+
+export interface SwitchOrganizationRequest {
+	organizationId: string;
+}
+
+export type SwitchOrganizationResponse = AuthRefreshResponse;

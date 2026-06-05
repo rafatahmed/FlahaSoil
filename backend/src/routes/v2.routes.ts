@@ -28,7 +28,7 @@ import {
 	ROLES_REPORT_WRITE,
 } from "../auth/guards";
 import { resolveAuthSession } from "../auth/session.middleware";
-import { getMe } from "../controllers/me.controller";
+import { getMe, getMyOrganizations } from "../controllers/me.controller";
 import { createAuthRouter } from "./auth.routes";
 import {
 	getProject,
@@ -70,6 +70,11 @@ export function createV2Router(): Router {
 
 	// Session echo — any authenticated user.
 	router.get("/me", asyncHandler(getMe));
+
+	// Phase 9A-H — lists the caller's ACTIVE memberships for the tenant
+	// switcher. Org-independent: a user with no active org still needs
+	// this endpoint to discover whether they have any memberships.
+	router.get("/me/organizations", asyncHandler(getMyOrganizations));
 
 	// Projects (Phase 8A) — agronomic container for samples.
 	router.post(

@@ -14,6 +14,7 @@
  */
 
 import { ensureDevUser } from "../src/auth/currentUser";
+import { seedFlahaDemoOrganization } from "./seedDemoOrganization";
 
 async function main(): Promise<void> {
 	if (process.env.NODE_ENV === "production") {
@@ -27,6 +28,19 @@ async function main(): Promise<void> {
 	console.log(
 		`[seed] dev user ensured (id=${user.id}, role=${user.role}, email=${user.email})`
 	);
+
+	// Phase 9A-K — Flaha Demo Organization with one user per role so
+	// the multi-tenant UX (login, tenant switcher, role matrix) can be
+	// driven without hand-rolling accounts through /auth/register.
+	const demo = await seedFlahaDemoOrganization();
+	// eslint-disable-next-line no-console
+	console.log(
+		`[seed] Flaha Demo Organization ensured (id=${demo.organizationId})`
+	);
+	for (const u of demo.users) {
+		// eslint-disable-next-line no-console
+		console.log(`[seed]   - ${u.email}  role=${u.role}  id=${u.userId}`);
+	}
 }
 
 main()

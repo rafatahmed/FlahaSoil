@@ -74,6 +74,8 @@ const client = {
 	login: vi.fn(),
 	refresh: vi.fn(),
 	logout: vi.fn(),
+	switchOrganization: vi.fn(),
+	listMyOrganizations: vi.fn(),
 };
 
 vi.mock("../../services/apiClientProvider", () => ({
@@ -109,6 +111,8 @@ beforeEach(() => {
 	client.login.mockReset();
 	client.refresh.mockReset();
 	client.logout.mockReset();
+	client.switchOrganization.mockReset();
+	client.listMyOrganizations.mockReset();
 });
 
 afterEach(() => {

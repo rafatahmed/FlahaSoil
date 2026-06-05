@@ -895,14 +895,153 @@ passwordPolicy,index}.ts(x)`, pages
 
 ### Deferred to later Phase 9 sub-phases
 
-- 9A-H: organization management UX (org settings page, members
-  list — read-only placeholders, no invitations yet).
-- 9A-I … 9A-M: security hardening (rate limits on `/auth/*`,
-  audit-log writers for sensitive actions), expanded auth +
-  tenant-isolation test suite, dev seed with a demo org + role
-  mix, migration & deploy runbook, and acceptance walk-through
-  of the 15 brief criteria.
+- 9A-H: organization management UX — **delivered in this pass
+  (org switcher + listing endpoint).** Org settings page and
+  read-only members list remain queued behind 9B.
+- 9A-K: dev seed with a demo org + role mix — **delivered in
+  this pass.** Production migration runbook still queued under
+  9A-M.
+- 9A-I … 9A-J, 9A-L … 9A-M: security hardening (rate limits on
+  `/auth/*`, audit-log writers for sensitive actions), expanded
+  auth + tenant-isolation test suite, migration & deploy
+  runbook, and acceptance walk-through of the 15 brief criteria.
 - Phase 9B: invitations + email + role management UX.
+
+---
+
+## Phase 9A-H + 9A-K — Organization switcher & demo seed ✅ COMPLETE
+
+**Goal:** Let users with multiple memberships rotate their active
+organization from the SPA, backed by a realistic, idempotent seed
+that provisions a multi-role demo organization out of the box.
+
+### Backend (additive)
+
+- `POST /api/v2/auth/switch-organization` (JWT-protected). Body
+  `{ organizationId }`. Verifies the caller has an ACTIVE
+  membership in the target org, persists the new
+  `User.activeOrganizationId`, mints a fresh access token
+  carrying the new `oid` claim, writes an `ORG_SWITCHED` audit
+  event, and returns a full `AuthSessionDTO`. Refresh-token
+  family is intentionally preserved — switches cost zero
+  refresh-cookie round-trips. Returns **404** (not 403) when the
+  membership is missing or non-ACTIVE so org existence is not
+  leaked.
+- `GET /api/v2/me/organizations` (JWT-protected). Returns
+  `{ activeOrganizationId, memberships[] }` — every ACTIVE
+  membership the caller holds, hydrated with the organization.
+  Pure projection; powers the tenant-switcher freshness poll
+  for long-running tabs.
+- Wiring: `backend/src/services/auth.service.ts`
+  (`switchUserOrganization`, `listUserMemberships`),
+  `backend/src/controllers/auth.controller.ts`
+  (`postSwitchOrganization`),
+  `backend/src/controllers/me.controller.ts`
+  (`getMyOrganizations`), `backend/src/routes/auth.routes.ts`,
+  `backend/src/routes/v2.routes.ts`,
+  `backend/src/validation/schemas.ts`
+  (`switchOrganizationSchema`).
+
+### Seed (Phase 9A-K)
+
+- `backend/prisma/seedDemoOrganization.ts` provisions the
+  **Flaha Demo Organization** (slug `flaha-demo-org`) and four
+  role-distinct demo accounts in a single transaction. All
+  writes are idempotent (`upsert`), so re-running the seed is a
+  no-op.
+- `backend/prisma/seed.ts` calls the demo seeder after the
+  baseline dev seed so `npm run db:seed --workspace backend`
+  yields a multi-membership user that exercises the switcher
+  end-to-end. The previously seeded `user_dev_admin` joins the
+  demo org as OWNER so a single login surfaces both
+  memberships.
+
+#### Demo accounts
+
+| Email                       | Role             | Purpose                       |
+| --------------------------- | ---------------- | ----------------------------- |
+| `owner@flahademo.test`      | `OWNER`          | Full org administration.      |
+| `agronomist@flahademo.test` | `AGRONOMIST`     | Projects + samples + reports. |
+| `lab@flahademo.test`        | `LAB_TECHNICIAN` | Samples + tests only.         |
+| `viewer@flahademo.test`     | `VIEWER`         | Read-only across the org.     |
+
+All four demo accounts share the password
+`FlahaDemo!2026` (constant `FLAHA_DEMO_PASSWORD` in
+`backend/prisma/seedDemoOrganization.ts`). Public on purpose —
+the seed is dev-only and the script aborts under
+`NODE_ENV=production`. Rotate before any shared environment
+goes external.
+
+The seed also cross-maps `user_dev_admin` (the dev fallback
+user) into the demo org as `OWNER`, so a freshly seeded DB
+gives that account two ACTIVE memberships — exactly what the
+tenant switcher needs to render. The dev admin still owns
+`org_flaha_demo` (the original Phase 8B demo org) as well.
+
+### Frontend
+
+- `frontend/src/auth/AuthContext.ts` — adds
+  `actions.switchOrganization(organizationId)`.
+- `frontend/src/auth/AuthProvider.tsx` — calls
+  `apiClient.switchOrganization`, feeds the returned session
+  through the existing `applySession` reducer so every tenant-
+  aware page re-renders in one tick.
+- `frontend/src/services/apiV2Client.ts` — interface now
+  exposes `switchOrganization` + `listMyOrganizations`.
+- `frontend/src/services/realApiV2Client.ts` — wires both
+  endpoints; switch uses the normal `postJson` path so
+  transparent 401 refresh still works.
+- `frontend/src/services/mockApiV2Client.ts` — adds a second
+  in-memory org so the picker is exercisable offline; tracks
+  the active org id at module scope so subsequent
+  `refresh` / `authMe` calls reflect the chosen tenant.
+- `frontend/src/layouts/components/TenantSwitcher.tsx` — new
+  MUI menu mounted in `TopAppBar`. Hidden when the user has
+  fewer than two memberships, so single-tenant chrome stays
+  clean.
+
+### Tests
+
+- Backend (`backend/src/__tests__/auth.routes.test.ts`):
+  - `GET /me/organizations` returns scoped memberships and 401
+    when unauthenticated.
+  - `POST /auth/switch-organization` rotates the access token,
+    persists the new active org, writes an `ORG_SWITCHED` audit
+    row, and returns 404 for non-member orgs, 401 for
+    unauthenticated calls, 400 for malformed bodies.
+- Frontend
+  (`frontend/src/layouts/components/__tests__/TenantSwitcher.test.tsx`):
+  - Renders nothing for unauthenticated sessions or when the
+    user has fewer than two memberships.
+  - Renders the active org label and every membership in the
+    menu with humanised role labels.
+  - Calls `actions.switchOrganization` for distinct orgs and
+    short-circuits when the active org is reselected.
+
+### Exit criteria
+
+- Switching an org rotates the access token without touching
+  the refresh-token family.
+- Cross-tenant switches are rejected with 404; no audit row
+  written.
+- Seeded demo accounts cover OWNER / AGRONOMIST /
+  LAB_TECHNICIAN / VIEWER and the dev admin holds two
+  memberships so the switcher renders on a fresh `db:seed`.
+- Documentation: this section + the **Phase 9A-H — Tenant
+  switching** block in `docs/v2-user-ownership.md`.
+
+### Deferred to later Phase 9 sub-phases (post 9A-H/K)
+
+- Org settings page + read-only members list (Phase 9B
+  groundwork).
+- Invitations, member management write actions, email
+  (Phase 9B).
+- Auth-endpoint rate limiting, account lockout, captcha
+  (Phase 9A-I).
+- Production migration runbook + secret rotation playbook
+  (Phase 9A-M).
+- `docs/v2-auth.md` and `docs/v2-multi-tenant-architecture.md`
+  detail papers (Phase 9A-L).
 
 ---
 

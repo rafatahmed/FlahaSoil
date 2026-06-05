@@ -21,6 +21,7 @@ import type {
 	AuthMeResponse,
 	AuthRefreshResponse,
 	AuthRegisterResponse,
+	SwitchOrganizationResponse,
 } from "@flaha/shared-types";
 
 import { env } from "../config/env";
@@ -30,10 +31,15 @@ import {
 	logoutUser,
 	refreshAuthTokens,
 	registerUser,
+	switchUserOrganization,
 	type RequestContext,
 } from "../services/auth.service";
 import { ApiError } from "../utils/apiError";
-import { loginSchema, registerSchema } from "../validation/schemas";
+import {
+	loginSchema,
+	registerSchema,
+	switchOrganizationSchema,
+} from "../validation/schemas";
 
 // ---------------------------------------------------------------------------
 // Cookie helpers
@@ -163,5 +169,33 @@ export async function getAuthMe(req: Request, res: Response): Promise<void> {
 		activeOrganization: session.activeOrganization,
 		memberships: session.memberships,
 	};
+	res.status(200).json(payload);
+}
+
+/**
+ * Phase 9A-H — POST /api/v2/auth/switch-organization.
+ *
+ * Rotates the access token to carry the new `oid` claim. The refresh-
+ * token family is intentionally preserved (no cookie reset) so a
+ * switch is a single round-trip with no impact on the user's reauth
+ * timeline. Returns a full AuthSessionDTO so the SPA can drop the
+ * payload straight into `applySession` — same shape as login/refresh.
+ */
+export async function postSwitchOrganization(
+	req: Request,
+	res: Response
+): Promise<void> {
+	const claims = req.accessTokenClaims;
+	if (!claims) {
+		throw ApiError.unauthorized("Missing access token.");
+	}
+	const parsed = switchOrganizationSchema.parse(req.body);
+	const ctx = readContext(req);
+	const session = await switchUserOrganization(
+		claims.sub,
+		parsed.organizationId,
+		ctx
+	);
+	const payload: SwitchOrganizationResponse = { session };
 	res.status(200).json(payload);
 }

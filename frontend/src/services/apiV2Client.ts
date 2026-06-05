@@ -44,6 +44,9 @@ import type {
 	PatchReportResponse,
 	RegenerateReportResponse,
 	RegisterRequest,
+	SwitchOrganizationRequest,
+	SwitchOrganizationResponse,
+	UserMembershipsResponse,
 } from "@flaha/shared-types";
 
 export interface ApiV2Client {
@@ -72,6 +75,22 @@ export interface ApiV2Client {
 	logout(): Promise<AuthLogoutResponse>;
 
 	authMe(): Promise<AuthMeResponse>;
+
+	// ---------------------------------------------------------------
+	// Phase 9A-H — Organization listing + switching
+	// ---------------------------------------------------------------
+	// `listMyOrganizations` is a JWT-protected read against
+	// `GET /me/organizations`; it powers the tenant switcher's freshness
+	// poll (auth session already carries memberships on hydrate, but a
+	// long-running tab may need to discover newly-accepted invites).
+	// `switchOrganization` rotates the access token via
+	// `POST /auth/switch-organization` and returns a full AuthSessionDTO
+	// so the SPA can drop it straight into `applySession`.
+	listMyOrganizations(): Promise<UserMembershipsResponse>;
+
+	switchOrganization(
+		body: SwitchOrganizationRequest
+	): Promise<SwitchOrganizationResponse>;
 
 	// Projects (Phase 8A) — agronomic container for samples.
 	// Phase 8B: `userId` was removed from these signatures; the owning

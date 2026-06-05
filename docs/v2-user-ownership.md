@@ -268,22 +268,53 @@ are gated by `ProtectedRoute` / `PublicOnlyRoute`. The Phase 8B
 request header are gone from the web client. See the Phase 9A-G
 section of `docs/v2-migration-plan.md` for the file inventory.
 
-### Org-switcher UX (still pending)
+### Phase 9A-H — Tenant switching ✅
 
-`/api/v2/auth/me` already returns `session.organization` and
-`session.role`, but the UI does not yet let a user with multiple
-memberships switch between them — `useAuth` exposes the active
-session as a single shape. The switcher is Phase 9A-H.
+The SPA now ships a top-bar tenant switcher
+(`frontend/src/layouts/components/TenantSwitcher.tsx`) for
+users with two or more ACTIVE memberships. Picking a different
+org dispatches `actions.switchOrganization(organizationId)` on
+the auth context, which calls
+`POST /api/v2/auth/switch-organization`. The endpoint:
+
+1. Verifies the caller has an ACTIVE membership in the target
+   org (404 otherwise — existence is not leaked).
+2. Persists the new `User.activeOrganizationId`.
+3. Mints a fresh access token carrying the new `oid` claim.
+4. Writes an `ORG_SWITCHED` audit row.
+5. Returns a full `AuthSessionDTO` so the SPA can drop it
+   straight into the same `applySession` reducer used by
+   login / refresh — every tenant-aware page re-renders in one
+   tick. The refresh-token family is intentionally preserved
+   so a switch costs zero refresh-cookie round-trips.
+
+A companion read-only endpoint
+`GET /api/v2/me/organizations` lets long-running tabs poll
+their full membership list — `useAuth` already carries the
+memberships hydrated on bootstrap, so the switcher consumes
+them directly without a per-render fetch.
+
+### Phase 9A-K — Demo seed (Flaha Demo Organization)
+
+`backend/prisma/seedDemoOrganization.ts` provisions a second
+organization (`Flaha Demo Organization`, slug `flaha-demo-org`)
+and four role-distinct demo users in one transaction; all
+writes are idempotent. The dev admin is cross-mapped into the
+demo org as OWNER so a fresh `npm run db:seed --workspace
+backend` yields the multi-membership shape the switcher needs.
+See the **Phase 9A-H + 9A-K** section of
+`docs/v2-migration-plan.md` for the demo account table.
 
 ### What is still NOT done (deferred from Phase 9A)
 
 - Organization settings page + read-only members list
-  (Phase 9A-H).
+  (Phase 9B groundwork).
 - Invitations, member management write actions, email
-  (Phase 9A-H → Phase 9B).
+  (Phase 9B).
 - Auth-endpoint rate limiting, account lockout, captcha
   (Phase 9A-I).
-- Production seed strategy + migration runbook (Phase 9A-K).
+- Production migration runbook + secret rotation playbook
+  (Phase 9A-M).
 - `docs/v2-auth.md` and `docs/v2-multi-tenant-architecture.md`
   detail papers (Phase 9A-L).
 
@@ -300,16 +331,19 @@ session as a single shape. The switcher is Phase 9A-H.
 - Frontend:
   `frontend/src/auth/{accessTokenStore,refreshCoordinator,AuthContext,AuthProvider,useAuth,ProtectedRoute,PublicOnlyRoute,passwordPolicy,index}.ts(x)`,
   pages `Login|Register|Logout|Account`, refactored
-  `frontend/src/services/realApiV2Client.ts`,
-  `frontend/src/layouts/components/TopAppBar.tsx`,
+  `frontend/src/services/{apiV2Client,realApiV2Client,mockApiV2Client}.ts`,
+  `frontend/src/layouts/components/{TopAppBar,TenantSwitcher}.tsx`,
   `frontend/src/layouts/components/SidebarNav.tsx`. The
   `frontend/src/session/` module was deleted in 9A-G.
+- Seed (Phase 9A-K):
+  `backend/prisma/seed.ts`, `backend/prisma/seedDemoOrganization.ts`.
 - Tests:
   `backend/src/auth/__tests__/{password,jwt,refreshTokens,ownership}.test.ts`,
   `backend/src/services/__tests__/auth.service.test.ts`,
   `backend/src/__tests__/{auth.routes,tenantIsolation,roleMatrix}.test.ts`,
   `backend/src/__tests__/_helpers/multiTenantStub.ts`,
-  `frontend/src/auth/__tests__/{passwordPolicy,accessTokenStore,refreshCoordinator,AuthProvider}.test.ts(x)`.
+  `frontend/src/auth/__tests__/{passwordPolicy,accessTokenStore,refreshCoordinator,AuthProvider}.test.ts(x)`,
+  `frontend/src/layouts/components/__tests__/TenantSwitcher.test.tsx`.
 - Shared types:
   `packages/shared-types/src/{users,auth,organizations}.ts`.
 - Schema: `prisma/v2-schema.prisma` (`User`, `Organization`,

@@ -25,6 +25,7 @@ import {
 	postLogout,
 	postRefresh,
 	postRegister,
+	postSwitchOrganization,
 } from "../controllers/auth.controller";
 import { requireAccessToken } from "../auth/requireAccessToken.middleware";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -47,6 +48,15 @@ export function createAuthRouter(): Router {
 		"/me",
 		asyncHandler(requireAccessToken),
 		asyncHandler(getAuthMe)
+	);
+
+	// Phase 9A-H — switch the caller's active organization. JWT-only
+	// (no role gate): membership eligibility is validated inside the
+	// service. Lives under /auth because it rotates the access token.
+	router.post(
+		"/switch-organization",
+		asyncHandler(requireAccessToken),
+		asyncHandler(postSwitchOrganization)
 	);
 
 	return router;

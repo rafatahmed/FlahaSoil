@@ -51,6 +51,9 @@ import {
 	type PatchReportResponse,
 	type RegenerateReportResponse,
 	type RegisterRequest,
+	type SwitchOrganizationRequest,
+	type SwitchOrganizationResponse,
+	type UserMembershipsResponse,
 	isApiErrorResponse,
 } from "@flaha/shared-types";
 import type { ApiErrorCode } from "@flaha/shared-types";
@@ -236,6 +239,22 @@ export const realApiV2Client: ApiV2Client = {
 
 	authMe() {
 		return getJson<AuthMeResponse>("/auth/me");
+	},
+
+	// Phase 9A-H — tenant listing + switching.
+	listMyOrganizations() {
+		return getJson<UserMembershipsResponse>("/me/organizations");
+	},
+
+	switchOrganization(body: SwitchOrganizationRequest) {
+		// Routed under `/auth/*` because it rotates the access token.
+		// `postJson` (not `postAuthJson`) keeps the standard retry-on-401
+		// path active so a transparently-refreshed access token can be
+		// used to perform the switch.
+		return postJson<SwitchOrganizationResponse>(
+			"/auth/switch-organization",
+			body
+		);
 	},
 
 	createProject(body: CreateProjectRequest) {

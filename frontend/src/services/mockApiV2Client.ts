@@ -50,6 +50,9 @@ import {
 	type RegisterRequest,
 	type ReportVersionDTO,
 	type SoilReportDTO,
+	type SwitchOrganizationRequest,
+	type SwitchOrganizationResponse,
+	type UserMembershipsResponse,
 	MembershipStatus,
 	OrganizationRole,
 	OrganizationStatus,
@@ -82,10 +85,84 @@ const MOCK_USER_ID = "user_dev_admin";
 // real client would never accept.
 const MOCK_ORG_ID = "org_dev_admin";
 const MOCK_MEMBERSHIP_ID = "mem_dev_admin";
+// Phase 9A-H — a second mock organization so the TenantSwitcher renders
+// a non-trivial picker in mock mode. Mirrors the role-matrix demo set
+// the backend seed provisions ("Flaha Demo Organization").
+const MOCK_DEMO_ORG_ID = "org_flaha_demo_full";
+const MOCK_DEMO_MEMBERSHIP_ID = "mem_dev_admin_demo";
 const MOCK_ACCESS_TOKEN = "mock.access.token";
 // Far future so the in-memory store never flags it as expired during
 // a mock-only session.
 const MOCK_ACCESS_TOKEN_EXPIRES_AT = "2099-12-31T23:59:59.000Z";
+
+// Tracks which org the mock session currently considers active. Lives at
+// module scope so a `switchOrganization` call followed by a `refresh`
+// returns a consistent session, mirroring the backend's persistence on
+// the User row.
+let mockActiveOrganizationId: string = MOCK_ORG_ID;
+
+function buildMockOrganizations(): {
+	personal: ReturnType<typeof buildPersonalOrg>;
+	demo: ReturnType<typeof buildDemoOrg>;
+} {
+	return { personal: buildPersonalOrg(), demo: buildDemoOrg() };
+}
+
+function buildPersonalOrg() {
+	return {
+		id: MOCK_ORG_ID,
+		name: "Development User's workspace",
+		slug: "dev-admin",
+		type: OrganizationType.CONSULTANCY,
+		status: OrganizationStatus.ACTIVE,
+		createdAt: NOW,
+		updatedAt: NOW,
+	};
+}
+
+function buildDemoOrg() {
+	return {
+		id: MOCK_DEMO_ORG_ID,
+		name: "Flaha Demo Organization",
+		slug: "flaha-demo-org",
+		type: OrganizationType.COMPANY,
+		status: OrganizationStatus.ACTIVE,
+		createdAt: NOW,
+		updatedAt: NOW,
+	};
+}
+
+function buildMockMemberships(): OrganizationMembershipDTO[] {
+	const { personal, demo } = buildMockOrganizations();
+	return [
+		{
+			id: MOCK_MEMBERSHIP_ID,
+			organizationId: personal.id,
+			userId: MOCK_USER_ID,
+			role: OrganizationRole.OWNER,
+			status: MembershipStatus.ACTIVE,
+			invitedById: null,
+			invitedAt: null,
+			acceptedAt: NOW,
+			createdAt: NOW,
+			updatedAt: NOW,
+			organization: personal,
+		},
+		{
+			id: MOCK_DEMO_MEMBERSHIP_ID,
+			organizationId: demo.id,
+			userId: MOCK_USER_ID,
+			role: OrganizationRole.AGRONOMIST,
+			status: MembershipStatus.ACTIVE,
+			invitedById: null,
+			invitedAt: null,
+			acceptedAt: NOW,
+			createdAt: NOW,
+			updatedAt: NOW,
+			organization: demo,
+		},
+	];
+}
 
 function buildMockAuthSession(): AuthSessionDTO {
 	const user = {
@@ -97,34 +174,17 @@ function buildMockAuthSession(): AuthSessionDTO {
 		updatedAt: NOW,
 		archivedAt: null,
 	};
-	const organization = {
-		id: MOCK_ORG_ID,
-		name: "Development User's workspace",
-		slug: "dev-admin",
-		type: OrganizationType.CONSULTANCY,
-		status: OrganizationStatus.ACTIVE,
-		createdAt: NOW,
-		updatedAt: NOW,
-	};
-	const membership: OrganizationMembershipDTO = {
-		id: MOCK_MEMBERSHIP_ID,
-		organizationId: MOCK_ORG_ID,
-		userId: MOCK_USER_ID,
-		role: OrganizationRole.OWNER,
-		status: MembershipStatus.ACTIVE,
-		invitedById: null,
-		invitedAt: null,
-		acceptedAt: NOW,
-		createdAt: NOW,
-		updatedAt: NOW,
-		organization,
-	};
+	const memberships = buildMockMemberships();
+	const active =
+		memberships.find(
+			(m) => m.organizationId === mockActiveOrganizationId
+		)?.organization ?? memberships[0]?.organization ?? null;
 	return {
 		accessToken: MOCK_ACCESS_TOKEN,
 		accessTokenExpiresAt: MOCK_ACCESS_TOKEN_EXPIRES_AT,
 		user,
-		activeOrganization: organization,
-		memberships: [membership],
+		activeOrganization: active ?? null,
+		memberships,
 	};
 }
 
@@ -209,6 +269,31 @@ export const mockApiV2Client: ApiV2Client = {
 			activeOrganization: session.activeOrganization,
 			memberships: session.memberships,
 		};
+	},
+
+	// Phase 9A-H — mock tenant listing + switching. The switch updates
+	// the module-scoped `mockActiveOrganizationId` so subsequent
+	// `refresh` / `authMe` calls reflect the new tenant. Membership
+	// existence is verified locally so the mock behaves like the real
+	// backend (404 when the org is unknown).
+	async listMyOrganizations(): Promise<UserMembershipsResponse> {
+		return {
+			activeOrganizationId: mockActiveOrganizationId,
+			memberships: buildMockMemberships(),
+		};
+	},
+
+	async switchOrganization(
+		body: SwitchOrganizationRequest
+	): Promise<SwitchOrganizationResponse> {
+		const exists = buildMockMemberships().some(
+			(m) => m.organizationId === body.organizationId
+		);
+		if (!exists) {
+			throw new Error(`Mock: unknown organization ${body.organizationId}`);
+		}
+		mockActiveOrganizationId = body.organizationId;
+		return { session: buildMockAuthSession() };
 	},
 
 	async createProject(

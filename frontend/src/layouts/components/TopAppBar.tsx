@@ -31,6 +31,7 @@ import { useNavigate } from "react-router-dom";
 
 import { AuthUserChip } from "./AuthUserChip";
 import { FlahaLogo } from "./FlahaLogo";
+import { TenantSwitcher } from "./TenantSwitcher";
 import { usePageHeaderState } from "../PageHeaderContext";
 
 interface TopAppBarProps {
@@ -101,6 +102,10 @@ export function TopAppBar({ drawerWidth, onMenuClick }: TopAppBarProps) {
 						</Typography>
 					)}
 				</Box>
+
+				{/* Phase 9A-H — multi-tenant picker. Hidden when the user
+				    has <2 memberships so single-tenant chrome stays clean. */}
+				<TenantSwitcher />
 
 				{!isPhone && (
 					<TextField

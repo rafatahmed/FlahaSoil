@@ -508,6 +508,90 @@ export async function getAuthMeSession(
 	return loadAuthSession(prisma, userId, accessToken);
 }
 
+// ---------------------------------------------------------------------------
+// Public API — Phase 9A-H: organization listing + switching
+// ---------------------------------------------------------------------------
+
+export interface UserMembershipsResult {
+	activeOrganizationId: string | null;
+	memberships: OrganizationMembershipDTO[];
+}
+
+/**
+ * Lists every ACTIVE membership for `userId` with hydrated
+ * organizations, plus the user's current `activeOrganizationId`. Pure
+ * read — used by `GET /api/v2/me/organizations` to populate the tenant
+ * switcher.
+ */
+export async function listUserMemberships(
+	userId: string
+): Promise<UserMembershipsResult> {
+	const prisma = getPrismaClient();
+	const userRow = (await prisma.user.findUnique({
+		where: { id: userId },
+	})) as Record<string, unknown> | null;
+	if (!userRow) {
+		throw ApiError.unauthorized("User not found.");
+	}
+	const membershipRows = (await prisma.organizationMembership.findMany({
+		where: { userId, status: "ACTIVE" },
+		include: { organization: true },
+		orderBy: { createdAt: "asc" },
+	})) as Record<string, unknown>[];
+	const memberships = membershipRows.map(toOrganizationMembershipDTO);
+	const activeOrganizationId =
+		(userRow["activeOrganizationId"] as string | null | undefined) ?? null;
+	return { activeOrganizationId, memberships };
+}
+
+/**
+ * Switches the caller's active organization. Verifies the caller has
+ * an ACTIVE membership in the target org, persists the new
+ * `activeOrganizationId` on the User row, mints a fresh access token
+ * carrying the new `oid` claim, and writes an `ORG_SWITCHED` audit
+ * event. The refresh-token family is intentionally preserved — only
+ * the access token rotates — so a switch costs zero refresh-cookie
+ * round-trips.
+ *
+ * Throws 404 (not 403) when the membership is missing or non-ACTIVE so
+ * the API does not leak existence of orgs the caller has no business
+ * knowing about.
+ */
+export async function switchUserOrganization(
+	userId: string,
+	organizationId: string,
+	ctx: RequestContext = {}
+): Promise<AuthSessionDTO> {
+	const prisma = getPrismaClient();
+
+	const membership = (await prisma.organizationMembership.findFirst({
+		where: { userId, organizationId, status: "ACTIVE" },
+	})) as Record<string, unknown> | null;
+	if (!membership) {
+		throw ApiError.notFound("Organization not found.");
+	}
+
+	await prisma.user.update({
+		where: { id: userId },
+		data: { activeOrganizationId: organizationId },
+	});
+
+	await writeAuditBestEffort({
+		action: "ORG_SWITCHED",
+		severity: "INFO",
+		actorUserId: userId,
+		organizationId,
+		requestId: ctx.requestId ?? null,
+		ipAddress: ctx.ipAddress ?? null,
+		userAgent: ctx.userAgent ?? null,
+		targetType: "Organization",
+		targetId: organizationId,
+	});
+
+	const access = await issueAccessToken(userId, organizationId);
+	return loadAuthSession(prisma, userId, access);
+}
+
 // Expose for tests + the (future) auth middleware.
 export { loadAuthSession };
 
