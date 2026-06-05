@@ -38,6 +38,18 @@ export class ApiError extends Error {
 		return new ApiError(404, "NOT_FOUND", message, details);
 	}
 
+	// Phase 9A-C — distinct factories for the auth layer. `unauthorized`
+	// is used for *credential* failures (no/invalid/expired token, bad
+	// password); `forbidden` is used for *authorization* failures
+	// (authenticated, but not allowed to touch the target resource).
+	static unauthorized(message: string, details?: unknown): ApiError {
+		return new ApiError(401, "UNAUTHORIZED", message, details);
+	}
+
+	static forbidden(message: string, details?: unknown): ApiError {
+		return new ApiError(403, "FORBIDDEN", message, details);
+	}
+
 	static validation(message: string, details?: unknown): ApiError {
 		return new ApiError(400, "VALIDATION_ERROR", message, details);
 	}

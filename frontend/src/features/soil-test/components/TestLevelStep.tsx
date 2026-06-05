@@ -1,15 +1,20 @@
 /**
  * FlahaSOIL v2 — wizard step: test level selection.
  *
- * Drives which subsequent steps are shown. See
- * `visibleStepsForLevel` in `soilTestDefaults`.
+ * Rendered as three selectable cards instead of a flat radio group so
+ * the user can see, side-by-side, what each level captures and which
+ * scenarios it suits. Selection drives which subsequent steps are
+ * shown (see `visibleStepsForLevel`).
  */
 import {
-	FormControl,
-	FormControlLabel,
-	FormLabel,
+	Box,
+	Card,
+	CardActionArea,
+	CardContent,
+	Chip,
+	Grid,
 	Radio,
-	RadioGroup,
+	Stack,
 	Typography,
 } from "@mui/material";
 import { SoilTestLevel } from "@flaha/shared-types";
@@ -23,40 +28,95 @@ interface TestLevelStepProps {
 
 export function TestLevelStep({ value, onChange }: TestLevelStepProps) {
 	return (
-		<FormControl>
-			<FormLabel id="test-level-label">
-				<Typography variant="h6" gutterBottom>
-					Test level
-				</Typography>
-			</FormLabel>
-			<RadioGroup
-				aria-labelledby="test-level-label"
-				value={value}
-				onChange={(e) => onChange(e.target.value as SoilTestLevel)}
-			>
-				{TEST_LEVEL_OPTIONS.map((opt) => (
-					<FormControlLabel
-						key={opt.value}
-						value={opt.value}
-						control={<Radio />}
-						label={
-							<>
-								<Typography component="span" fontWeight={600}>
-									{opt.label}
-								</Typography>
-								<Typography
-									component="div"
-									variant="body2"
-									color="text.secondary"
+		<Box>
+			<Typography variant="h6" gutterBottom>
+				Test level
+			</Typography>
+			<Typography color="text.secondary" sx={{ mb: 3 }}>
+				Choose the depth of analysis that matches your lab report. You
+				can always start with Preliminary and submit a Moderate or
+				Advanced test later for the same sample.
+			</Typography>
+
+			<Grid container spacing={2} role="radiogroup" aria-label="Test level">
+				{TEST_LEVEL_OPTIONS.map((opt) => {
+					const selected = value === opt.value;
+					return (
+						<Grid item xs={12} md={4} key={opt.value}>
+							<Card
+								variant="outlined"
+								sx={{
+									height: "100%",
+									borderColor: selected ? "primary.main" : "divider",
+									borderWidth: selected ? 2 : 1,
+									transition:
+										"border-color 120ms ease, box-shadow 120ms ease",
+								}}
+							>
+								<CardActionArea
+									onClick={() => onChange(opt.value)}
+									sx={{ height: "100%", alignItems: "stretch" }}
 								>
-									{opt.description}
-								</Typography>
-							</>
-						}
-						sx={{ alignItems: "flex-start", py: 1 }}
-					/>
-				))}
-			</RadioGroup>
-		</FormControl>
+									<CardContent>
+										<Stack
+											direction="row"
+											spacing={1}
+											alignItems="center"
+											sx={{ mb: 1 }}
+										>
+											<Radio
+												checked={selected}
+												value={opt.value}
+												name="test-level"
+												size="small"
+												onChange={() => onChange(opt.value)}
+												inputProps={{
+													"aria-label": `Select ${opt.label}`,
+												}}
+												sx={{ p: 0.5 }}
+											/>
+											<Typography variant="subtitle1" fontWeight={600}>
+												{opt.label}
+											</Typography>
+											{selected ? (
+												<Chip
+													label="Selected"
+													size="small"
+													color="primary"
+													variant="outlined"
+												/>
+											) : null}
+										</Stack>
+										<Typography
+											variant="body2"
+											sx={{ mb: 2 }}
+										>
+											{opt.description}
+										</Typography>
+										<MetaRow label="Captures" value={opt.captures} />
+										<MetaRow label="Best for" value={opt.bestFor} />
+									</CardContent>
+								</CardActionArea>
+							</Card>
+						</Grid>
+					);
+				})}
+			</Grid>
+		</Box>
+	);
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+	return (
+		<Box sx={{ mb: 1 }}>
+			<Typography
+				variant="caption"
+				color="text.secondary"
+				sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+			>
+				{label}
+			</Typography>
+			<Typography variant="body2">{value}</Typography>
+		</Box>
 	);
 }

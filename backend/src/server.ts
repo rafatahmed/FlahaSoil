@@ -8,22 +8,25 @@
  */
 
 import { createApp } from "./app";
+import { runBootstrap } from "./bootstrap";
 import { env } from "./config/env";
+import { logger } from "./utils/logger";
 
 const app = createApp();
 
+// Phase 8B: ensure the seeded dev user exists before accepting traffic
+// in non-production environments. Bootstrap errors are non-fatal so a
+// transient DB issue at boot does not block restarts.
+void runBootstrap();
+
 const server = app.listen(env.port, () => {
-	// eslint-disable-next-line no-console
-	console.log(
-		`[flaha-soil-v2-api] listening on :${env.port} (env=${env.nodeEnv})`
-	);
+	logger.info("server.listening", { port: env.port, env: env.nodeEnv });
 });
 
 const SHUTDOWN_SIGNALS = ["SIGINT", "SIGTERM"] as const;
 for (const sig of SHUTDOWN_SIGNALS) {
 	process.on(sig, () => {
-		// eslint-disable-next-line no-console
-		console.log(`[flaha-soil-v2-api] received ${sig}, closing server`);
+		logger.info("server.shutdown", { signal: sig });
 		server.close(() => process.exit(0));
 	});
 }

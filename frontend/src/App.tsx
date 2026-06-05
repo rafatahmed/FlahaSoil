@@ -7,16 +7,23 @@
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { BrowserRouter } from "react-router-dom";
 
+import { AuthProvider } from "./auth";
 import { AppRoutes } from "./routes/AppRoutes";
-import { theme } from "./theme/theme";
+import { flahaSoilTheme } from "./theme/flahaSoilTheme";
 
+// Phase 9A-G: AuthProvider replaces the legacy dev-session SessionProvider.
+// BrowserRouter is mounted INSIDE AuthProvider so the auth context is
+// available to ProtectedRoute / PublicOnlyRoute. AuthProvider, in turn,
+// uses `useNavigate`-free APIs so it doesn't require the Router.
 export default function App() {
 	return (
-		<ThemeProvider theme={theme}>
+		<ThemeProvider theme={flahaSoilTheme}>
 			<CssBaseline />
-			<BrowserRouter>
-				<AppRoutes />
-			</BrowserRouter>
+			<AuthProvider>
+				<BrowserRouter>
+					<AppRoutes />
+				</BrowserRouter>
+			</AuthProvider>
 		</ThemeProvider>
 	);
 }

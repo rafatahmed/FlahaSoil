@@ -3,12 +3,17 @@
  *
  * Owns the draft state and step navigation. The visible step list is
  * derived from `draft.testLevel`. Submit chains create-sample →
- * create-test → calculate against whichever client `getApiClient()`
- * returns (mock by default, real when `VITE_USE_MOCK_API="false"`).
+ * create-test → calculate against the active API client.
+ *
+ * The wizard always runs inside a `Project`. A `?projectId`
+ * search parameter preselects the project; otherwise the user picks
+ * one in the sample-info step. The "Next" button on that step is
+ * disabled until a project is selected so we never call
+ * `createSoilSample` without an owning project.
  */
 import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { SoilTestLevel } from "@flaha/shared-types";
 
 import { AdvancedInputStep } from "../features/soil-test/components/AdvancedInputStep";
@@ -24,16 +29,56 @@ import {
 	toCreateSoilTestRequest,
 } from "../features/soil-test/state/soilTestDraft";
 import { visibleStepsForLevel } from "../features/soil-test/utils/soilTestDefaults";
-import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
+import { usePageHeader } from "../layouts/PageHeaderContext";
+import { getApiClient } from "../services/apiClientProvider";
 
 export function SoilTestWizardPage() {
 	const navigate = useNavigate();
-	const [draft, setDraft] = useState<SoilTestDraft>(EMPTY_DRAFT);
+	const [searchParams] = useSearchParams();
+	const preselectedProjectId = searchParams.get("projectId");
+
+	const [draft, setDraft] = useState<SoilTestDraft>(() => ({
+		...EMPTY_DRAFT,
+		sampleInfo: {
+			...EMPTY_DRAFT.sampleInfo,
+			projectId: preselectedProjectId ?? null,
+		},
+	}));
 	const [activeStep, setActiveStep] = useState(0);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const apiMode = getApiClientMode();
+	usePageHeader({
+		title: "New soil test",
+		subtitle: preselectedProjectId
+			? "Guided wizard · project preselected"
+			: "Guided wizard · capture sample, analyse, interpret",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			...(preselectedProjectId
+				? [
+						{ label: "Projects", to: "/projects" },
+						{ label: "Project", to: `/projects/${preselectedProjectId}` },
+					]
+				: [{ label: "Projects", to: "/projects" }]),
+			{ label: "New soil test" },
+		],
+	});
+
+	// Keep the draft in sync if the user lands on the wizard with a
+	// different `?projectId` query (e.g. from a different project).
+	useEffect(() => {
+		if (
+			preselectedProjectId &&
+			draft.sampleInfo.projectId !== preselectedProjectId
+		) {
+			setDraft((d) => ({
+				...d,
+				sampleInfo: { ...d.sampleInfo, projectId: preselectedProjectId },
+			}));
+		}
+	}, [preselectedProjectId, draft.sampleInfo.projectId]);
 
 	const steps = useMemo(
 		() => visibleStepsForLevel(draft.testLevel),
@@ -41,18 +86,25 @@ export function SoilTestWizardPage() {
 	);
 	const current = steps[activeStep];
 	const isLast = activeStep === steps.length - 1;
+	const projectSelected = !!draft.sampleInfo.projectId;
+	const canAdvance =
+		current?.key === "sample-info" ? projectSelected : true;
 
 	const next = () => setActiveStep((s) => Math.min(s + 1, steps.length - 1));
 	const back = () => setActiveStep((s) => Math.max(s - 1, 0));
 
 	const handleSubmit = async () => {
+		if (!draft.sampleInfo.projectId) {
+			setError("Please select a project before submitting the soil test.");
+			return;
+		}
 		setSubmitting(true);
 		setError(null);
 		try {
 			const client = getApiClient();
 			const sample = await client.createSoilSample({
-				userId: "user_mock",
 				...draft.sampleInfo,
+				projectId: draft.sampleInfo.projectId,
 			});
 			const test = await client.createSoilTest(
 				toCreateSoilTestRequest(draft, sample.sample.id)
@@ -85,13 +137,6 @@ export function SoilTestWizardPage() {
 
 	return (
 		<Box>
-			<Typography variant="h4" gutterBottom>
-				New Soil Test
-			</Typography>
-			<Typography color="text.secondary" sx={{ mb: 2 }}>
-				API mode: <strong>{apiMode}</strong>
-			</Typography>
-
 			{error && (
 				<Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
 					{error}
@@ -130,7 +175,11 @@ export function SoilTestWizardPage() {
 					Back
 				</Button>
 				{!isLast && (
-					<Button variant="contained" onClick={next}>
+					<Button
+						variant="contained"
+						onClick={next}
+						disabled={!canAdvance}
+					>
 						Next
 					</Button>
 				)}
@@ -139,13 +188,9 @@ export function SoilTestWizardPage() {
 						variant="contained"
 						color="primary"
 						onClick={handleSubmit}
-						disabled={submitting}
+						disabled={submitting || !projectSelected}
 					>
-						{submitting
-						? "Submitting…"
-						: apiMode === "mock"
-						? "Submit (mock)"
-						: "Submit"}
+						{submitting ? "Submitting…" : "Submit soil test"}
 					</Button>
 				)}
 			</Stack>

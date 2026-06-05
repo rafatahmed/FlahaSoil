@@ -1,57 +1,125 @@
 /**
- * FlahaSOIL v2 — Reports page.
+ * FlahaSOIL v2 — Reports page (Phase 8A).
  *
- * Placeholder list of reports. Phase 5 shows mocked rows; Phase 6
- * will replace this with a paginated query against the real backend.
+ * Reports are generated per soil test (POST /api/v2/soil-tests/:id/reports)
+ * and there is no aggregate `/reports` query in v2 yet. This page
+ * therefore acts as the navigation hub: pick a project, drill into a
+ * soil test, and generate or view its report from the test detail
+ * view. The list below mirrors the active API client's projects.
  */
 import {
+	Alert,
 	Box,
-	List,
-	ListItem,
-	ListItemText,
+	Card,
+	CardActionArea,
+	CardContent,
+	Chip,
+	Divider,
 	Paper,
+	Stack,
 	Typography,
 } from "@mui/material";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
-interface MockReportRow {
-	id: string;
-	soilTestId: string;
-	reportType: string;
-	status: string;
-}
-
-const MOCK_REPORTS: MockReportRow[] = [
-	{
-		id: "rpt_mock_001",
-		soilTestId: "test_mock_001",
-		reportType: "FULL_PDF",
-		status: "GENERATED",
-	},
-];
+import { usePageHeader } from "../layouts/PageHeaderContext";
+import { getApiClient } from "../services/apiClientProvider";
+import { useAuth } from "../auth";
 
 export function ReportsPage() {
+	const navigate = useNavigate();
+	const { status: sessionStatus } = useAuth();
+	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
+	const [error, setError] = useState<string | null>(null);
+
+	usePageHeader({
+		title: "Reports",
+		subtitle: "Browse projects to open per-test reports",
+		breadcrumbs: [
+			{ label: "Home", to: "/" },
+			{ label: "Dashboard", to: "/dashboard" },
+			{ label: "Reports" },
+		],
+	});
+
+	useEffect(() => {
+		if (sessionStatus !== "authenticated") return;
+		let cancelled = false;
+		setError(null);
+		getApiClient()
+			.listProjects({})
+			.then((res) => {
+				if (!cancelled) setProjects(res.projects);
+			})
+			.catch((err: unknown) => {
+				if (!cancelled) {
+					setError(err instanceof Error ? err.message : String(err));
+				}
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [sessionStatus]);
+
 	return (
 		<Box>
-			<Typography variant="h4" gutterBottom>
-				Reports
-			</Typography>
 			<Typography color="text.secondary" sx={{ mb: 3 }}>
-				Mocked report list. Generation, download, and pagination land in
-				later phases.
+				Reports are generated per soil test. Choose a project to browse
+				its samples and tests, then open a test to generate or download
+				its report.
 			</Typography>
 
-			<Paper variant="outlined">
-				<List>
-					{MOCK_REPORTS.map((r) => (
-						<ListItem key={r.id} divider>
-							<ListItemText
-								primary={`${r.reportType} — ${r.id}`}
-								secondary={`Soil test ${r.soilTestId} · ${r.status}`}
-							/>
-						</ListItem>
+			{error && (
+				<Alert severity="error" sx={{ mb: 2 }}>
+					Failed to load projects: {error}
+				</Alert>
+			)}
+
+			{projects === null && !error && (
+				<Typography color="text.secondary">Loading…</Typography>
+			)}
+
+			{projects !== null && projects.length === 0 && (
+				<Paper variant="outlined" sx={{ p: 3, textAlign: "center" }}>
+					<Typography color="text.secondary">
+						No projects yet — create one from the Projects page to start
+						generating reports.
+					</Typography>
+				</Paper>
+			)}
+
+			{projects !== null && projects.length > 0 && (
+				<Stack spacing={1}>
+					{projects.map((p) => (
+						<Card key={p.id} variant="outlined">
+							<CardActionArea onClick={() => navigate(`/projects/${p.id}`)}>
+								<CardContent>
+									<Stack direction="row" alignItems="center" spacing={1}>
+										<Typography variant="subtitle1" sx={{ flexGrow: 1 }}>
+											{p.name}
+											{p.code ? ` · ${p.code}` : ""}
+										</Typography>
+										<Chip
+											label={`${p.sampleCount} sample${p.sampleCount === 1 ? "" : "s"}`}
+											size="small"
+										/>
+										<Chip
+											label={p.status}
+											size="small"
+											variant="outlined"
+										/>
+									</Stack>
+									<Divider sx={{ my: 1 }} />
+									<Typography variant="body2" color="text.secondary">
+										Open project to browse soil tests and their reports.
+									</Typography>
+								</CardContent>
+							</CardActionArea>
+						</Card>
 					))}
-				</List>
-			</Paper>
+				</Stack>
+			)}
 		</Box>
 	);
 }

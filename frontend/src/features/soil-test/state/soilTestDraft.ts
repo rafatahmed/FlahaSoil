@@ -18,8 +18,18 @@ import {
 	SoilValueSource,
 } from "@flaha/shared-types";
 
+/**
+ * Draft shape used while the wizard is being filled in. `projectId` is
+ * required on `CreateSoilSampleRequest` (every soil sample must belong
+ * to a project — Phase 8A), but the wizard naturally starts with no
+ * selection and the user picks the owning project in the first step,
+ * so the draft widens the field to `string | null` and the submit
+ * handler guards against `null` before the create call.
+ */
 export interface SoilTestDraftSampleInfo
-	extends Omit<CreateSoilSampleRequest, "userId"> {}
+	extends Omit<CreateSoilSampleRequest, "projectId"> {
+	projectId: string | null;
+}
 
 export type SoilTestDraftTextureInput = Partial<CreateSoilTextureInputPayload>;
 

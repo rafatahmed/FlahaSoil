@@ -84,6 +84,10 @@ export interface SoilReportEnvelope {
 /**
  * Compact projection for UI cards / list views. Shape is intentionally
  * narrow (no nested DTOs) so a list of summaries stays cheap.
+ *
+ * Phase 8D added optional `reportId` / `latestVersionNumber` so the
+ * summary can deep-link into the report viewer when at least one
+ * version has been generated.
  */
 export interface SoilReportSummary {
 	soilTestId: string;
@@ -98,4 +102,6 @@ export interface SoilReportSummary {
 	hasInterpretation: boolean;
 	warningCount: number;
 	generatedAt: string;
+	reportId?: string | null;
+	latestVersionNumber?: number | null;
 }

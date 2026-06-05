@@ -1,12 +1,15 @@
 /**
  * FlahaSOIL v2 — wizard step: advanced (micronutrient + salinity) inputs.
  *
- * All fields land on `draft.chemistryInput`. No validation in Phase 5.
+ * Grouped sections: micronutrients and salinity / sodicity indices.
+ * All fields land on `draft.chemistryInput`. Validation is the
+ * backend's responsibility.
  */
-import { Grid, TextField, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 
 import type { SoilTestDraft } from "../state/soilTestDraft";
-import { ADVANCED_FIELDS } from "../utils/soilTestDefaults";
+import { ADVANCED_GROUPS } from "../utils/soilTestDefaults";
+import { FieldSection } from "./FieldSection";
 
 interface AdvancedInputStepProps {
 	draft: SoilTestDraft;
@@ -31,25 +34,23 @@ export function AdvancedInputStep({
 	};
 
 	return (
-		<>
+		<Box>
 			<Typography variant="h6" gutterBottom>
-				Advanced inputs
+				Micronutrients & salinity indices
 			</Typography>
-			<Grid container spacing={2}>
-				{ADVANCED_FIELDS.map((field) => (
-					<Grid item xs={12} sm={6} md={4} key={field.key}>
-						<TextField
-							label={
-								field.unit ? `${field.label} (${field.unit})` : field.label
-							}
-							type="number"
-							fullWidth
-							value={valueOf(field.key)}
-							onChange={(e) => setField(field.key, e.target.value)}
-						/>
-					</Grid>
-				))}
-			</Grid>
-		</>
+			<Typography color="text.secondary" sx={{ mb: 3 }}>
+				Optional inputs for full advisory: micronutrients enable
+				deficiency screening, SAR / ESP enable sodicity diagnosis.
+			</Typography>
+
+			{ADVANCED_GROUPS.map((group) => (
+				<FieldSection
+					key={group.title}
+					group={group}
+					valueOf={valueOf}
+					onChange={setField}
+				/>
+			))}
+		</Box>
 	);
 }

@@ -50,11 +50,20 @@ enum SoilValueSource {
   CALCULATED
 }
 
-/// Lifecycle of a generated soil report.
+/// Lifecycle of a generated soil report (Phase 8D).
+/// DRAFT       = row exists, no version generated yet (legacy placeholder path).
+/// GENERATING  = composer is running; do not surface to UI as ready.
+/// READY       = at least one ReportVersion has been written successfully and
+///               currentVersionId is set.
+/// ARCHIVED    = user-hidden; preserved for audit history.
+/// FAILED      = last generation attempt failed; errorMessage on the latest
+///               ReportVersion carries the reason. Regeneration is allowed.
 enum SoilReportStatus {
   DRAFT
-  GENERATED
+  GENERATING
+  READY
   ARCHIVED
+  FAILED
 }
 
 /// Output of @flaha/soil-interpretation `overallSoilRating`.
@@ -64,17 +73,341 @@ enum SoilInterpretationRating {
   POOR
 }
 
+/// Lifecycle of a Project. ACTIVE projects appear in the default
+/// dashboard; ARCHIVED projects are hidden behind an explicit filter.
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+/// Coarse-grained role for the v2 user model. Retained as a Phase 8B
+/// MIGRATION ARTEFACT only — Phase 9A makes `OrganizationMembership.role`
+/// the authoritative permission source. New code MUST NOT branch on
+/// `User.role`; authorization derives from the active membership.
+enum UserRole {
+  ADMIN
+  AGRONOMIST
+  CLIENT
+  VIEWER
+}
+
+// -----------------------------------------------------------------------------
+// Phase 9A — Authentication, Organizations & Multi-Tenant enums
+// -----------------------------------------------------------------------------
+
+/// Business shape of an Organization. Used for UI grouping and (future)
+/// feature gating; not consulted for authorization.
+enum OrganizationType {
+  COMPANY
+  CONSULTANCY
+  LABORATORY
+  FARM
+  CLIENT
+}
+
+/// Lifecycle of an Organization. SUSPENDED organizations exist but
+/// block all member access; ARCHIVED is the soft-delete state.
+enum OrganizationStatus {
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+/// Authoritative permission role of a User WITHIN a given Organization
+/// (see `OrganizationMembership.role`). One User may hold different
+/// roles in different organizations.
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  AGRONOMIST
+  LAB_TECHNICIAN
+  CONSULTANT
+  VIEWER
+}
+
+/// Lifecycle of a single membership row. PENDING covers invited-but-not-
+/// accepted members (the invitation surface itself is Phase 9B); ACTIVE
+/// is the working state; SUSPENDED revokes access without losing audit
+/// history; REMOVED is the tombstone for departed members.
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+/// Severity classification for audit log entries (Phase 9A). SECURITY
+/// covers credential events (failed login, refresh reuse, lockouts) and
+/// MUST be alertable in production.
+enum AuditSeverity {
+  INFO
+  WARNING
+  SECURITY
+}
+
+/// Bounded enum of audit-loggable actions. Adding a new action is a
+/// schema change on purpose so the catalogue stays reviewable.
+enum AuditAction {
+  AUTH_REGISTER
+  AUTH_LOGIN
+  AUTH_LOGIN_FAILED
+  AUTH_LOGOUT
+  AUTH_REFRESH
+  AUTH_REFRESH_REUSE_DETECTED
+  AUTH_TOKEN_REVOKED
+  ORG_CREATED
+  ORG_UPDATED
+  ORG_SWITCHED
+  MEMBERSHIP_CREATED
+  MEMBERSHIP_ROLE_CHANGED
+  MEMBERSHIP_REMOVED
+  PROJECT_CREATED
+  PROJECT_UPDATED
+  REPORT_GENERATED
+  REPORT_REGENERATED
+  REPORT_ARCHIVED
+  REPORT_RENAMED
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -1 — User (Phase 8B)
+// Owner of Projects (and, transitively, samples / tests / reports). The v2
+// dev-session layer reads a seeded ADMIN user out of this table so the API
+// can enforce ownership without depending on production auth (JWT / OAuth)
+// yet. `archivedAt` is a soft-delete marker; archived users keep their
+// rows so historical ownership chains remain resolvable.
+// -----------------------------------------------------------------------------
+model User {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  displayName String
+  /// Phase 9A — Argon2id hash of the user's password. Nullable so
+  /// pre-9A seeded rows (e.g. `user_dev_admin`) remain readable; the
+  /// auth service refuses login when null. Plaintext passwords MUST
+  /// NEVER touch this column.
+  passwordHash String?
+  /// Phase 9A — currently active tenant context for this user. Set on
+  /// login (defaulting to the OWNER membership of the personal org
+  /// auto-provisioned at registration) and updated by the
+  /// switch-organization endpoint. Nullable for legacy/dev users.
+  activeOrganizationId String?
+  /// Migration artefact (see `enum UserRole`). Authorization is now
+  /// derived from the active OrganizationMembership.
+  role        UserRole  @default(AGRONOMIST)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  archivedAt  DateTime?
+
+  projects           Project[]
+  memberships        OrganizationMembership[] @relation("MembershipUser")
+  invitedMemberships OrganizationMembership[] @relation("MembershipInvitedBy")
+  activeOrganization Organization?            @relation("UserActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]               @relation("AuditActor")
+
+  @@index([role])
+  @@index([archivedAt])
+  @@index([activeOrganizationId])
+  @@map("users")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -0.5 — Organization (Phase 9A)
+// Top-level tenant. Owns Projects (and transitively samples / tests /
+// reports). Users gain access through `OrganizationMembership` rows; there
+// is no implicit access via project.userId. `slug` is the URL-friendly
+// handle and is unique across the whole table.
+// -----------------------------------------------------------------------------
+model Organization {
+  id        String             @id @default(cuid())
+  name      String
+  slug      String             @unique
+  type      OrganizationType   @default(COMPANY)
+  status    OrganizationStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  memberships    OrganizationMembership[]
+  projects       Project[]
+  samples        SoilSample[]
+  auditLogs      AuditLog[]
+  activeForUsers User[]                   @relation("UserActiveOrganization")
+
+  @@index([status])
+  @@index([type])
+  @@map("organizations")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -0.4 — OrganizationMembership (Phase 9A)
+// Resolves the many-to-many between User and Organization, and carries the
+// authoritative permission role for that user within that org. A user may
+// have at most one membership per organization (composite unique).
+// -----------------------------------------------------------------------------
+model OrganizationMembership {
+  id             String           @id @default(cuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole
+  status         MembershipStatus @default(ACTIVE)
+  /// FK to the user who issued the invitation (null for the OWNER
+  /// membership created at registration / org bootstrap).
+  invitedById    String?
+  invitedAt      DateTime?
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation("MembershipUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy    User?        @relation("MembershipInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([role])
+  @@index([status])
+  @@map("organization_memberships")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -0.3 — RefreshToken (Phase 9A)
+// One row per issued refresh token. The raw token is NEVER stored — only
+// `tokenHash` (SHA-256 of the random token bytes). Tokens belong to a
+// `familyId` so theft detection can revoke an entire chain in a single
+// update when a previously-rotated token is replayed.
+// -----------------------------------------------------------------------------
+model RefreshToken {
+  id            String    @id @default(cuid())
+  userId        String
+  /// SHA-256 hex of the raw refresh-token string. Unique so a single
+  /// presented token can be matched in O(1).
+  tokenHash     String    @unique
+  /// Stable id shared by every token in a single rotation chain. A new
+  /// `familyId` is minted at login; rotation keeps the same `familyId`.
+  familyId      String
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  /// Free-text reason (e.g. "rotated", "logout", "reuse_detected",
+  /// "admin_revoke"). Indexed only via the parent userId.
+  revokedReason String?
+  userAgent     String?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -0.2 — AuditLog (Phase 9A)
+// Append-only record of security- and tenancy-relevant actions. Rows are
+// never updated; redactions are layered above via metadataJson filtering.
+// -----------------------------------------------------------------------------
+model AuditLog {
+  id             String        @id @default(cuid())
+  /// Nullable for actions performed by an unauthenticated visitor
+  /// (e.g. AUTH_LOGIN_FAILED before a session exists).
+  actorUserId    String?
+  /// Nullable for org-independent actions (registration, login).
+  organizationId String?
+  action         AuditAction
+  severity       AuditSeverity @default(INFO)
+  /// Request id propagated from the API middleware so a single
+  /// request's audit rows can be correlated.
+  requestId      String?
+  /// Logical type of the targeted entity (e.g. "Project", "Report").
+  targetType     String?
+  targetId       String?
+  /// Free-form structured context. MUST NOT contain passwords,
+  /// raw tokens, or PII beyond what is already in actor / org rows.
+  metadataJson   Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime      @default(now())
+
+  actor        User?         @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([actorUserId])
+  @@index([organizationId])
+  @@index([action])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 0 — Project (Phase 8A, extended in Phase 9A)
+// Agronomic container for samples. Every SoilSample created in v2 belongs to
+// exactly one Project (samples created in earlier phases keep `projectId =
+// null` and surface in the UI under a synthetic "Unassigned" project).
+//
+// Phase 9A — authoritative ownership moves from `userId` to
+// `organizationId`. `organizationId` is added as NULLABLE here (migration
+// step 1 from docs/v2-auth-and-tenancy.md); the seed script backfills
+// existing rows to a Demo Organization (step 2/3) and Phase 9A-B flips it
+// to required (step 4). `userId` is retained as the historical creator
+// reference and is no longer consulted for authorization.
+// -----------------------------------------------------------------------------
+model Project {
+  id             String        @id @default(cuid())
+  /// Phase 9A — owning tenant. Nullable through the migration window;
+  /// the service layer rejects new projects without an organizationId
+  /// once Phase 9A-B lands. Cross-tenant queries MUST filter on this
+  /// column and never on `userId`.
+  organizationId String?
+  /// Historical creator. Retained for audit / display ("created by");
+  /// no longer authoritative for authorization (see organizationId).
+  userId         String
+  name           String
+  /// Optional short code (e.g. "AL-FARM-01") for human cross-reference.
+  code           String?
+  description    String?
+  locationName   String?
+  status         ProjectStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  owner        User          @relation(fields: [userId], references: [id])
+  samples      SoilSample[]
+
+  @@unique([userId, code])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([status])
+  @@map("projects")
+}
+
 // -----------------------------------------------------------------------------
 // MODEL 1 — SoilSample
 // A physical sample collected at a location and depth. May be tested multiple
 // times (e.g. preliminary screening followed by an advanced lab panel).
+// Phase 8A: belongs to a Project (nullable for back-compat with rows created
+// before the Project model existed).
+// Phase 9A: denormalised `organizationId` mirrors the existing `userId`
+// denormalisation — kept for fast per-tenant sample queries and as a
+// defence-in-depth check that the service layer's tenant scoping has not
+// been bypassed. Authoritative tenancy still resolves via project.
 // -----------------------------------------------------------------------------
 model SoilSample {
   id           String    @id @default(cuid())
-  /// FK to the v2 user table (to be defined in a later phase). String only at
-  /// this stage — no Prisma relation, deliberately, since the v2 user model
-  /// is out of scope for Phase 3.
+  /// Phase 9A — denormalised tenant id. Mirrors `project.organizationId`
+  /// and MUST be kept in sync by the service layer (a sample's owning
+  /// project never moves between orgs). Nullable through the migration
+  /// window; required after Phase 9A-B backfill.
+  organizationId String?
+  /// Denormalized owner id (Phase 8B). Retained for historical "created by"
+  /// display and for fast per-user queries; NOT authoritative for
+  /// authorization in Phase 9A — see organizationId above.
   userId       String
+  /// FK to Project. Nullable so historical samples remain readable; the v2
+  /// API rejects new samples without a project (enforced at service layer).
   projectId    String?
   locationName String?
   latitude     Float?
@@ -85,8 +418,11 @@ model SoilSample {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  project      Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
   tests        SoilTest[]
 
+  @@index([organizationId])
   @@index([userId])
   @@index([projectId])
   @@index([sampleDate])
@@ -143,7 +479,7 @@ model SoilTextureInput {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 
-  soilTest             SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@map("soil_texture_inputs")
 }
@@ -203,7 +539,7 @@ model SoilChemistryInput {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 
-  soilTest  SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@map("soil_chemistry_inputs")
 }
@@ -240,7 +576,7 @@ model SoilPhysicsResult {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
-  soilTest             SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([textureClass])
   @@map("soil_physics_results")
@@ -269,7 +605,7 @@ model SoilChemistryResult {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  soilTest           SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([cec])
   @@index([esp])
@@ -298,36 +634,127 @@ model SoilInterpretation {
   /// Array of warning strings emitted by the interpretation engine,
   /// persisted as a JSON array (e.g. ["Severe salinity — ...", ...]).
   warningsJson           Json
-  createdAt              DateTime                 @default(now())
-  updatedAt              DateTime                 @updatedAt
 
-  soilTest               SoilTest                 @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  /// Phase 8D — extended classifications produced by the rules engine.
+  /// All fields are nullable: the engine omits each one when its input
+  /// is not available. Severity values follow FAO-29 buckets.
+  salinitySeverity      String?
+  sodicitySeverity      String?
+  organicMatterCategory String?
+  infiltrationClass     String?
+  compactionRisk        String?
+  /// Structured per-use suitability matrix produced by
+  /// `classifyTextureSuitability`; shape is
+  /// `{ turfgrass|landscape|agriculture|irrigation: { verdict, reasons[] } }`.
+  textureSuitabilityJson Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([overallSoilRating])
   @@index([salinityRisk])
   @@index([sodiumRisk])
+  @@index([salinitySeverity])
+  @@index([sodicitySeverity])
+  @@index([compactionRisk])
   @@map("soil_interpretations")
 }
 
 // -----------------------------------------------------------------------------
-// MODEL 8 — SoilReport
-// Generated artefact (PDF / HTML / JSON export) for a SoilTest.
+// MODEL 8 — SoilReport (Phase 8D)
+// Generated artefact (HTML / future PDF) for a SoilTest. A SoilReport is a
+// *durable handle* (title, number, archived flag); the actual report payload
+// lives in immutable ReportVersion rows. `currentVersionId` points to the
+// most recent successful version so the API can answer "give me the report"
+// without joining + sorting on every request.
+//
+// Status transitions (Phase 8D):
+//   DRAFT      → GENERATING                    (generate started)
+//   GENERATING → READY                         (generate succeeded)
+//   GENERATING → FAILED                        (generate threw)
+//   READY      → GENERATING                    (regenerate started)
+//   *          → ARCHIVED                      (user archive action)
 // -----------------------------------------------------------------------------
 model SoilReport {
-  id          String           @id @default(cuid())
-  soilTestId  String
-  status      SoilReportStatus @default(DRAFT)
-  reportType  String?
-  fileUrl     String?
-  generatedAt DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  soilTestId       String
+  status           SoilReportStatus @default(DRAFT)
+  /// Human-readable title (e.g. "Doha field — preliminary report"). Defaults
+  /// to the parent sample's locationName + test level when not supplied.
+  title            String?
+  /// Project-scoped report number for cover pages (e.g. "FLH-2025-001").
+  /// Assigned by the generator on first successful version.
+  reportNumber     String?
+  /// User-archived reports are hidden from default lists.
+  archived         Boolean          @default(false)
+  /// Legacy column (Phase 6 placeholder). Kept for backward compatibility
+  /// with the existing API surface; new code should look at the latest
+  /// ReportVersion instead.
+  reportType       String?
+  /// FK to the latest *successful* ReportVersion. Null while in DRAFT /
+  /// before the first successful generate. Updated atomically in the
+  /// generate transaction.
+  currentVersionId String?
+  /// Last time a ReportVersion was successfully written. Mirrors
+  /// currentVersion.generatedAt for cheap list rendering.
+  generatedAt      DateTime?
+  /// Legacy URL field (Phase 6 placeholder for an externally-hosted PDF).
+  /// Retained but no longer populated by the v1 generator.
+  fileUrl          String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  soilTest    SoilTest         @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest       SoilTest        @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  versions       ReportVersion[] @relation("ReportVersionsOfReport")
+  currentVersion ReportVersion?  @relation("ReportCurrentVersion", fields: [currentVersionId], references: [id], onDelete: SetNull)
 
   @@index([soilTestId])
   @@index([status])
+  @@index([archived])
   @@map("soil_reports")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL 8b — ReportVersion (Phase 8D)
+// Immutable snapshot of a generated report. Once a row is written it is
+// never updated — regeneration creates a new ReportVersion with
+// versionNumber = N+1 so prior reports remain provable.
+//
+// The full ProfessionalReportDTO (cover, sections, recommendations, audit
+// trace) is stored verbatim in `snapshotJson`. The flat summary columns
+// (overallSoilRating, textureClass, status, generatedByUserId) exist purely
+// to support list pages without re-reading the full JSON.
+// -----------------------------------------------------------------------------
+model ReportVersion {
+  id                String   @id @default(cuid())
+  reportId          String
+  versionNumber     Int
+  /// Frozen ProfessionalReportDTO captured at generation time. Future
+  /// changes to source rows do NOT mutate this column.
+  snapshotJson      Json
+  /// Mirrors the parent SoilReport status the moment this version was
+  /// completed (READY for success, FAILED for an aborted attempt).
+  status            SoilReportStatus
+  /// User who triggered this generation (snapshot of req.currentUser.id).
+  generatedByUserId String?
+  /// Denormalised for list rendering. Pulled from interpretation snapshot.
+  overallSoilRating String?
+  /// Denormalised for list rendering. Pulled from physics snapshot.
+  textureClass      String?
+  /// Populated only on FAILED versions. Single-line human readable reason.
+  errorMessage      String?
+  generatedAt       DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  report        SoilReport   @relation("ReportVersionsOfReport", fields: [reportId], references: [id], onDelete: Cascade)
+  pointedToBy   SoilReport[] @relation("ReportCurrentVersion")
+
+  @@unique([reportId, versionNumber])
+  @@index([reportId])
+  @@index([status])
+  @@map("soil_report_versions")
 }
 
 // -----------------------------------------------------------------------------
@@ -354,7 +781,7 @@ model SoilLabValue {
   measuredAt             DateTime?
   createdAt              DateTime  @default(now())
 
-  soilTest               SoilTest  @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
+  soilTest SoilTest @relation(fields: [soilTestId], references: [id], onDelete: Cascade)
 
   @@index([soilTestId])
   @@index([fieldKey])

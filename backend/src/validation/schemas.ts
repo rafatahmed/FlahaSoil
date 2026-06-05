@@ -8,7 +8,7 @@
  * adds business rules (texture sum, test-level requirements).
  */
 
-import { SoilTestLevel, SoilValueSource } from "@flaha/shared-types";
+import { ProjectStatus, SoilTestLevel, SoilValueSource } from "@flaha/shared-types";
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -21,15 +21,43 @@ const optionalIsoString = z.string().datetime({ offset: true }).nullable().optio
 
 const valueSourceSchema = z.nativeEnum(SoilValueSource);
 const testLevelSchema = z.nativeEnum(SoilTestLevel);
+const projectStatusSchema = z.nativeEnum(ProjectStatus);
+
+// ---------------------------------------------------------------------------
+// 0. POST /projects (Phase 8A)
+// ---------------------------------------------------------------------------
+
+// Phase 8B / 9A-E: `userId` was removed from the body — the controller
+// pulls the owning user + tenant from `req.authSession` (authSession
+// middleware).
+export const createProjectSchema = z.object({
+	name: z.string().min(1, "name is required").max(200),
+	code: z.string().min(1).max(80).nullable().optional(),
+	description: optionalNullableString,
+	locationName: optionalNullableString,
+	status: projectStatusSchema.optional(),
+});
+
+export type CreateProjectParsed = z.infer<typeof createProjectSchema>;
+
+export const listProjectsQuerySchema = z.object({
+	status: projectStatusSchema.optional(),
+});
+
+export type ListProjectsQueryParsed = z.infer<typeof listProjectsQuerySchema>;
 
 // ---------------------------------------------------------------------------
 // 1. POST /soil-samples
 // ---------------------------------------------------------------------------
 
+// Phase 8B / 9A-E: `userId` was removed from the body — the owning
+// user + tenant are pulled from `req.authSession` (authSession
+// middleware). `projectId` remains required for newly created samples;
+// the nullable variant on the read DTO is kept for back-compat with
+// pre-Project-model rows.
 export const createSoilSampleSchema = z
 	.object({
-		userId: z.string().min(1, "userId is required"),
-		projectId: optionalNullableString,
+		projectId: z.string().min(1, "projectId is required"),
 		locationName: optionalNullableString,
 		latitude: z.number().gte(-90).lte(90).nullable().optional(),
 		longitude: z.number().gte(-180).lte(180).nullable().optional(),
@@ -258,9 +286,72 @@ export type CalculateSoilTestParsed = z.infer<typeof calculateSoilTestSchema>;
 // ---------------------------------------------------------------------------
 
 export const createSoilReportSchema = z.object({
-	reportType: z.string().min(1),
+	reportType: z.string().min(1).optional(),
 	includeTrace: z.boolean().optional(),
 	includeRawLabValues: z.boolean().optional(),
+	title: z.string().min(1).max(200).optional(),
+	reportNumber: z.string().min(1).max(64).optional(),
+	cover: z
+		.object({
+			clientName: z.string().max(200).optional(),
+			consultantName: z.string().max(200).optional(),
+			consultantRole: z.string().max(200).optional(),
+		})
+		.optional(),
 });
 
 export type CreateSoilReportParsed = z.infer<typeof createSoilReportSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 8D: PATCH /reports/:reportId
+// ---------------------------------------------------------------------------
+
+export const patchReportSchema = z.object({
+	title: z.string().min(1).max(200).optional(),
+	archived: z.boolean().optional(),
+});
+
+export type PatchReportParsed = z.infer<typeof patchReportSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 9A-C — Auth endpoints
+//
+// Password POLICY (length + character classes) is enforced separately
+// by `auth/password.ts` so the rule lives in exactly one place. These
+// schemas only check structural shape + obvious bounds.
+// ---------------------------------------------------------------------------
+
+const emailSchema = z
+	.string()
+	.trim()
+	.min(3, "email is required")
+	.max(254)
+	.email("email must be a valid address");
+
+const passwordSchema = z.string().min(1, "password is required").max(512);
+
+export const registerSchema = z.object({
+	email: emailSchema,
+	password: passwordSchema,
+	displayName: z.string().trim().min(1, "displayName is required").max(120),
+	organizationName: z.string().trim().min(1).max(200).optional(),
+});
+
+export type RegisterParsed = z.infer<typeof registerSchema>;
+
+export const loginSchema = z.object({
+	email: emailSchema,
+	password: passwordSchema,
+});
+
+export type LoginParsed = z.infer<typeof loginSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 9A-H — POST /api/v2/auth/switch-organization
+// ---------------------------------------------------------------------------
+
+export const switchOrganizationSchema = z.object({
+	organizationId: z.string().trim().min(1, "organizationId is required").max(60),
+});
+
+export type SwitchOrganizationParsed = z.infer<typeof switchOrganizationSchema>;

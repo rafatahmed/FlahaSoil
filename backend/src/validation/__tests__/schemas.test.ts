@@ -15,19 +15,30 @@ import {
 } from "../schemas";
 
 describe("createSoilSampleSchema", () => {
+	// Phase 8B: `userId` is no longer part of the request body — the
+	// owning user is resolved server-side from the dev-session
+	// middleware. The schema only validates the client-supplied fields.
 	it("accepts a minimal valid payload", () => {
-		const result = createSoilSampleSchema.safeParse({ userId: "u_1" });
+		const result = createSoilSampleSchema.safeParse({
+			projectId: "p_1",
+		});
 		expect(result.success).toBe(true);
 	});
 
-	it("rejects an empty userId", () => {
-		const result = createSoilSampleSchema.safeParse({ userId: "" });
+	it("rejects a missing projectId (Phase 8A — required)", () => {
+		const result = createSoilSampleSchema.safeParse({});
 		expect(result.success).toBe(false);
+		if (!result.success) {
+			const issue = result.error.issues.find(
+				(i) => i.path.join(".") === "projectId"
+			);
+			expect(issue).toBeDefined();
+		}
 	});
 
 	it("rejects depthToCm < depthFromCm", () => {
 		const result = createSoilSampleSchema.safeParse({
-			userId: "u_1",
+			projectId: "p_1",
 			depthFromCm: 30,
 			depthToCm: 10,
 		});
@@ -42,7 +53,7 @@ describe("createSoilSampleSchema", () => {
 
 	it("rejects an out-of-range latitude", () => {
 		const result = createSoilSampleSchema.safeParse({
-			userId: "u_1",
+			projectId: "p_1",
 			latitude: 95,
 		});
 		expect(result.success).toBe(false);

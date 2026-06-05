@@ -8,8 +8,15 @@
  * responsibility of `apiClientProvider.ts`.
  */
 import type {
+	AuthLoginResponse,
+	AuthLogoutResponse,
+	AuthMeResponse,
+	AuthRefreshResponse,
+	AuthRegisterResponse,
 	CalculateSoilTestRequest,
 	CalculateSoilTestResponse,
+	CreateProjectRequest,
+	CreateProjectResponse,
 	CreateSoilReportRequest,
 	CreateSoilReportResponse,
 	CreateSoilSampleRequest,
@@ -17,14 +24,83 @@ import type {
 	CreateSoilTestRequest,
 	CreateSoilTestResponse,
 	FlahaCalcExportResponse,
+	GenerateReportRequest,
+	GenerateReportResponse,
+	GetCurrentUserResponse,
+	GetProjectResponse,
+	GetReportResponse,
+	GetReportVersionResponse,
 	GetSoilInterpretationResponse,
 	GetSoilSampleResponse,
 	GetSoilTestReportResponse,
 	GetSoilTestReportSummaryResponse,
 	GetSoilTestResponse,
+	ListProjectReportsResponse,
+	ListProjectsQuery,
+	ListProjectsResponse,
+	ListReportVersionsResponse,
+	LoginRequest,
+	PatchReportRequest,
+	PatchReportResponse,
+	RegenerateReportResponse,
+	RegisterRequest,
+	SwitchOrganizationRequest,
+	SwitchOrganizationResponse,
+	UserMembershipsResponse,
 } from "@flaha/shared-types";
 
 export interface ApiV2Client {
+	// Identity (Phase 8B) — resolve the dev-session user the API thinks
+	// the client is. Kept on the interface as a thin compatibility shim
+	// over the JWT session for code paths that still rely on the
+	// dev-session shape (none in the live tree as of 9A-G; the mock keeps
+	// it because removing it would force a v2 dependency on @auth/me).
+	getMe(): Promise<GetCurrentUserResponse>;
+
+	// ---------------------------------------------------------------
+	// Phase 9A-C / 9A-G — Auth surface
+	// ---------------------------------------------------------------
+	// `register` / `login` / `refresh` are public (no Authorization
+	// header required); `logout` / `authMe` are JWT-protected. The
+	// real client manages the HttpOnly refresh-cookie transparently
+	// via `credentials: include`; the mock just returns canned
+	// fixtures so the SPA can be exercised offline.
+
+	register(body: RegisterRequest): Promise<AuthRegisterResponse>;
+
+	login(body: LoginRequest): Promise<AuthLoginResponse>;
+
+	refresh(): Promise<AuthRefreshResponse>;
+
+	logout(): Promise<AuthLogoutResponse>;
+
+	authMe(): Promise<AuthMeResponse>;
+
+	// ---------------------------------------------------------------
+	// Phase 9A-H — Organization listing + switching
+	// ---------------------------------------------------------------
+	// `listMyOrganizations` is a JWT-protected read against
+	// `GET /me/organizations`; it powers the tenant switcher's freshness
+	// poll (auth session already carries memberships on hydrate, but a
+	// long-running tab may need to discover newly-accepted invites).
+	// `switchOrganization` rotates the access token via
+	// `POST /auth/switch-organization` and returns a full AuthSessionDTO
+	// so the SPA can drop it straight into `applySession`.
+	listMyOrganizations(): Promise<UserMembershipsResponse>;
+
+	switchOrganization(
+		body: SwitchOrganizationRequest
+	): Promise<SwitchOrganizationResponse>;
+
+	// Projects (Phase 8A) — agronomic container for samples.
+	// Phase 8B: `userId` was removed from these signatures; the owning
+	// user is resolved server-side from the dev-session.
+	createProject(body: CreateProjectRequest): Promise<CreateProjectResponse>;
+
+	listProjects(query: ListProjectsQuery): Promise<ListProjectsResponse>;
+
+	getProjectById(projectId: string): Promise<GetProjectResponse>;
+
 	createSoilSample(
 		body: CreateSoilSampleRequest
 	): Promise<CreateSoilSampleResponse>;
@@ -60,6 +136,33 @@ export interface ApiV2Client {
 	): Promise<GetSoilTestReportSummaryResponse>;
 
 	getFlahaCalcExport(soilTestId: string): Promise<FlahaCalcExportResponse>;
+
+	// Phase 8D — Report management surface.
+	generateReport(
+		soilTestId: string,
+		body: GenerateReportRequest
+	): Promise<GenerateReportResponse>;
+
+	listProjectReports(projectId: string): Promise<ListProjectReportsResponse>;
+
+	getReport(reportId: string): Promise<GetReportResponse>;
+
+	listReportVersions(reportId: string): Promise<ListReportVersionsResponse>;
+
+	getReportVersion(
+		reportId: string,
+		versionNumber: number
+	): Promise<GetReportVersionResponse>;
+
+	regenerateReport(reportId: string): Promise<RegenerateReportResponse>;
+
+	patchReport(
+		reportId: string,
+		body: PatchReportRequest
+	): Promise<PatchReportResponse>;
+
+	/** Returns the absolute URL of the rendered HTML preview for a version. */
+	getReportVersionPreviewUrl(reportId: string, versionNumber: number): string;
 }
 
 // Re-export the fetch-backed implementation so existing imports of

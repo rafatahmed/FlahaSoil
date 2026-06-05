@@ -75,8 +75,14 @@ import change at the call sites (or via a context provider).
 2. **Runtime validation.** No Zod / Yup. The wizard accepts any input;
    validation rules are documented in `docs/v2-api-contracts.md §4`
    and will be enforced in Phase 6.
-3. **Authentication.** `userId` is hard-coded to `"user_mock"` in the
-   wizard submit. Auth flow lands in Phase 6.
+3. **Authentication.** Identity is resolved through the Phase 8B
+   dev-session layer (`frontend/src/session/`): `SessionProvider`
+   calls `GET /api/v2/me` once, persists the dev user id in
+   `localStorage`, and `realApiV2Client` injects it as the
+   `x-dev-user-id` header on every request. There is no login screen,
+   no password handling, and no JWT/OAuth — see
+   `docs/v2-user-ownership.md` for the boundary and the migration
+   path to a real auth layer.
 4. **State management.** Wizard state lives in component-local
    `useState`. No Redux / Zustand / Context store.
 5. **Branding polish.** Theme uses a single primary green; no custom

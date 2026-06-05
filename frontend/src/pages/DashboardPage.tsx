@@ -1,89 +1,148 @@
 /**
- * FlahaSOIL v2 — Dashboard.
+ * FlahaSOIL v2 — operational dashboard (Phase 8C-A).
  *
- * Welcome message + four navigation cards. No live data in Phase 5.
+ * The dashboard is the operator's workspace, distinct from the landing
+ * page. It surfaces a Soil Health Overview (KPI tiles), recent
+ * projects, alerts derived from project status, the system-status
+ * card, and the quick-action grid. Recent soil tests / reports are
+ * scoped per project in the v2 API, so the dashboard deep-links into
+ * project detail for those views rather than mock-aggregating them.
  */
-import {
-	Box,
-	Card,
-	CardActionArea,
-	CardContent,
-	Grid,
-	Typography,
-} from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
-import IosShareIcon from "@mui/icons-material/IosShare";
-import HistoryIcon from "@mui/icons-material/History";
+import FolderIcon from "@mui/icons-material/Folder";
+import OpacityIcon from "@mui/icons-material/Opacity";
 import ScienceIcon from "@mui/icons-material/Science";
-import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
-interface DashCard {
-	title: string;
-	description: string;
-	to: string;
-	icon: ReactNode;
-}
+import { AlertsPanel } from "../features/dashboard/components/AlertsPanel";
+import { MetricCard } from "../features/dashboard/components/MetricCard";
+import { QuickActionsGrid } from "../features/dashboard/components/QuickActionsGrid";
+import { RecentProjectsList } from "../features/dashboard/components/RecentProjectsList";
+import { SystemStatusCard } from "../features/dashboard/components/SystemStatusCard";
+import { usePageHeader } from "../layouts/PageHeaderContext";
+import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
+import { useAuth } from "../auth";
 
-const CARDS: DashCard[] = [
-	{
-		title: "New Soil Test",
-		description: "Start a guided soil-test wizard.",
-		to: "/soil-tests/new",
-		icon: <ScienceIcon fontSize="large" color="primary" />,
-	},
-	{
-		title: "Recent Tests",
-		description: "Recent tests will appear here in a later phase.",
-		to: "/",
-		icon: <HistoryIcon fontSize="large" color="primary" />,
-	},
-	{
-		title: "Reports",
-		description: "Generated PDF / CSV reports.",
-		to: "/reports",
-		icon: <AssessmentIcon fontSize="large" color="primary" />,
-	},
-	{
-		title: "FlahaCalc Export",
-		description: "Export soil parameters to FlahaCalc.",
-		to: "/flahacalc-export",
-		icon: <IosShareIcon fontSize="large" color="primary" />,
-	},
-];
+const MAX_RECENT_PROJECTS = 5;
 
 export function DashboardPage() {
 	const navigate = useNavigate();
+	const { status: sessionStatus, user } = useAuth();
+	const apiMode = getApiClientMode();
+	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
+	const [error, setError] = useState<string | null>(null);
+
+	usePageHeader({
+		title: "Soil Intelligence Workspace",
+		subtitle: user
+			? `${user.displayName} · operational dashboard`
+			: "Operational dashboard",
+		breadcrumbs: [{ label: "Home", to: "/" }, { label: "Dashboard" }],
+	});
+
+	useEffect(() => {
+		if (sessionStatus !== "authenticated") return;
+		let cancelled = false;
+		setError(null);
+		getApiClient()
+			.listProjects({})
+			.then((res) => {
+				if (!cancelled) setProjects(res.projects);
+			})
+			.catch((err: unknown) => {
+				if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [sessionStatus]);
+
+	const totalProjects = projects?.length ?? null;
+	const totalSamples =
+		projects === null
+			? null
+			: projects.reduce((sum, p) => sum + p.sampleCount, 0);
+	const activeProjects =
+		projects === null ? null : projects.filter((p) => p.status === "ACTIVE").length;
+	const archived =
+		projects === null ? null : projects.filter((p) => p.status === "ARCHIVED").length;
 
 	return (
 		<Box>
-			<Typography variant="h4" gutterBottom>
-				Welcome to FlahaSOIL v2
+			<Typography variant="h6" sx={{ mb: 1.5 }}>
+				Soil Health Overview
 			</Typography>
-			<Typography color="text.secondary" sx={{ mb: 4 }}>
-				Contract-driven preview build. All data on this screen is mocked.
-			</Typography>
+			<Box
+				sx={{
+					display: "grid",
+					gap: 2,
+					gridTemplateColumns: {
+						xs: "1fr",
+						sm: "repeat(2, 1fr)",
+						md: "repeat(4, 1fr)",
+					},
+					mb: 4,
+				}}
+			>
+				<MetricCard
+					label="Projects"
+					value={totalProjects}
+					icon={<FolderIcon />}
+					accent="soil"
+					hint="All agronomic projects"
+				/>
+				<MetricCard
+					label="Samples"
+					value={totalSamples}
+					icon={<OpacityIcon />}
+					accent="green"
+					hint="Field samples collected"
+				/>
+				<MetricCard
+					label="Active"
+					value={activeProjects}
+					icon={<ScienceIcon />}
+					accent="sand"
+					hint="Projects in active analysis"
+				/>
+				<MetricCard
+					label="Archived"
+					value={archived}
+					icon={<AssessmentIcon />}
+					accent="warning"
+					hint="Projects kept for audit reference"
+				/>
+			</Box>
 
-			<Grid container spacing={3}>
-				{CARDS.map((card) => (
-					<Grid item xs={12} sm={6} md={3} key={card.title}>
-						<Card variant="outlined" sx={{ height: "100%" }}>
-							<CardActionArea
-								onClick={() => navigate(card.to)}
-								sx={{ height: "100%" }}
-							>
-								<CardContent>
-									<Box sx={{ mb: 1 }}>{card.icon}</Box>
-									<Typography variant="h6">{card.title}</Typography>
-									<Typography variant="body2" color="text.secondary">
-										{card.description}
-									</Typography>
-								</CardContent>
-							</CardActionArea>
-						</Card>
-					</Grid>
-				))}
-			</Grid>
+			<Box
+				sx={{
+					display: "grid",
+					gap: 3,
+					gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" },
+					mb: 4,
+				}}
+			>
+				<RecentProjectsList
+					projects={projects}
+					error={error}
+					limit={MAX_RECENT_PROJECTS}
+					onOpen={(id) => navigate(`/projects/${id}`)}
+					onManage={() => navigate("/projects")}
+				/>
+				<Stack spacing={3}>
+					<AlertsPanel projects={projects} />
+					<SystemStatusCard apiMode={apiMode} />
+				</Stack>
+			</Box>
+
+			<Typography variant="h6" sx={{ mb: 1.5 }}>
+				Quick actions
+			</Typography>
+			<QuickActionsGrid />
 		</Box>
 	);
 }
+

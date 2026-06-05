@@ -4,8 +4,13 @@
  * Single decision point for choosing between the in-memory mock and
  * the fetch-backed real client at runtime.
  *
- *   - `VITE_USE_MOCK_API === "true"`  → `mockApiV2Client` (default)
- *   - any other value (incl. unset)   → `realApiV2Client`
+ *   - `VITE_USE_MOCK_API === "true"`  → `mockApiV2Client`
+ *   - any other value (incl. unset)   → `realApiV2Client` (default)
+ *
+ * Phase 9A-G flipped the default: the real backend is the production
+ * path and is now the safe default. Mock mode must be opted into
+ * explicitly so a stray missing env var never silently runs the SPA
+ * against fixtures instead of the API.
  *
  * Pages MUST import `getApiClient()` from this module rather than
  * referencing the mock or real client directly. That keeps the toggle
@@ -20,10 +25,10 @@ export type ApiClientMode = "mock" | "real";
 
 function readMode(): ApiClientMode {
 	const raw = import.meta.env.VITE_USE_MOCK_API;
-	// Default: mock. Only an explicit "false" switches to real to make
-	// the safe path the default during development.
-	if (typeof raw !== "string") return "mock";
-	return raw.toLowerCase() === "false" ? "real" : "mock";
+	// Default: real. Only an explicit "true" switches to mock so the
+	// production path is the safe default during development too.
+	if (typeof raw !== "string") return "real";
+	return raw.toLowerCase() === "true" ? "mock" : "real";
 }
 
 let cachedMode: ApiClientMode | null = null;

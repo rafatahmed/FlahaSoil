@@ -1,106 +1,114 @@
 /**
- * FlahaSOIL v2 — application chrome.
+ * FlahaSOIL v2 — application chrome (Phase 8C-A).
  *
- * Permanent left drawer on desktop, AppBar with the page title, and
- * an `<Outlet />` for the active route. Navigation items are static
- * for Phase 5; an active-link indicator is provided via NavLink.
+ * Platform shell composed of a fixed top app bar, a section-grouped
+ * sidebar, an optional page context bar with breadcrumbs/subtitle, and
+ * the routed content area. Responsive behaviour:
+ *   - Desktop (md+): persistent left sidebar (240px).
+ *   - Tablet/mobile (<md): temporary drawer that the menu button opens.
+ *
+ * Page metadata (title, subtitle, breadcrumbs, project context) flows
+ * through `PageHeaderContext`; pages call `usePageHeader(...)` to set
+ * theirs. The shell remains route-agnostic.
  */
-import {
-	AppBar,
-	Box,
-	Drawer,
-	List,
-	ListItemButton,
-	ListItemIcon,
-	ListItemText,
-	Toolbar,
-	Typography,
-} from "@mui/material";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import IosShareIcon from "@mui/icons-material/IosShare";
-import ScienceIcon from "@mui/icons-material/Science";
-import type { ReactNode } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Box, Drawer, Toolbar, useMediaQuery, useTheme } from "@mui/material";
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
 
-const DRAWER_WIDTH = 240;
+import { FlahaLogo } from "./components/FlahaLogo";
+import { PageContextBar } from "./components/PageContextBar";
+import { SidebarNav } from "./components/SidebarNav";
+import { TopAppBar } from "./components/TopAppBar";
+import { PageHeaderProvider } from "./PageHeaderContext";
+import { flahaSoilColors } from "../theme/flahaSoilTheme";
 
-interface NavItem {
-	label: string;
-	to: string;
-	icon: ReactNode;
-}
-
-const NAV_ITEMS: NavItem[] = [
-	{ label: "Dashboard", to: "/", icon: <DashboardIcon /> },
-	{ label: "New Soil Test", to: "/soil-tests/new", icon: <ScienceIcon /> },
-	{ label: "Reports", to: "/reports", icon: <AssessmentIcon /> },
-	{
-		label: "FlahaCalc Export",
-		to: "/flahacalc-export",
-		icon: <IosShareIcon />,
-	},
-];
+const DRAWER_WIDTH = 248;
 
 export function AppLayout() {
+	const theme = useTheme();
+	const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
+	const [mobileOpen, setMobileOpen] = useState(false);
+
+	const drawerContent = (
+		<>
+			<Toolbar
+				sx={{
+					backgroundColor: flahaSoilColors.deepSoilBrown,
+					minHeight: 64,
+					px: 2,
+				}}
+			>
+				<FlahaLogo size={26} variant="full" />
+			</Toolbar>
+			<SidebarNav onNavigate={() => setMobileOpen(false)} />
+		</>
+	);
+
 	return (
-		<Box sx={{ display: "flex", minHeight: "100vh" }}>
-			<AppBar
-				position="fixed"
-				sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}
-			>
-				<Toolbar>
-					<Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-						FlahaSOIL v2
-					</Typography>
-				</Toolbar>
-			</AppBar>
+		<PageHeaderProvider>
+			<Box sx={{ display: "flex", minHeight: "100vh" }}>
+				<TopAppBar
+					drawerWidth={DRAWER_WIDTH}
+					onMenuClick={() => setMobileOpen((v) => !v)}
+				/>
 
-			<Drawer
-				variant="permanent"
-				sx={{
-					width: DRAWER_WIDTH,
-					flexShrink: 0,
-					[`& .MuiDrawer-paper`]: {
-						width: DRAWER_WIDTH,
-						boxSizing: "border-box",
-					},
-				}}
-			>
-				<Toolbar />
-				<Box sx={{ overflow: "auto" }}>
-					<List>
-						{NAV_ITEMS.map((item) => (
-							<ListItemButton
-								key={item.to}
-								component={NavLink}
-								to={item.to}
-								end={item.to === "/"}
-								sx={{
-									"&.active": {
-										backgroundColor: "action.selected",
-									},
-								}}
-							>
-								<ListItemIcon>{item.icon}</ListItemIcon>
-								<ListItemText primary={item.label} />
-							</ListItemButton>
-						))}
-					</List>
+				<Box
+					component="nav"
+					sx={{
+						width: { md: DRAWER_WIDTH },
+						flexShrink: { md: 0 },
+					}}
+					aria-label="primary navigation"
+				>
+					{isDesktop ? (
+						<Drawer
+							variant="permanent"
+							open
+							sx={{
+								"& .MuiDrawer-paper": {
+									width: DRAWER_WIDTH,
+									boxSizing: "border-box",
+								},
+							}}
+						>
+							{drawerContent}
+						</Drawer>
+					) : (
+						<Drawer
+							variant="temporary"
+							open={mobileOpen}
+							onClose={() => setMobileOpen(false)}
+							ModalProps={{ keepMounted: true }}
+							sx={{
+								"& .MuiDrawer-paper": {
+									width: DRAWER_WIDTH,
+									boxSizing: "border-box",
+								},
+							}}
+						>
+							{drawerContent}
+						</Drawer>
+					)}
 				</Box>
-			</Drawer>
 
-			<Box
-				component="main"
-				sx={{
-					flexGrow: 1,
-					p: 3,
-					width: { sm: `calc(100% - ${DRAWER_WIDTH}px)` },
-				}}
-			>
-				<Toolbar />
-				<Outlet />
+				<Box
+					component="main"
+					sx={{
+						flexGrow: 1,
+						width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+						minHeight: "100vh",
+						backgroundColor: "background.default",
+						display: "flex",
+						flexDirection: "column",
+					}}
+				>
+					<Toolbar />
+					<PageContextBar />
+					<Box sx={{ p: { xs: 2, md: 4 }, flexGrow: 1 }}>
+						<Outlet />
+					</Box>
+				</Box>
 			</Box>
-		</Box>
+		</PageHeaderProvider>
 	);
 }
