@@ -46,4 +46,29 @@ export interface SoilInterpretationResult {
 	overallSoilRating: string;
 
 	warnings: string[];
+
+	// Phase 8D additions — severity classes and structured suitability
+	// matrix. All fields are OPTIONAL with the same "input present →
+	// field present" contract as the categories above.
+	salinitySeverity?:
+		| "None"
+		| "Slight"
+		| "Moderate"
+		| "Strong"
+		| "Severe";
+	sodicitySeverity?:
+		| "None"
+		| "Slight"
+		| "Moderate"
+		| "Strong"
+		| "Severe";
+	organicMatterCategory?: string;
+	infiltrationClass?: string;
+	compactionRisk?: "Low" | "Moderate" | "High";
+	textureSuitability?: {
+		turfgrass: { verdict: "Suitable" | "Marginal" | "Unsuitable"; reasons: string[] };
+		landscape: { verdict: "Suitable" | "Marginal" | "Unsuitable"; reasons: string[] };
+		agriculture: { verdict: "Suitable" | "Marginal" | "Unsuitable"; reasons: string[] };
+		irrigation: { verdict: "Suitable" | "Marginal" | "Unsuitable"; reasons: string[] };
+	};
 }

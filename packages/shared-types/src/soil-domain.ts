@@ -40,10 +40,20 @@ export enum SoilValueSource {
 	CALCULATED = "CALCULATED",
 }
 
+/**
+ * Lifecycle of a generated soil report. Mirrors `enum SoilReportStatus`
+ * in `prisma/v2-schema.prisma`.
+ *
+ * Phase 8D introduced the GENERATING / READY / FAILED transitions and
+ * renamed the previous GENERATED value to READY for symmetry with the
+ * "is at least one ReportVersion successfully persisted" predicate.
+ */
 export enum SoilReportStatus {
 	DRAFT = "DRAFT",
-	GENERATED = "GENERATED",
+	GENERATING = "GENERATING",
+	READY = "READY",
 	ARCHIVED = "ARCHIVED",
+	FAILED = "FAILED",
 }
 
 export enum SoilInterpretationRating {
@@ -203,6 +213,38 @@ export interface SoilChemistryResultDTO {
 	updatedAt: IsoDateString;
 }
 
+/**
+ * FAO-29 severity buckets shared by salinity and sodicity. Mirrors the
+ * `SalinitySeverity` / `SodicitySeverity` literals exported from
+ * `@flaha/soil-interpretation`.
+ */
+export type SoilSeverityClass =
+	| "None"
+	| "Slight"
+	| "Moderate"
+	| "Strong"
+	| "Severe";
+
+/** Per-use verdict value in a {@link SuitabilityMatrixDTO} entry. */
+export type SuitabilityVerdictValue = "Suitable" | "Marginal" | "Unsuitable";
+
+export interface SuitabilityMatrixEntry {
+	verdict: SuitabilityVerdictValue;
+	reasons: string[];
+}
+
+/**
+ * Structured texture-suitability matrix persisted under
+ * `SoilInterpretation.textureSuitabilityJson`. Each entry combines a
+ * verdict with the human-readable reasons that produced it.
+ */
+export interface SuitabilityMatrixDTO {
+	turfgrass: SuitabilityMatrixEntry;
+	landscape: SuitabilityMatrixEntry;
+	agriculture: SuitabilityMatrixEntry;
+	irrigation: SuitabilityMatrixEntry;
+}
+
 export interface SoilInterpretationDTO {
 	id: string;
 	soilTestId: string;
@@ -218,6 +260,16 @@ export interface SoilInterpretationDTO {
 	overallSoilRating: SoilInterpretationRating;
 	/** JSON array of warning strings emitted by `@flaha/soil-interpretation`. */
 	warningsJson: string[];
+
+	// Phase 8D — extended classifications. All fields nullable; the
+	// engine omits each one when its input is not available.
+	salinitySeverity?: SoilSeverityClass | null;
+	sodicitySeverity?: SoilSeverityClass | null;
+	organicMatterCategory?: string | null;
+	infiltrationClass?: string | null;
+	compactionRisk?: "Low" | "Moderate" | "High" | null;
+	textureSuitabilityJson?: SuitabilityMatrixDTO | null;
+
 	createdAt: IsoDateString;
 	updatedAt: IsoDateString;
 }
@@ -230,6 +282,15 @@ export interface SoilReportDTO {
 	id: string;
 	soilTestId: string;
 	status: SoilReportStatus;
+	/** Phase 8D — durable handle fields. */
+	title?: string | null;
+	reportNumber?: string | null;
+	archived: boolean;
+	/** FK to the latest successful ReportVersion (null while DRAFT). */
+	currentVersionId?: string | null;
+	/** Convenience: versionNumber of the currentVersion, or 0 when none. */
+	latestVersionNumber: number;
+	/** Legacy Phase 6 placeholder fields. Retained for compatibility. */
 	reportType?: string | null;
 	fileUrl?: string | null;
 	generatedAt?: IsoDateString | null;

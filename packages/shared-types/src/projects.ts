@@ -49,11 +49,12 @@ export interface ProjectSummaryDTO {
 // ---------------------------------------------------------------------------
 
 /**
- * Wire-format request for `POST /api/v2/projects`. Ownership is resolved
- * server-side from the dev-session (see backend `auth/devSession.middleware`),
- * NOT from a body field — Phase 8B intentionally removed `userId` from the
- * client-supplied payload so the API never trusts the client to declare
- * its own user identity.
+ * Wire-format request for `POST /api/v2/projects`. Ownership + tenancy
+ * are resolved server-side from the auth session (see backend
+ * `auth/session.middleware`), NOT from a body field — Phase 8B
+ * intentionally removed `userId` from the client-supplied payload (and
+ * 9A-E removed the parallel `organizationId` field) so the API never
+ * trusts the client to declare its own identity or tenant.
  */
 export interface CreateProjectRequest {
 	name: string;

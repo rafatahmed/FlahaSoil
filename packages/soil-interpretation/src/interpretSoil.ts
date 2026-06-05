@@ -16,9 +16,16 @@ import {
 	classifyBaseSaturation,
 	classifyCationBalance,
 	classifyCec,
+	classifyCompactionRisk,
+	classifyDrainageFromKsat,
+	classifyInfiltration,
+	classifyOrganicMatter,
 	classifyPh,
 	classifySalinity,
+	classifySalinitySeverity,
+	classifySodicitySeverity,
 	classifySodiumRisk,
+	classifyTextureSuitability,
 	classifyWaterHolding,
 	passthroughDrainage,
 } from "./rules";
@@ -85,9 +92,9 @@ export function interpretSoil(
 		kPercent !== undefined
 	) {
 		result.cationBalance = classifyCationBalance({
-			caPercent,
-			mgPercent,
-			kPercent,
+			...(caPercent !== undefined ? { caPercent } : {}),
+			...(mgPercent !== undefined ? { mgPercent } : {}),
+			...(kPercent !== undefined ? { kPercent } : {}),
 		});
 	}
 
@@ -100,8 +107,57 @@ export function interpretSoil(
 	}
 
 	const drainage = toString(physics.drainageClass);
+	const ksat = toFiniteNumber(physics.saturatedConductivity);
 	if (drainage !== undefined) {
 		result.drainageClass = passthroughDrainage(drainage);
+	} else if (ksat !== undefined) {
+		result.drainageClass = classifyDrainageFromKsat(ksat);
+	}
+	if (ksat !== undefined) {
+		result.infiltrationClass = classifyInfiltration(ksat);
+	}
+
+	// -------------------------------------------------------------------
+	// Phase 8D — extended classifications
+	// -------------------------------------------------------------------
+	if (ec !== undefined) {
+		result.salinitySeverity = classifySalinitySeverity(ec);
+	}
+	const sar = toFiniteNumber(chemistry.sar);
+	if (sar !== undefined || esp !== undefined) {
+		result.sodicitySeverity = classifySodicitySeverity({
+			...(sar !== undefined ? { sar } : {}),
+			...(esp !== undefined ? { esp } : {}),
+		});
+	}
+	const om =
+		toFiniteNumber(chemistry.organicMatter) ??
+		toFiniteNumber(physics.organicMatter) ??
+		toFiniteNumber((physics as Record<string, unknown>).organicMatterPercent);
+	if (om !== undefined) {
+		result.organicMatterCategory = classifyOrganicMatter(om);
+	}
+	const bd = toFiniteNumber(physics.bulkDensity);
+	const textureClass = toString(physics.textureClass);
+	if (bd !== undefined) {
+		result.compactionRisk = classifyCompactionRisk({
+			bulkDensity: bd,
+			...(textureClass !== undefined ? { textureClass } : {}),
+		});
+	}
+	if (textureClass !== undefined) {
+		result.textureSuitability = classifyTextureSuitability({
+			textureClass,
+			...(result.salinitySeverity !== undefined
+				? { salinitySeverity: result.salinitySeverity }
+				: {}),
+			...(result.sodicitySeverity !== undefined
+				? { sodicitySeverity: result.sodicitySeverity }
+				: {}),
+			...(result.drainageClass !== undefined
+				? { drainageClass: result.drainageClass }
+				: {}),
+		});
 	}
 
 	// -------------------------------------------------------------------
