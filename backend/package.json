@@ -14,7 +14,8 @@
 		"test:watch": "vitest",
 		"prisma:generate:v2": "prisma generate --schema ../prisma/v2-schema.prisma",
 		"prisma:db:push:v2": "prisma db push --schema ../prisma/v2-schema.prisma",
-		"prisma:seed:v2": "tsx --env-file=.env prisma/seed.ts"
+		"prisma:seed:v2": "tsx --env-file=.env prisma/seed.ts",
+		"prisma:backfill:org-ids:v2": "tsx --env-file=.env prisma/backfill-org-ids-9a.ts"
 	},
 	"dependencies": {
 		"@flaha/shared-types": "*",
@@ -22,13 +23,17 @@
 		"@flaha/soil-interpretation": "*",
 		"@flaha/soil-physics": "*",
 		"@prisma/client": "^5.22.0",
+		"argon2": "^0.44.0",
+		"cookie-parser": "^1.4.7",
 		"cors": "^2.8.5",
 		"express": "^4.21.0",
 		"helmet": "^7.2.0",
+		"jose": "^6.2.3",
 		"morgan": "^1.10.0",
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
+		"@types/cookie-parser": "^1.4.10",
 		"@types/cors": "^2.8.17",
 		"@types/express": "^4.17.21",
 		"@types/morgan": "^1.9.9",
