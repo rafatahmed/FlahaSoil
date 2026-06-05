@@ -41,6 +41,10 @@ export interface PrismaModelDelegate<T> {
 		data: unknown;
 		include?: unknown;
 	}): Promise<T>;
+	updateMany(args: {
+		where?: Record<string, unknown>;
+		data: unknown;
+	}): Promise<{ count: number }>;
 	upsert(args: {
 		where: Record<string, unknown>;
 		create: unknown;
@@ -55,6 +59,7 @@ export interface PrismaModelDelegate<T> {
 		take?: number;
 		skip?: number;
 	}): Promise<T[]>;
+	count(args?: { where?: Record<string, unknown> }): Promise<number>;
 }
 
 export interface PrismaClientLike {
@@ -62,6 +67,11 @@ export interface PrismaClientLike {
 	$disconnect(): Promise<void>;
 	$transaction<R>(fn: (tx: PrismaClientLike) => Promise<R>): Promise<R>;
 	user: PrismaModelDelegate<Record<string, unknown>>;
+	// Phase 9A — multi-tenant + auth delegates.
+	organization: PrismaModelDelegate<Record<string, unknown>>;
+	organizationMembership: PrismaModelDelegate<Record<string, unknown>>;
+	refreshToken: PrismaModelDelegate<Record<string, unknown>>;
+	auditLog: PrismaModelDelegate<Record<string, unknown>>;
 	project: PrismaModelDelegate<Record<string, unknown>>;
 	soilSample: PrismaModelDelegate<Record<string, unknown>>;
 	soilTest: PrismaModelDelegate<Record<string, unknown>>;
@@ -71,6 +81,13 @@ export interface PrismaClientLike {
 	soilChemistryResult: PrismaModelDelegate<Record<string, unknown>>;
 	soilInterpretation: PrismaModelDelegate<Record<string, unknown>>;
 	soilReport: PrismaModelDelegate<Record<string, unknown>>;
+	reportVersion: PrismaModelDelegate<Record<string, unknown>> & {
+		findFirst(args: {
+			where?: Record<string, unknown>;
+			orderBy?: unknown;
+			select?: unknown;
+		}): Promise<Record<string, unknown> | null>;
+	};
 	soilLabValue: PrismaModelDelegate<Record<string, unknown>>;
 }
 
