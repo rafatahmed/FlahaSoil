@@ -15,16 +15,16 @@ The shell is built on `frontend/src/theme/flahaSoilTheme.ts`. The
 palette is anchored to soil-science semantics rather than generic UI
 colours:
 
-| Token              | Hex       | Used for                                        |
-| ------------------ | --------- | ----------------------------------------------- |
-| `deepSoilBrown`    | `#4B2E1A` | Primary brand, top app bar, sidebar accents     |
-| `clayEarth`        | `#8B5E3C` | Secondary brand, hero gradient                  |
-| `sandBeige`        | `#D9C7A7` | Subtle surfaces, sand-tier KPI accents          |
-| `organicGreen`     | `#2E7D32` | Action / success, "green" KPI accents, avatars  |
-| `analyticalCream`  | `#F5F0E6` | Card backgrounds for high-content panels        |
-| `mineralWarning`   | `#C97B33` | Warning accent for at-risk KPIs and alerts      |
-| `criticalSalinity` | `#B71C1C` | High-salinity / critical interpretation chips   |
-| `neutralBg`        | `#FAF8F4` | Application background                          |
+| Token              | Hex       | Used for                                       |
+| ------------------ | --------- | ---------------------------------------------- |
+| `deepSoilBrown`    | `#4B2E1A` | Primary brand, top app bar, sidebar accents    |
+| `clayEarth`        | `#8B5E3C` | Secondary brand, hero gradient                 |
+| `sandBeige`        | `#D9C7A7` | Subtle surfaces, sand-tier KPI accents         |
+| `organicGreen`     | `#2E7D32` | Action / success, "green" KPI accents, avatars |
+| `analyticalCream`  | `#F5F0E6` | Card backgrounds for high-content panels       |
+| `mineralWarning`   | `#C97B33` | Warning accent for at-risk KPIs and alerts     |
+| `criticalSalinity` | `#B71C1C` | High-salinity / critical interpretation chips  |
+| `neutralBg`        | `#FAF8F4` | Application background                         |
 
 Typography uses MUI defaults; heading weights are tightened (600) and
 captions are softened for the dense dashboards.
@@ -69,20 +69,20 @@ Sub-components live in `frontend/src/layouts/components/`:
 
 Defined in `frontend/src/routes/AppRoutes.tsx`:
 
-| Path                              | Page                  | Notes                                     |
-| --------------------------------- | --------------------- | ----------------------------------------- |
-| `/`                               | `LandingPage`         | Marketing entry; no API calls             |
-| `/dashboard`                      | `DashboardPage`       | Operational workspace                     |
-| `/projects`                       | `ProjectsListPage`    | "My projects"                             |
-| `/projects/:projectId`            | `ProjectDetailPage`   | Samples + project actions                 |
-| `/soil-tests/new`                 | `SoilTestWizardPage`  | Accepts `?projectId=` preselection        |
-| `/soil-tests/:soilTestId`         | `SoilTestDetailPage`  | Physics / chemistry / interpretation      |
-| `/soil-tests/:soilTestId/report`  | `SoilTestReportPage`  | Read-only report                          |
-| `/reports`                        | `ReportsPage`         | Project-grouped report index              |
-| `/flahacalc-export`               | `FlahaCalcExportPage` | Preview + raw JSON                        |
-| `/profile`                        | `ProfilePage`         | Identity + platform activity + session    |
-| `/settings`                       | `SettingsPage`        | Stub (Planned categories)                 |
-| `/standards`                      | `StandardsPage`       | Stub (reference index)                    |
+| Path                             | Page                  | Notes                                  |
+| -------------------------------- | --------------------- | -------------------------------------- |
+| `/`                              | `LandingPage`         | Marketing entry; no API calls          |
+| `/dashboard`                     | `DashboardPage`       | Operational workspace                  |
+| `/projects`                      | `ProjectsListPage`    | "My projects"                          |
+| `/projects/:projectId`           | `ProjectDetailPage`   | Samples + project actions              |
+| `/soil-tests/new`                | `SoilTestWizardPage`  | Accepts `?projectId=` preselection     |
+| `/soil-tests/:soilTestId`        | `SoilTestDetailPage`  | Physics / chemistry / interpretation   |
+| `/soil-tests/:soilTestId/report` | `SoilTestReportPage`  | Read-only report                       |
+| `/reports`                       | `ReportsPage`         | Project-grouped report index           |
+| `/flahacalc-export`              | `FlahaCalcExportPage` | Preview + raw JSON                     |
+| `/profile`                       | `ProfilePage`         | Identity + platform activity + session |
+| `/settings`                      | `SettingsPage`        | Stub (Planned categories)              |
+| `/standards`                     | `StandardsPage`       | Stub (reference index)                 |
 
 The landing page is intentionally separate from `/dashboard`: `/` is
 the unauthenticated face of the platform and must render even when
@@ -129,7 +129,48 @@ project is known); the top bar then renders a small "Project · Name
 
 ---
 
-## 6. Deferred
+## 6. Local dev (v2)
+
+The v2 stack has a dedicated launcher at `scripts/dev-v2.ps1`. It is
+deliberately separate from the legacy `scripts/launch-flaha.ps1`
+(which targets `public/` + `api-implementation/` on ports 3000/3001)
+and never touches that surface.
+
+| Command                             | Effect                                                                                                          |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pwsh ./scripts/dev-v2.ps1 start`   | Verify `backend/.env` + Postgres, run `prisma generate` for the v2 schema, start backend + frontend (detached). |
+| `pwsh ./scripts/dev-v2.ps1 stop`    | Terminate the tracked backend + frontend processes and free their ports.                                        |
+| `pwsh ./scripts/dev-v2.ps1 restart` | `stop`, brief settle, `start`.                                                                                  |
+| `pwsh ./scripts/dev-v2.ps1 status`  | Listening state + tracked PID for Postgres / backend / frontend.                                                |
+
+Prerequisites:
+
+- PostgreSQL must already be running on `localhost:5432`. The script
+  probes the port and refuses to start the stack if it is down; it
+  never starts Postgres itself.
+- `backend/.env` must exist (copy from `backend/.env.example`) and
+  must set `DATABASE_URL_V2`.
+
+URLs:
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:3002/api/v2` (health probe at
+  `http://localhost:3002/health`)
+
+Logs and tracked PIDs land under `logs/`:
+
+- `logs/dev-v2-backend.log`, `logs/dev-v2-frontend.log` — full child
+  process output.
+- `logs/dev-v2-prisma.log` — last `prisma generate` run.
+- `logs/dev-v2-backend.pid`, `logs/dev-v2-frontend.pid` — used by
+  `stop` / `restart` to find the right processes across invocations.
+
+Flags: `-NoGenerate` skips `prisma generate`; `-SkipDbCheck` skips
+the Postgres reachability probe (only useful for no-DB sanity runs).
+
+---
+
+## 7. Deferred
 
 - Real `/settings` — currently four planned categories with
   outlined "Planned" chips; no settings are persistable yet.

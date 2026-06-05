@@ -477,26 +477,432 @@ Out of scope (deferred to later phases):
 
 ---
 
-## Phase 8 — Reports, audit trace, production hardening
+## Phase 8 — Reports & production hardening (foundation) ✅ COMPLETE
 
-**Goal:** Round out the v2 surface with the report generation pipeline,
-end-to-end audit traceability, and the operational primitives required for a
-non-development deployment.
+**Goal:** Land the Phase 8 baseline of report assembly + audit trace +
+operational primitives. This is the foundation that Phase 8D builds on.
 
-Tasks:
+Tasks (delivered):
 
-- Wire `POST /api/v2/soil-tests/:id/reports` to the templated PDF/HTML
-  generator and persist artefacts.
-- Capture an audit trace per calculation (inputs, engine versions, derived
-  outputs) using the existing Prisma `AuditEntry` model.
-- Add structured request logging, rate limiting, and authentication on
-  `/api/v2/*`.
-- Production-grade env handling, container build, and migration runbook for
-  `prisma migrate deploy` against PostgreSQL.
+- `GET /api/v2/soil-tests/:id/report` — read-only `SoilReportEnvelope`
+  with normalised inputs, structured warnings, and an audit trace
+  (`physicsTrace`, `chemistryInputsUsed`, `normalizedInputs`,
+  `skippedModules`). No calculations re-run at fetch time.
+- Structured warning catalogue (`backend/src/services/report/warnings.ts`)
+  with stable wire codes (`CHEMISTRY_SKIPPED_*`, `TDS_INCONSISTENT_WITH_EC`,
+  `EC_DERIVED_FROM_TDS`, `INTERPRETATION_WARNING`).
+- Operational primitives: structured JSON logger
+  (`backend/src/utils/logger.ts`), in-memory sliding-window rate limit
+  (`backend/src/middleware/rateLimit.ts`, 120 req/min/IP), hardened
+  `errorHandler` mapping `entity.too.large` → `PAYLOAD_TOO_LARGE` (413),
+  `express.json({ limit: "512kb" })`, new shared error codes
+  `PAYLOAD_TOO_LARGE` and `RATE_LIMITED`.
+- Frontend `SoilTestReportPage` mounted at `/soil-tests/:id/report` with
+  `warningDetails` chips and a collapsible audit-trace panel.
 
-Exit criteria: reports generated and downloadable from the frontend; audit
-entries written for every calculation; backend deployable from a single
-container image.
+Exit criteria: report envelope reachable from the SPA; warnings carry
+stable codes; rate limit + payload cap in place; documented in
+`docs/v2-reporting.md`.
+
+Out of scope (moved to Phase 8D / Phase 9): immutable report versions,
+recommendation rule engine, HTML/PDF renderer pipeline, container build,
+production deployment runbook, real authentication.
+
+---
+
+## Phase 8D — Reports v1 & production hardening ✅ COMPLETE
+
+**Goal:** Turn the Phase 8 read-only envelope into a professional,
+versioned, immutable report product with a deterministic recommendation
+engine and a renderer abstraction that targets HTML today and PDF /
+email in Phase 9.
+
+Tasks (P8D.A → P8D.J):
+
+1. **Database** — Add `SoilReport` (durable handle: title, number,
+   archived flag, `currentVersionId` pointer, status) and
+   `ReportVersion` (immutable snapshot with `snapshotJson`,
+   `versionNumber`, `status`, `generatedByUserId`, denormalised
+   `overallSoilRating` + `textureClass` for cheap list rendering).
+   Status enum `SoilReportStatus`
+   (`DRAFT|GENERATING|READY|FAILED|ARCHIVED`). Indexed on `archived`,
+   `status`, `reportId`. Schema synced via `prisma db push` against
+   `flahasoil_v2_dev`; no destructive migration.
+2. **Shared types** — `ProfessionalReportDTO`,
+   `RecommendationSetDTO`, `ReportVersionDTO`,
+   `GenerateReportRequest/Response`, `PatchReportRequest/Response`,
+   `ListReportVersionsResponse`, `GetReportResponse`,
+   `ListProjectReportsResponse` in
+   `packages/shared-types/src/professional-report.ts` and re-exported
+   from the package barrel. Wire-stable codes
+   (`REC-<DOMAIN>-<NNN>`, `SoilReportStatus`).
+3. **Composer (pure)** — `composeProfessionalReport()` takes already
+   loaded Prisma rows + the existing `SoilReportEnvelope` and returns
+   a fully populated `ProfessionalReportDTO` (cover, executive
+   summary, texture/physics/chemistry, salinity/sodicity/irrigation,
+   agronomic, recommendations, notes, appendix). Pure function — no
+   I/O, no recalculation.
+4. **Recommendation engine** — Rule registry
+   (`backend/src/services/report/rules.ts`) of pure records (`code`,
+   severity, horizon, category, copy, `evaluate(ctx)`). 13 rules
+   across SAL / SOD / PH / OM / TEX / CEC / DRN / COMP / MON.
+   `runRecommendations()` walks the registry once and groups matches
+   by horizon (`SHORT|MEDIUM|LONG`).
+5. **Renderer abstraction** — Three small interfaces in
+   `renderer/types.ts` (`ReportTemplate`, `ReportRenderer`,
+   `ReportExporter`) + `DEFAULT_BRAND` tokens. `DefaultReportRenderer`
+   assembles `defaultTemplate` + `defaultTemplate2` into a
+   self-contained HTML document with brand tokens inlined as CSS
+   variables. PDF / email exporters intentionally deferred.
+6. **Service (transactional)** — `generateReport()` /
+   `regenerateReport()` write the version + flip
+   `SoilReport.currentVersionId` inside a single
+   `prisma.$transaction(...)`. Failures persist a `FAILED` version
+   with `errorMessage` rather than leaving an orphaned `GENERATING`
+   row. `listProjectReports()`, `getReport()`, `updateReport()`,
+   `listVersions()`, `getVersion()` round out the surface.
+7. **HTTP surface** — `POST /api/v2/soil-tests/:id/reports`,
+   `GET /api/v2/projects/:projectId/reports`,
+   `GET|PATCH /api/v2/reports/:id`,
+   `POST /api/v2/reports/:id/regenerate`,
+   `GET /api/v2/reports/:id/versions`,
+   `GET /api/v2/reports/:id/versions/:n`,
+   `GET /api/v2/reports/:id/versions/:n/preview` (text/html).
+   Validation via zod schemas; ownership enforced through
+   `assertReportOwnership` (Report → SoilTest → SoilSample → Project →
+   User); cross-user access returns 404 (not 403).
+8. **Frontend** — `ReportsListPage` (cards per report with status
+   badge, latest version, generatedAt, generate action) and
+   `ReportDetailPage` (sectioned `ProfessionalReportDTO` render,
+   version history sidebar with regenerate, Print button opens HTML
+   preview, disabled "Download PDF" placeholder). Both mock and real
+   API clients expose `listReports` / `getReport` /
+   `getReportVersions` / `getReportVersion` / `generateReport` /
+   `regenerateReport` / `updateReport`.
+9. **Tests** — 5 composer + 9 service (stub Prisma `$transaction`) +
+   9 ownership + 5 recommendation + 16 extended interpretation +
+   17 legacy interpretation tests. Full backend suite at 79 pass +
+   1 skipped. `__tests__/integration/soilTest.e2e.test.ts` remains
+   gated on `DATABASE_URL_V2` matching `*_test`.
+10. **Documentation** — `docs/v2-reports.md` (architecture, schema,
+    immutability model, DTO sections, rule registry, renderer
+    abstraction, HTTP surface, frontend integration, testing matrix,
+    deferred items).
+
+Exit criteria: backend `typecheck` + `test` green (79 pass, 1 skipped);
+frontend `typecheck` + `build` green; immutable snapshots reproducible
+across rule registry changes; ownership chain enforced on every report
+route; documented in `docs/v2-reports.md`.
+
+Out of scope (deferred to Phase 9):
+
+- PDF exporter (Puppeteer / Playwright) — `ReportExporter` interface
+  in place.
+- Email exporter (transactional templates).
+- Real authentication beyond the dev-session header (login / JWT /
+  role gating).
+- Container image + production deployment runbook +
+  `prisma migrate deploy` against managed PostgreSQL.
+- Branded print stylesheet beyond the inlined token defaults.
+- Formal agronomic review of rule thresholds and citations.
+- Multi-tenant orgs / shared reports across users.
+
+---
+
+## Phase 9A — Authentication & multi-tenant architecture 🚧 IN PROGRESS
+
+**Goal:** Replace the Phase 8B `x-dev-user-id` development header with
+production-grade authentication (argon2 + JWT access + hashed refresh
+tokens) and re-anchor resource ownership from `User` to
+`Organization` so the platform supports multi-tenant deployments.
+
+### 9A-A — Database schema ✅ COMPLETE
+
+- Added `passwordHash`, `lastLoginAt`, `archivedAt` to `User`.
+- Added `Organization` (id, name, slug unique, createdAt) and
+  `OrganizationMembership` (`@@unique([userId, organizationId])`,
+  `role: OrganizationRole`).
+- `OrganizationRole` enum: `OWNER`, `ADMIN`, `AGRONOMIST`,
+  `LAB_TECHNICIAN`, `CONSULTANT`, `VIEWER`.
+- Added `RefreshToken` (token-hash + family-id, revoked flag,
+  user/membership FK, replayed-by pointer) and `AuditLog` (action +
+  actor + target + payload + at).
+- Added `organizationId` to `Project`, `SoilSample`, `SoilTest`, and
+  `SoilReport` (denormalised for fast tenant-scoped queries).
+- Synced via `prisma db push` against `flahasoil_v2_dev`; no
+  production data so no backfill required.
+
+### 9A-B — Tenant ownership migration ✅ COMPLETE
+
+- All resource queries now filter by `organizationId` rather than
+  `userId`. `Project.userId` is retained as the _author_ of the row
+  but no longer the tenancy key.
+- New tenancy assertion helpers in `backend/src/auth/ownership.ts`:
+  `assertProjectTenancy`, `assertSampleTenancy`,
+  `assertSoilTestTenancy`, `assertReportTenancy`. All return 404
+  (not 403) on a cross-tenant match.
+
+### 9A-C — Auth backend ✅ COMPLETE
+
+- `backend/src/auth/password.ts` — argon2id hash + verify
+  (OWASP 2024: 64 MiB / 3 iterations) + policy validation
+  (≥12 chars, letter+digit, max 128).
+- `backend/src/auth/jwt.ts` — HS256 access tokens via `jose`
+  (15-min TTL, `{ sub, oid, iat, exp }` claims).
+- `backend/src/auth/refreshTokens.ts` — 32-byte b64url tokens stored
+  as SHA-256 hashes; family-based rotation + reuse detection
+  (replay triggers revocation of the whole family).
+- `backend/src/auth/audit.ts` — `writeAuditTransactional` for
+  security events and `writeAuditBestEffort` for business events.
+- HTTP surface under `/api/v2/auth`: `POST /register`, `POST /login`,
+  `POST /refresh`, `POST /logout`, `GET /me`. Refresh tokens travel
+  in an `HttpOnly; Secure` cookie scoped to `Path=/api/v2/auth`;
+  access tokens are returned in the JSON body and held in browser
+  memory only.
+- Production boot fails fast when `JWT_SECRET` is missing or
+  shorter than 32 chars; dev/test derive a deterministic per-machine
+  fallback so issued tokens survive a `tsx watch` reload.
+
+### 9A-D — Route protection & tenant isolation ✅ COMPLETE
+
+- `backend/src/auth/session.middleware.ts` — `resolveAuthSession`
+  verifies the bearer JWT, loads the `User` + active
+  `OrganizationMembership`, and attaches
+  `req.authSession = { mode, userId, organizationId, role,
+membershipId, ... }`. Falls back to the legacy dev resolver only
+  when `ALLOW_DEV_AUTH=true` (default ON in dev/test, FORCE OFF in
+  production; explicit `ALLOW_DEV_AUTH=true` under
+  `NODE_ENV=production` is a boot-time error).
+- `backend/src/auth/guards.ts` — composable middlewares:
+  `requireAuth`, `requireOrganization`, `requireOrgRole(...roles)`,
+  `requireProjectAccess`, `requireSampleAccess`,
+  `requireSoilTestAccess`, `requireReportAccess`. Resource guards
+  combine the tenancy assertion with the role matrix (see below)
+  and surface a single 404 on cross-tenant access.
+- `backend/src/routes/v2.routes.ts` — every protected route is
+  mounted with `resolveAuthSession` + the matching guards.
+  `/api/v2/auth/{register,login,refresh}` stay public;
+  `/api/v2/auth/{me,logout}` are JWT-protected.
+
+#### Role matrix (Phase 9A-D)
+
+| Role             | Read | Create / edit projects | Create samples + tests | Generate / regen reports | Manage org / members |
+| ---------------- | :--: | :--------------------: | :--------------------: | :----------------------: | :------------------: |
+| `OWNER`          |  ✅  |           ✅           |           ✅           |            ✅            |          ✅          |
+| `ADMIN`          |  ✅  |           ✅           |           ✅           |            ✅            |          ✅          |
+| `AGRONOMIST`     |  ✅  |           ✅           |           ✅           |            ✅            |          ❌          |
+| `LAB_TECHNICIAN` |  ✅  |           ❌           |           ✅           |            ❌            |          ❌          |
+| `CONSULTANT`     |  ✅  |           ❌           |           ❌           |            ✅            |          ❌          |
+| `VIEWER`         |  ✅  |           ❌           |           ❌           |            ❌            |          ❌          |
+
+Locked in by `backend/src/__tests__/roleMatrix.test.ts` (24 cases:
+`POST /projects`, `POST /soil-samples`, `POST /reports/:id/regenerate`,
+plus a positive-control read for every role).
+
+#### Tenant isolation tests
+
+`backend/src/__tests__/tenantIsolation.test.ts` seeds two
+organizations (Org A + Org B) with an owner each. Org B's bearer
+token receives a 404 for every read of Org A's project, sample,
+test, report, report versions, and project-scoped report list, and
+sees an empty list for `GET /projects`. The Org A owner sees their
+own project as a positive control. A malformed bearer also returns
+401 with `UNAUTHORIZED`.
+
+### 9A-E — Production-only auth + legacy cleanup ✅ COMPLETE
+
+- `ALLOW_DEV_AUTH` defaults to **false** in every environment. Tests
+  that need the dev resolver opt in by setting
+  `process.env.ALLOW_DEV_AUTH = "true"` BEFORE the first import of
+  `config/env` and calling `_resetEnvForTesting()` (see
+  `backend/src/__tests__/app.test.ts`).
+- `backend/src/config/env.ts` switched to a lazy-loaded Proxy so a
+  test harness can mutate `process.env` after the module import and
+  the value still propagates on first read. Production /
+  dev call sites are unaffected (the proxy resolves once and caches).
+- `backend/src/auth/devSession.middleware.ts` deleted. The single
+  entry point is `resolveAuthSession`; the dev path is now an
+  internal fallback inside that middleware, gated on
+  `env.auth.allowDevAuth && env.nodeEnv !== "production"`.
+- `req.currentUser` back-compat write removed from
+  `resolveAuthSession`. Every controller reads `req.authSession`
+  exclusively (see `controllers/me.controller.ts` as the canonical
+  example).
+- Legacy `userId`-based ownership helpers (`assertProjectOwnership`,
+  `assertSampleOwnership`, `assertSoilTestOwnership`,
+  `assertReportOwnership`, `requireCurrentUser`) deleted from
+  `backend/src/auth/ownership.ts`. Only the `organizationId`-based
+  `assert*Tenancy` family remains.
+- Unused helpers `getUserOrDev` and
+  `getActiveOrganizationIdForUser` removed from
+  `backend/src/auth/currentUser.ts`.
+
+### 9A-F — Route audit & tenant safety ✅ COMPLETE
+
+Every `/api/v2/*` route is now tenant-safe by construction:
+
+| Route                                           | Auth            | Guard                                         | Tenancy check                         | Role gate              |
+| ----------------------------------------------- | --------------- | --------------------------------------------- | ------------------------------------- | ---------------------- |
+| `POST /auth/register`                           | public          | —                                             | n/a                                   | n/a                    |
+| `POST /auth/login`                              | public          | —                                             | n/a                                   | n/a                    |
+| `POST /auth/refresh`                            | public (cookie) | —                                             | n/a                                   | n/a                    |
+| `POST /auth/logout`                             | JWT             | `requireAccessToken`                          | n/a                                   | n/a                    |
+| `GET  /auth/me`                                 | JWT             | `requireAccessToken`                          | n/a                                   | n/a                    |
+| `GET  /me`                                      | JWT + session   | `resolveAuthSession`                          | n/a                                   | any authenticated      |
+| `POST /projects`                                | JWT + session   | `requireOrgRole(ROLES_AGRONOMY_WRITE)`        | actor.org from session                | `ROLES_AGRONOMY_WRITE` |
+| `GET  /projects`                                | JWT + session   | `requireOrganization`                         | filter by `organizationId`            | any role               |
+| `GET  /projects/:projectId`                     | JWT + session   | `requireProjectAccess()`                      | `assertProjectTenancy`                | any role               |
+| `POST /soil-samples`                            | JWT + session   | `requireOrgRole(ROLES_LAB_WRITE)`             | `assertProjectTenancy` (in service)   | `ROLES_LAB_WRITE`      |
+| `GET  /soil-samples/:sampleId`                  | JWT + session   | `requireSampleAccess()`                       | `assertSampleTenancy`                 | any role               |
+| `POST /soil-tests`                              | JWT + session   | `requireOrgRole(ROLES_LAB_WRITE)`             | `assertSampleTenancy` (in controller) | `ROLES_LAB_WRITE`      |
+| `GET  /soil-tests/:soilTestId`                  | JWT + session   | `requireSoilTestAccess()`                     | `assertSoilTestTenancy`               | any role               |
+| `POST /soil-tests/:soilTestId/calculate`        | JWT + session   | `requireSoilTestAccess({ROLES_LAB_WRITE})`    | `assertSoilTestTenancy`               | `ROLES_LAB_WRITE`      |
+| `GET  /soil-tests/:soilTestId/interpretation`   | JWT + session   | `requireSoilTestAccess()`                     | `assertSoilTestTenancy`               | any role               |
+| `POST /soil-tests/:soilTestId/reports`          | JWT + session   | `requireSoilTestAccess({ROLES_REPORT_WRITE})` | `assertSoilTestTenancy`               | `ROLES_REPORT_WRITE`   |
+| `GET  /soil-tests/:soilTestId/report`           | JWT + session   | `requireSoilTestAccess()`                     | `assertSoilTestTenancy`               | any role               |
+| `GET  /soil-tests/:soilTestId/flahacalc-export` | JWT + session   | `requireSoilTestAccess()`                     | `assertSoilTestTenancy`               | any role               |
+| `GET  /projects/:projectId/reports`             | JWT + session   | `requireProjectAccess()`                      | `assertProjectTenancy`                | any role               |
+| `GET  /reports/:reportId`                       | JWT + session   | `requireReportAccess()`                       | `assertReportTenancy`                 | any role               |
+| `PATCH /reports/:reportId`                      | JWT + session   | `requireReportAccess({ROLES_REPORT_WRITE})`   | `assertReportTenancy`                 | `ROLES_REPORT_WRITE`   |
+| `POST /reports/:reportId/regenerate`            | JWT + session   | `requireReportAccess({ROLES_REPORT_WRITE})`   | `assertReportTenancy`                 | `ROLES_REPORT_WRITE`   |
+| `GET  /reports/:reportId/versions`              | JWT + session   | `requireReportAccess()`                       | `assertReportTenancy`                 | any role               |
+| `GET  /reports/:reportId/versions/:n`           | JWT + session   | `requireReportAccess()`                       | `assertReportTenancy`                 | any role               |
+| `GET  /reports/:reportId/versions/:n/preview`   | JWT + session   | `requireReportAccess()`                       | `assertReportTenancy`                 | any role               |
+
+Semantics:
+
+- Missing / expired JWT → **401** with `UNAUTHORIZED`.
+- Session present but no active org → **403** with `FORBIDDEN`.
+- Session OK but role insufficient → **403** with `FORBIDDEN`.
+- Resource id belongs to another tenant → **404** with `NOT_FOUND`
+  (no existence leak across tenants).
+
+### 9A-G — Frontend authentication UX ✅ COMPLETE
+
+The frontend now consumes the JWT auth backend end-to-end. The
+Phase 8B `flahasoil.v2.devUserId` localStorage flow and the
+`x-dev-user-id` header are gone from the web client.
+
+- `frontend/src/auth/accessTokenStore.ts` — in-memory access-token
+  snapshot (token + `expiresAt`) with subscribe semantics; never
+  persisted to storage so XSS cannot exfiltrate a long-lived
+  credential.
+- `frontend/src/auth/refreshCoordinator.ts` — collapses concurrent
+  401-driven refresh attempts into a single `POST /auth/refresh`
+  call; in-flight callers await the same promise.
+- `frontend/src/auth/AuthProvider.tsx` + `AuthContext.ts` +
+  `useAuth.ts` — auth state machine
+  (`loading | authenticated | unauthenticated | error`) plus
+  `login`, `logout`, and silent-refresh-on-mount for session
+  recovery after a page reload.
+- `frontend/src/auth/ProtectedRoute.tsx` — redirects to
+  `/login?next=<encoded path>` when unauthenticated.
+- `frontend/src/auth/PublicOnlyRoute.tsx` — redirects authenticated
+  users away from `/login` and `/register` to `/dashboard`.
+- `frontend/src/auth/passwordPolicy.ts` — mirrors the backend
+  policy (≥12 chars, letter + digit, max 128) for client-side
+  validation feedback before the request is sent.
+- Pages: `LoginPage`, `RegisterPage`, `LogoutPage`, `AccountPage`
+  added. `DashboardPage`, `ProfilePage`, `ProjectDetailPage`,
+  `ProjectReportsPage`, `ProjectsListPage`, `ReportDetailPage`,
+  `ReportsPage` were migrated from `useSession` to `useAuth`.
+- `frontend/src/services/realApiV2Client.ts` now attaches
+  `Authorization: Bearer <accessToken>` from `accessTokenStore`,
+  sends credentials so the refresh cookie travels, and routes
+  401s through `coordinatedRefresh()` with a single retry before
+  surfacing the error.
+- `TopAppBar` shows the new `AuthUserChip` (email + active org +
+  role + logout link); `SidebarNav` hides protected links when the
+  session is `unauthenticated`.
+- The whole `frontend/src/session/` module (SessionProvider,
+  SessionContext, SessionUserChip, useSession, devSessionStorage)
+  was deleted.
+
+#### Frontend tests (Vitest + React Testing Library)
+
+- `frontend/vite.config.ts` and `frontend/package.json` wired up
+  Vitest 2.x with `jsdom` + `@testing-library/react` and a
+  workspace `npm test` script.
+- `frontend/src/test/setup.ts` registers `@testing-library/jest-dom`
+  matchers on the Vitest `expect`.
+- 19 tests across four files all green:
+  - `auth/__tests__/passwordPolicy.test.ts` (5 cases — length,
+    digit, letter, max length, success).
+  - `auth/__tests__/accessTokenStore.test.ts` (6 cases — set/get,
+    clear, subscribe + unsubscribe, expiry awareness).
+  - `auth/__tests__/refreshCoordinator.test.ts` (4 cases —
+    deduplication, propagation of result, reset between calls,
+    error propagation).
+  - `auth/__tests__/AuthProvider.test.tsx` (4 cases — silent
+    refresh success, 401 settles to unauthenticated, login flips
+    status + stores token, logout clears token even when the
+    network call fails).
+
+#### Frontend acceptance (Phase 9A-G brief)
+
+- Register from `/register` → on success the user is dropped on
+  `/dashboard` already authenticated.
+- Login from `/login?next=…` → returns to the original protected
+  URL on success.
+- Page reload triggers a silent refresh; the session recovers
+  when the HttpOnly cookie is still valid and falls back to
+  `/login` otherwise.
+- All `/api/v2/*` calls go out with a Bearer JWT (no
+  `x-dev-user-id`).
+- `/logout` revokes the refresh family, clears the cookie, and
+  the in-memory access token.
+- `npm run typecheck --workspace @flaha/web` and
+  `npm run build --workspace @flaha/web` both pass.
+
+### Outputs (Phase 9A so far)
+
+- Backend: `backend/src/auth/{password,jwt,refreshTokens,audit,
+session.middleware,guards,ownership,requireAccessToken.middleware,
+currentUser}.ts`, `backend/src/services/auth.service.ts`,
+  `backend/src/controllers/auth.controller.ts`,
+  `backend/src/routes/auth.routes.ts`, updated `v2.routes.ts`.
+  `auth/devSession.middleware.ts` was deleted in 9A-E.
+- Frontend: `frontend/src/auth/{accessTokenStore,refreshCoordinator,
+AuthContext,AuthProvider,useAuth,ProtectedRoute,PublicOnlyRoute,
+passwordPolicy,index}.ts(x)`, pages
+  `Login|Register|Logout|Account`, refactored
+  `realApiV2Client.ts`, `TopAppBar`, `SidebarNav`. The
+  `frontend/src/session/` module was deleted in 9A-G.
+- Shared types: `AuthSessionDTO`, `RegisterRequest`, `LoginRequest`,
+  `AuthMeResponse`, `OrganizationRole`, `OrganizationDTO`,
+  `OrganizationMembershipDTO`.
+- Tests: backend — 162 pass + 1 skipped across 19 files (46
+  Phase 9A-C auth tests, 14 tenancy/ownership tests, 9 tenant
+  isolation tests, and 24 role matrix tests). Frontend — 19 pass
+  across 4 files (Phase 9A-G).
+
+### Exit criteria (Phase 9A)
+
+- All non-auth `/api/v2/*` routes require a valid JWT. The
+  `x-dev-user-id` header fallback is OFF by default in every
+  environment and is only honoured when `ALLOW_DEV_AUTH=true` is
+  set AND `NODE_ENV !== "production"`.
+- Every resource query filters by `organizationId`; cross-tenant
+  access returns 404.
+- Role matrix enforced by guards and locked by tests.
+- Dev-auth backdoor refuses to boot under `NODE_ENV=production`.
+- Frontend ships login / register / logout / account UX, holds
+  access tokens in memory only, recovers sessions via silent
+  refresh, and no longer reads or writes the Phase 8B
+  `flahasoil.v2.devUserId` key.
+- Documented in this section, `docs/v2-user-ownership.md`,
+  and (next) `docs/v2-auth.md` / `docs/v2-multi-tenant-architecture.md`.
+
+### Deferred to later Phase 9 sub-phases
+
+- 9A-H: organization management UX (org settings page, members
+  list — read-only placeholders, no invitations yet).
+- 9A-I … 9A-M: security hardening (rate limits on `/auth/*`,
+  audit-log writers for sensitive actions), expanded auth +
+  tenant-isolation test suite, dev seed with a demo org + role
+  mix, migration & deploy runbook, and acceptance walk-through
+  of the 15 brief criteria.
+- Phase 9B: invitations + email + role management UX.
 
 ---
 
