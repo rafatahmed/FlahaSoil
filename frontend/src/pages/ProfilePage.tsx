@@ -30,7 +30,7 @@ import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
 import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
-import { useSession } from "../session";
+import { useAuth } from "../auth";
 import { flahaSoilColors } from "../theme/flahaSoilTheme";
 
 interface FuturePlaceholder {
@@ -65,7 +65,8 @@ function initials(name: string): string {
 }
 
 export function ProfilePage() {
-	const { user, role, status } = useSession();
+	const { user, status, activeOrganization } = useAuth();
+	const role = user?.role ?? null;
 	const apiMode = getApiClientMode();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 
@@ -80,7 +81,7 @@ export function ProfilePage() {
 	});
 
 	useEffect(() => {
-		if (status !== "ready") return;
+		if (status !== "authenticated") return;
 		let cancelled = false;
 		getApiClient()
 			.listProjects({})
@@ -132,12 +133,13 @@ export function ProfilePage() {
 								</Typography>
 								<Stack direction="row" spacing={1} sx={{ mt: 1 }}>
 									{role && <Chip label={role} size="small" color="primary" />}
-									<Chip
-										label="Dev session"
-										size="small"
-										variant="outlined"
-										color="warning"
-									/>
+									{activeOrganization && (
+										<Chip
+											label={activeOrganization.name}
+											size="small"
+											variant="outlined"
+										/>
+									)}
 								</Stack>
 							</Box>
 						</Stack>
@@ -152,13 +154,19 @@ export function ProfilePage() {
 					<Divider />
 					<CardContent>
 						<Stack spacing={1.5}>
-							<Row label="Session mode" value="Development" />
 							<Row
 								label="API mode"
 								value={apiMode === "real" ? "Live backend" : "Demonstration mode"}
 							/>
-							<Row label="Status" value={status === "ready" ? "Resolved" : status} />
+							<Row
+								label="Status"
+								value={status === "authenticated" ? "Signed in" : status}
+							/>
 							<Row label="User id" value={user?.id ?? "—"} />
+							<Row
+								label="Organization"
+								value={activeOrganization?.name ?? "—"}
+							/>
 						</Stack>
 					</CardContent>
 				</Card>

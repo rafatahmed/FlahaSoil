@@ -25,11 +25,11 @@ import type { ProjectSummaryDTO } from "@flaha/shared-types";
 
 import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
-import { useSession } from "../session";
+import { useAuth } from "../auth";
 
 export function ReportsPage() {
 	const navigate = useNavigate();
-	const { status: sessionStatus } = useSession();
+	const { status: sessionStatus } = useAuth();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export function ReportsPage() {
 	});
 
 	useEffect(() => {
-		if (sessionStatus !== "ready") return;
+		if (sessionStatus !== "authenticated") return;
 		let cancelled = false;
 		setError(null);
 		getApiClient()

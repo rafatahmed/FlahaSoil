@@ -18,6 +18,7 @@ import {
 	Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import DescriptionIcon from "@mui/icons-material/Description";
 import ScienceIcon from "@mui/icons-material/Science";
 import { useCallback, useEffect, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
@@ -26,12 +27,12 @@ import type { GetProjectResponse } from "@flaha/shared-types";
 import { ProjectSampleRow } from "../features/projects/components/ProjectSampleRow";
 import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
-import { useSession } from "../session";
+import { useAuth } from "../auth";
 
 export function ProjectDetailPage() {
 	const { projectId = "" } = useParams<{ projectId: string }>();
 	const navigate = useNavigate();
-	const { status: sessionStatus } = useSession();
+	const { status: sessionStatus } = useAuth();
 	const [data, setData] = useState<GetProjectResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
@@ -69,15 +70,22 @@ export function ProjectDetailPage() {
 	}, [projectId]);
 
 	useEffect(() => {
-		// Defer until the dev-session is resolved; otherwise the very
-		// first request would race the `x-dev-user-id` header write.
-		if (sessionStatus !== "ready") return;
+		// Defer until auth is resolved; the realApiV2Client attaches the
+		// JWT from accessTokenStore and AuthProvider populates it on hydrate.
+		if (sessionStatus !== "authenticated") return;
 		load();
 	}, [load, sessionStatus]);
 
 	if (error) {
 		return (
-			<Alert severity="error">
+			<Alert
+				severity="error"
+				action={
+					<Button color="inherit" size="small" onClick={load}>
+						Retry
+					</Button>
+				}
+			>
 				Failed to load project {projectId}: {error}
 			</Alert>
 		);
@@ -112,6 +120,14 @@ export function ProjectDetailPage() {
 						variant="outlined"
 					>
 						All projects
+					</Button>
+					<Button
+						component={RouterLink}
+						to={`/projects/${project.id}/reports`}
+						variant="outlined"
+						startIcon={<DescriptionIcon />}
+					>
+						Reports
 					</Button>
 					<Button
 						variant="contained"

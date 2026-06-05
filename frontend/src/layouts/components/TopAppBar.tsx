@@ -29,7 +29,7 @@ import MenuIcon from "@mui/icons-material/Menu";
 import SearchIcon from "@mui/icons-material/Search";
 import { useNavigate } from "react-router-dom";
 
-import { SessionUserChip } from "../../session";
+import { AuthUserChip } from "./AuthUserChip";
 import { FlahaLogo } from "./FlahaLogo";
 import { usePageHeaderState } from "../PageHeaderContext";
 
@@ -142,7 +142,7 @@ export function TopAppBar({ drawerWidth, onMenuClick }: TopAppBarProps) {
 				</Tooltip>
 
 				<Stack direction="row" alignItems="center" sx={{ pl: 1 }}>
-					<SessionUserChip />
+					<AuthUserChip />
 				</Stack>
 			</Toolbar>
 		</AppBar>

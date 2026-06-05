@@ -30,12 +30,16 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
+import { useAuth } from "../../auth";
+
 interface NavItem {
 	label: string;
 	to: string;
 	icon: ReactNode;
 	exact?: boolean;
 	placeholder?: boolean;
+	/** Phase 9A-G — only render when the user is authenticated. */
+	requiresAuth?: boolean;
 }
 
 interface NavSection {
@@ -50,16 +54,16 @@ const SECTIONS: NavSection[] = [
 		label: "Primary",
 		items: [
 			{ label: "Home", to: "/", icon: <HomeIcon />, exact: true },
-			{ label: "Dashboard", to: "/dashboard", icon: <DashboardIcon /> },
-			{ label: "Projects", to: "/projects", icon: <FolderIcon /> },
+			{ label: "Dashboard", to: "/dashboard", icon: <DashboardIcon />, requiresAuth: true },
+			{ label: "Projects", to: "/projects", icon: <FolderIcon />, requiresAuth: true },
 		],
 	},
 	{
 		id: "analysis",
 		label: "Analysis",
 		items: [
-			{ label: "New Soil Test", to: "/soil-tests/new", icon: <ScienceIcon /> },
-			{ label: "Reports", to: "/reports", icon: <AssessmentIcon /> },
+			{ label: "New Soil Test", to: "/soil-tests/new", icon: <ScienceIcon />, requiresAuth: true },
+			{ label: "Reports", to: "/reports", icon: <AssessmentIcon />, requiresAuth: true },
 			{
 				label: "Standards",
 				to: "/standards",
@@ -76,6 +80,7 @@ const SECTIONS: NavSection[] = [
 				label: "FlahaCalc Export",
 				to: "/flahacalc-export",
 				icon: <IosShareIcon />,
+				requiresAuth: true,
 			},
 		],
 	},
@@ -83,12 +88,14 @@ const SECTIONS: NavSection[] = [
 		id: "account",
 		label: "Account",
 		items: [
-			{ label: "Profile", to: "/profile", icon: <PersonIcon /> },
+			{ label: "Account", to: "/account", icon: <PersonIcon />, requiresAuth: true },
+			{ label: "Profile", to: "/profile", icon: <PersonIcon />, requiresAuth: true },
 			{
 				label: "Settings",
 				to: "/settings",
 				icon: <SettingsIcon />,
 				placeholder: true,
+				requiresAuth: true,
 			},
 		],
 	},
@@ -99,9 +106,19 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
+	const { status } = useAuth();
+	const isAuthed = status === "authenticated";
+
+	// Hide protected items + drop sections that become empty after the
+	// filter so unauthenticated users don't see a wall of "Sign in" gates.
+	const visibleSections = SECTIONS.map((section) => ({
+		...section,
+		items: section.items.filter((item) => !item.requiresAuth || isAuthed),
+	})).filter((section) => section.items.length > 0);
+
 	return (
 		<Box sx={{ py: 2 }}>
-			{SECTIONS.map((section) => (
+			{visibleSections.map((section) => (
 				<Box key={section.id} sx={{ mb: 1.5 }}>
 					<Typography
 						variant="overline"

@@ -17,8 +17,9 @@ import {
 	Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import type { GetSoilTestResponse } from "@flaha/shared-types";
+import { SoilReportStatus } from "@flaha/shared-types";
 
 import { ChemistryResultCard } from "../features/results/components/ChemistryResultCard";
 import { InterpretationCard } from "../features/results/components/InterpretationCard";
@@ -30,8 +31,23 @@ import { getApiClient } from "../services/apiClientProvider";
 
 export function SoilTestDetailPage() {
 	const { soilTestId = "" } = useParams<{ soilTestId: string }>();
+	const navigate = useNavigate();
 	const [data, setData] = useState<GetSoilTestResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [generating, setGenerating] = useState(false);
+
+	const onGenerateReport = async () => {
+		if (generating) return;
+		setGenerating(true);
+		try {
+			const { report } = await getApiClient().generateReport(soilTestId, {});
+			navigate(`/reports/${report.id}`);
+		} catch (err: unknown) {
+			setError(err instanceof Error ? err.message : String(err));
+		} finally {
+			setGenerating(false);
+		}
+	};
 
 	usePageHeader({
 		title: "Soil test results",
@@ -84,14 +100,22 @@ export function SoilTestDetailPage() {
 			<Stack
 				direction="row"
 				justifyContent="flex-end"
+				spacing={1}
 				sx={{ mb: 3 }}
 			>
 				<Button
 					component={RouterLink}
 					to={`/soil-tests/${data.soilTest.id}/report`}
-					variant="contained"
+					variant="outlined"
 				>
-					View report
+					Quick view
+				</Button>
+				<Button
+					variant="contained"
+					onClick={onGenerateReport}
+					disabled={generating}
+				>
+					{generating ? "Generating…" : "Generate report"}
 				</Button>
 			</Stack>
 
@@ -122,14 +146,27 @@ export function SoilTestDetailPage() {
 						<CardContent>
 							{data.reports.length === 0 ? (
 								<Typography variant="body2" color="text.secondary">
-									No reports generated yet.
+									No reports generated yet. Use &quot;Generate
+									report&quot; above to create the first version.
 								</Typography>
 							) : (
-								data.reports.map((r) => (
-									<Typography key={r.id} variant="body2">
-										{r.reportType ?? "Report"} — {r.status}
-									</Typography>
-								))
+								<Stack spacing={1}>
+									{data.reports.map((r) => (
+										<Button
+											key={r.id}
+											component={RouterLink}
+											to={`/reports/${r.id}`}
+											variant="text"
+											sx={{ justifyContent: "flex-start" }}
+										>
+											{r.title ?? r.reportNumber ?? "Report"} — v
+											{r.latestVersionNumber} ·{" "}
+											{r.status === SoilReportStatus.READY
+												? "Ready"
+												: r.status}
+										</Button>
+									))}
+								</Stack>
 							)}
 						</CardContent>
 					</Card>

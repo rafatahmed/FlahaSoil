@@ -24,13 +24,13 @@ import { RecentProjectsList } from "../features/dashboard/components/RecentProje
 import { SystemStatusCard } from "../features/dashboard/components/SystemStatusCard";
 import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient, getApiClientMode } from "../services/apiClientProvider";
-import { useSession } from "../session";
+import { useAuth } from "../auth";
 
 const MAX_RECENT_PROJECTS = 5;
 
 export function DashboardPage() {
 	const navigate = useNavigate();
-	const { status: sessionStatus, user } = useSession();
+	const { status: sessionStatus, user } = useAuth();
 	const apiMode = getApiClientMode();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export function DashboardPage() {
 	});
 
 	useEffect(() => {
-		if (sessionStatus !== "ready") return;
+		if (sessionStatus !== "authenticated") return;
 		let cancelled = false;
 		setError(null);
 		getApiClient()

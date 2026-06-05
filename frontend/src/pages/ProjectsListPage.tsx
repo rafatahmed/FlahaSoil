@@ -28,11 +28,11 @@ import type { ProjectSummaryDTO } from "@flaha/shared-types";
 import { NewProjectDialog } from "../features/projects/components/NewProjectDialog";
 import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
-import { useSession } from "../session";
+import { useAuth } from "../auth";
 
 export function ProjectsListPage() {
 	const navigate = useNavigate();
-	const { status: sessionStatus } = useSession();
+	const { status: sessionStatus } = useAuth();
 	const [projects, setProjects] = useState<ProjectSummaryDTO[] | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,7 +59,7 @@ export function ProjectsListPage() {
 	}, []);
 
 	useEffect(() => {
-		if (sessionStatus !== "ready") return;
+		if (sessionStatus !== "authenticated") return;
 		load();
 	}, [load, sessionStatus]);
 

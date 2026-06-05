@@ -15,6 +15,11 @@
  *     of `apiClientProvider.ts`.
  */
 import {
+	type AuthLoginResponse,
+	type AuthLogoutResponse,
+	type AuthMeResponse,
+	type AuthRefreshResponse,
+	type AuthRegisterResponse,
 	type CalculateSoilTestRequest,
 	type CalculateSoilTestResponse,
 	type CreateProjectRequest,
@@ -26,24 +31,35 @@ import {
 	type CreateSoilTestRequest,
 	type CreateSoilTestResponse,
 	type FlahaCalcExportResponse,
+	type GenerateReportRequest,
+	type GenerateReportResponse,
 	type GetCurrentUserResponse,
 	type GetProjectResponse,
+	type GetReportResponse,
+	type GetReportVersionResponse,
 	type GetSoilInterpretationResponse,
 	type GetSoilSampleResponse,
 	type GetSoilTestReportResponse,
 	type GetSoilTestReportSummaryResponse,
 	type GetSoilTestResponse,
+	type ListProjectReportsResponse,
 	type ListProjectsQuery,
 	type ListProjectsResponse,
+	type ListReportVersionsResponse,
+	type LoginRequest,
+	type PatchReportRequest,
+	type PatchReportResponse,
+	type RegenerateReportResponse,
+	type RegisterRequest,
 	isApiErrorResponse,
 } from "@flaha/shared-types";
 import type { ApiErrorCode } from "@flaha/shared-types";
 
 import type { ApiV2Client } from "./apiV2Client";
-import { getStoredDevUserId } from "../session/devSessionStorage";
+import { getAccessToken } from "../auth/accessTokenStore";
+import { coordinatedRefresh } from "../auth/refreshCoordinator";
 
 const DEFAULT_BASE_URL = "http://localhost:3002/api/v2";
-const DEV_USER_HEADER = "x-dev-user-id";
 
 function getBaseUrl(): string {
 	const fromEnv = import.meta.env.VITE_API_BASE_URL;
@@ -55,19 +71,19 @@ function getBaseUrl(): string {
 }
 
 /**
- * Phase 8B: every request includes the persisted dev-user id so the
- * backend's `devSessionMiddleware` resolves the same session across
- * reloads. The header is omitted on the very first boot (before
- * /me has populated it) — the backend falls back to the seeded
- * `user_dev_admin` in that case.
+ * Phase 9A-G: every request runs with `credentials: include` so the
+ * HttpOnly refresh-token cookie is sent on `/auth/refresh` and
+ * `/auth/logout`. The in-memory access token (if any) is attached as a
+ * `Bearer` token; the dev-user-id header is gone — the backend no
+ * longer accepts it in production and the SPA must not depend on it.
  */
 function buildHeaders(extra?: Record<string, string>): HeadersInit {
 	const headers: Record<string, string> = {
 		Accept: "application/json",
 		...(extra ?? {}),
 	};
-	const devUserId = getStoredDevUserId();
-	if (devUserId) headers[DEV_USER_HEADER] = devUserId;
+	const snap = getAccessToken();
+	if (snap) headers.Authorization = `Bearer ${snap.token}`;
 	return headers;
 }
 
@@ -119,26 +135,107 @@ async function parseJsonOrThrow<T>(res: Response): Promise<T> {
 	return body as T;
 }
 
-async function getJson<T>(path: string): Promise<T> {
-	const res = await fetch(`${getBaseUrl()}${path}`, {
-		method: "GET",
-		headers: buildHeaders(),
-	});
+/**
+ * Single source of truth for outgoing fetches against the v2 API.
+ *
+ * Phase 9A-G behaviour:
+ *   - `credentials: "include"` so the HttpOnly refresh cookie is sent
+ *     on `/auth/refresh` and `/auth/logout`.
+ *   - On 401 we ask the refresh coordinator for a fresh access token.
+ *     If we get one, we retry the original request ONCE with the new
+ *     Bearer header. If refresh fails, we surface the original 401.
+ *   - The auth endpoints opt out of the retry loop by passing
+ *     `retryOn401: false` — a 401 from `/auth/refresh` IS the logout
+ *     signal and must propagate.
+ */
+interface FetchOptions {
+	method: "GET" | "POST" | "PATCH";
+	body?: unknown;
+	retryOn401?: boolean;
+}
+
+async function apiFetch<T>(path: string, opts: FetchOptions): Promise<T> {
+	const url = `${getBaseUrl()}${path}`;
+	const hasBody = opts.body !== undefined;
+	const init: RequestInit = {
+		method: opts.method,
+		credentials: "include",
+		headers: buildHeaders(
+			hasBody ? { "Content-Type": "application/json" } : undefined
+		),
+	};
+	if (hasBody) init.body = JSON.stringify(opts.body);
+
+	let res = await fetch(url, init);
+
+	if (res.status === 401 && (opts.retryOn401 ?? true)) {
+		const snap = await coordinatedRefresh();
+		if (snap) {
+			// Rebuild headers so the new Bearer token is picked up.
+			const retryInit: RequestInit = {
+				method: opts.method,
+				credentials: "include",
+				headers: buildHeaders(
+					hasBody ? { "Content-Type": "application/json" } : undefined
+				),
+			};
+			if (hasBody) retryInit.body = JSON.stringify(opts.body);
+			res = await fetch(url, retryInit);
+		}
+	}
+
 	return parseJsonOrThrow<T>(res);
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-	const res = await fetch(`${getBaseUrl()}${path}`, {
-		method: "POST",
-		headers: buildHeaders({ "Content-Type": "application/json" }),
-		body: JSON.stringify(body),
-	});
-	return parseJsonOrThrow<T>(res);
+function getJson<T>(path: string): Promise<T> {
+	return apiFetch<T>(path, { method: "GET" });
+}
+
+function postJson<T>(path: string, body: unknown): Promise<T> {
+	return apiFetch<T>(path, { method: "POST", body });
+}
+
+function patchJson<T>(path: string, body: unknown): Promise<T> {
+	return apiFetch<T>(path, { method: "PATCH", body });
+}
+
+/** POST helper for `/auth/*` — never retries on 401. */
+function postAuthJson<T>(path: string, body: unknown): Promise<T> {
+	return apiFetch<T>(path, { method: "POST", body, retryOn401: false });
 }
 
 export const realApiV2Client: ApiV2Client = {
 	getMe() {
 		return getJson<GetCurrentUserResponse>("/me");
+	},
+
+	// ---------------------------------------------------------------
+	// Phase 9A-G — Auth
+	// ---------------------------------------------------------------
+	register(body: RegisterRequest) {
+		return postAuthJson<AuthRegisterResponse>("/auth/register", body);
+	},
+
+	login(body: LoginRequest) {
+		return postAuthJson<AuthLoginResponse>("/auth/login", body);
+	},
+
+	refresh() {
+		// No body — the refresh token lives in the cookie.
+		return postAuthJson<AuthRefreshResponse>("/auth/refresh", {});
+	},
+
+	logout() {
+		// Uses Bearer token (logout is JWT-protected) AND clears the
+		// refresh cookie server-side. retryOn401 stays the default
+		// (true) so a stale access token can be refreshed once before
+		// logout; if the refresh ALSO fails we surface the 401 and
+		// the caller treats the session as already gone.
+		return postJson<AuthLogoutResponse>("/auth/logout", {});
+	},
+
+	authMe() {
+		return getJson<AuthMeResponse>("/auth/me");
 	},
 
 	createProject(body: CreateProjectRequest) {
@@ -215,6 +312,59 @@ export const realApiV2Client: ApiV2Client = {
 	getFlahaCalcExport(soilTestId: string) {
 		return getJson<FlahaCalcExportResponse>(
 			`/soil-tests/${encodeURIComponent(soilTestId)}/flahacalc-export`
+		);
+	},
+
+	// Phase 8D — Report management surface.
+	generateReport(soilTestId: string, body: GenerateReportRequest) {
+		return postJson<GenerateReportResponse>(
+			`/soil-tests/${encodeURIComponent(soilTestId)}/reports`,
+			body
+		);
+	},
+
+	listProjectReports(projectId: string) {
+		return getJson<ListProjectReportsResponse>(
+			`/projects/${encodeURIComponent(projectId)}/reports`
+		);
+	},
+
+	getReport(reportId: string) {
+		return getJson<GetReportResponse>(
+			`/reports/${encodeURIComponent(reportId)}`
+		);
+	},
+
+	listReportVersions(reportId: string) {
+		return getJson<ListReportVersionsResponse>(
+			`/reports/${encodeURIComponent(reportId)}/versions`
+		);
+	},
+
+	getReportVersion(reportId: string, versionNumber: number) {
+		return getJson<GetReportVersionResponse>(
+			`/reports/${encodeURIComponent(reportId)}/versions/${versionNumber}`
+		);
+	},
+
+	regenerateReport(reportId: string) {
+		return postJson<RegenerateReportResponse>(
+			`/reports/${encodeURIComponent(reportId)}/regenerate`,
+			{}
+		);
+	},
+
+	patchReport(reportId: string, body: PatchReportRequest) {
+		return patchJson<PatchReportResponse>(
+			`/reports/${encodeURIComponent(reportId)}`,
+			body
+		);
+	},
+
+	getReportVersionPreviewUrl(reportId: string, versionNumber: number) {
+		return (
+			`${getBaseUrl()}/reports/${encodeURIComponent(reportId)}` +
+			`/versions/${versionNumber}/preview`
 		);
 	},
 };
