@@ -1,9 +1,12 @@
 /**
- * FlahaSOIL v2 API — Project service (Phase 8A).
+ * FlahaSOIL v2 API — Project service (Phase 8A → 9A-D.5).
  *
- * Owns the read/write surface for `Project`. Every list/read path is
- * scoped by `userId` so v2 can never leak cross-user records, even
- * before the real auth layer lands.
+ * Owns the read/write surface for `Project`. Phase 9A-D moved the
+ * authoritative tenancy boundary from `userId` to `organizationId`:
+ * every list/read path now filters by `organizationId` and writes
+ * persist both the creator (`userId`, audit) and the tenant
+ * (`organizationId`, isolation). The controller layer is responsible
+ * for providing both via the resolved `req.authSession`.
  */
 
 import {
@@ -13,6 +16,7 @@ import {
 	ProjectStatus,
 } from "@flaha/shared-types";
 
+import type { AuthorActor } from "../auth/session.middleware";
 import { getPrismaClient } from "../prisma/client";
 import { ApiError } from "../utils/apiError";
 import {
@@ -35,13 +39,14 @@ function isPrismaUniqueConstraintError(err: unknown): boolean {
 }
 
 export async function createProject(
-	userId: string,
+	actor: AuthorActor,
 	input: CreateProjectParsed
 ): Promise<CreateProjectResponse> {
 	const prisma = getPrismaClient();
 
 	const data: Record<string, unknown> = {
-		userId,
+		userId: actor.userId,
+		organizationId: actor.organizationId,
 		name: input.name,
 		status: input.status ?? ProjectStatus.ACTIVE,
 	};
@@ -61,7 +66,7 @@ export async function createProject(
 		// human-readable message instead of leaking the raw Prisma error.
 		if (isPrismaUniqueConstraintError(err)) {
 			throw ApiError.validation(
-				`A project with code "${input.code ?? ""}" already exists for this user.`
+				`A project with code "${input.code ?? ""}" already exists.`
 			);
 		}
 		throw err;
@@ -69,12 +74,12 @@ export async function createProject(
 }
 
 export async function listProjects(
-	userId: string,
+	organizationId: string,
 	query: ListProjectsQueryParsed
 ): Promise<ListProjectsResponse> {
 	const prisma = getPrismaClient();
 
-	const where: Record<string, unknown> = { userId };
+	const where: Record<string, unknown> = { organizationId };
 	if (query.status !== undefined) where["status"] = query.status;
 
 	const rows = await prisma.project.findMany({
@@ -94,12 +99,12 @@ export async function listProjects(
 
 export async function getProjectById(
 	projectId: string,
-	userId: string
+	organizationId: string
 ): Promise<GetProjectResponse> {
 	const prisma = getPrismaClient();
 
 	const row = await prisma.project.findFirst({
-		where: { id: projectId, userId },
+		where: { id: projectId, organizationId },
 		include: { samples: { orderBy: { createdAt: "desc" } } },
 	});
 
@@ -113,5 +118,5 @@ export async function getProjectById(
 	return { project: toProjectDTO(row), samples };
 }
 
-// `assertProjectOwnership` was moved to `auth/ownership.ts` in Phase 8B
-// so every owning-row check lives next to the dev-session resolver.
+// Tenancy helpers live in `auth/ownership.ts` (`assertProjectTenancy`)
+// and are mounted as route-level guards in `routes/v2.routes.ts`.

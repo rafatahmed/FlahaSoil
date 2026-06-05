@@ -1,15 +1,17 @@
 /**
- * FlahaSOIL v2 API — current-user resolver (Phase 8B).
+ * FlahaSOIL v2 API — dev-user resolver (Phase 8B, trimmed in 9A-E).
  *
- * Owns the read/write surface for the v2 `User` model needed by the
- * dev-session layer. Production auth (JWT / password / OAuth) is
- * deliberately out of scope here; the only callers are:
+ * Owns the read/write surface for the seeded development user that the
+ * `ALLOW_DEV_AUTH=true` fallback in `resolveAuthSession` falls back to
+ * when a `/api/v2/*` request arrives without a JWT bearer token.
  *
- *   - `devSession.middleware.ts` — looks up `req.currentUser` from a
- *     header or the seeded dev user.
- *   - `bootstrap.ts` — ensures the seeded dev user exists on boot in
- *     development.
- *   - `controllers/me.controller.ts` — serves GET /api/v2/me.
+ * Production auth (JWT / password / OAuth) is implemented in
+ * `services/auth.service.ts`; this module is intentionally narrow.
+ * Callers in the live tree:
+ *
+ *   - `auth/session.middleware.ts` — dev fallback path only.
+ *   - `bootstrap.ts` — ensures the seeded dev user exists when
+ *     `ALLOW_DEV_AUTH=true` during dev boot.
  */
 
 import {
@@ -31,12 +33,45 @@ const DEV_USER_EMAIL = "dev@flahasoil.local";
 const DEV_USER_DISPLAY_NAME = "Development User";
 
 /**
- * Idempotently ensures the seeded dev user exists. Safe to call from
- * the boot path and from tests; uses a fixed id so repeated calls do
- * not produce duplicates.
+ * Phase 9A — stable identifiers for the seeded "Flaha Demo" organization
+ * and the dev user's OWNER membership in it. Fixed ids let the backfill
+ * script + dev seed converge on the same rows without races.
+ */
+export const DEV_ORG_ID = "org_flaha_demo";
+const DEV_ORG_NAME = "Flaha Demo";
+const DEV_ORG_SLUG = "flaha-demo";
+export const DEV_MEMBERSHIP_ID = "mbr_dev_admin_demo";
+
+/**
+ * Idempotently ensures the seeded dev user exists, plus the Flaha Demo
+ * organization and the dev user's OWNER membership in it. Safe to call
+ * from the boot path and from tests; uses fixed ids so repeated calls
+ * do not produce duplicates.
+ *
+ * Phase 9A — also sets `User.activeOrganizationId` so writes performed
+ * via the dev-session middleware can populate `Project.organizationId`
+ * and `SoilSample.organizationId` correctly during the migration
+ * window.
  */
 export async function ensureDevUser(): Promise<UserDTO> {
 	const prisma = getPrismaClient();
+
+	// 1. Demo organization (top-level tenant for dev / smoke data).
+	await prisma.organization.upsert({
+		where: { id: DEV_ORG_ID },
+		create: {
+			id: DEV_ORG_ID,
+			name: DEV_ORG_NAME,
+			slug: DEV_ORG_SLUG,
+			type: "COMPANY",
+			status: "ACTIVE",
+		},
+		update: {},
+	});
+
+	// 2. Dev user. `activeOrganizationId` set on first create so writes
+	//    immediately get tagged; never overwritten by the upsert so a
+	//    later switch-org action survives bootstraps.
 	const row = await prisma.user.upsert({
 		where: { id: DEV_USER_ID },
 		create: {
@@ -44,9 +79,27 @@ export async function ensureDevUser(): Promise<UserDTO> {
 			email: DEV_USER_EMAIL,
 			displayName: DEV_USER_DISPLAY_NAME,
 			role: UserRole.ADMIN,
+			activeOrganizationId: DEV_ORG_ID,
 		},
 		update: {},
 	});
+
+	// 3. OWNER membership for the dev user in the demo org. Idempotent
+	//    via the composite (organizationId, userId) unique index — we
+	//    use a fixed id so the row is recognisable in logs / audits.
+	await prisma.organizationMembership.upsert({
+		where: { id: DEV_MEMBERSHIP_ID },
+		create: {
+			id: DEV_MEMBERSHIP_ID,
+			organizationId: DEV_ORG_ID,
+			userId: DEV_USER_ID,
+			role: "OWNER",
+			status: "ACTIVE",
+			acceptedAt: new Date(),
+		},
+		update: {},
+	});
+
 	return toUserDTO(row);
 }
 
@@ -62,15 +115,4 @@ export async function getUserById(userId: string): Promise<UserDTO | null> {
 	return row ? toUserDTO(row) : null;
 }
 
-/**
- * Convenience wrapper: returns the user for `userId` when it resolves,
- * otherwise the seeded dev user. Used by the dev-session middleware so
- * a stale `x-dev-user-id` header never produces a 500.
- */
-export async function getUserOrDev(userId: string | undefined): Promise<UserDTO> {
-	if (userId) {
-		const found = await getUserById(userId);
-		if (found) return found;
-	}
-	return ensureDevUser();
-}
+

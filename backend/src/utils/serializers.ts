@@ -9,6 +9,12 @@
 
 import {
 	type IsoDateString,
+	type MembershipStatus,
+	type OrganizationDTO,
+	type OrganizationMembershipDTO,
+	type OrganizationRole,
+	type OrganizationStatus,
+	type OrganizationType,
 	type ProjectDTO,
 	type ProjectSummaryDTO,
 	ProjectStatus,
@@ -92,6 +98,41 @@ export function toUserDTO(row: Record<string, unknown>): UserDTO {
 		updatedAt: toIso(row["updatedAt"] as Date),
 		archivedAt: toIsoNullable(row["archivedAt"] as Date | null | undefined),
 	};
+}
+
+// Phase 9A — Organization + Membership serialisers.
+export function toOrganizationDTO(
+	row: Record<string, unknown>
+): OrganizationDTO {
+	return {
+		id: row["id"] as string,
+		name: row["name"] as string,
+		slug: row["slug"] as string,
+		type: row["type"] as OrganizationType,
+		status: row["status"] as OrganizationStatus,
+		createdAt: toIso(row["createdAt"] as Date),
+		updatedAt: toIso(row["updatedAt"] as Date),
+	};
+}
+
+export function toOrganizationMembershipDTO(
+	row: Record<string, unknown>
+): OrganizationMembershipDTO {
+	const dto: OrganizationMembershipDTO = {
+		id: row["id"] as string,
+		organizationId: row["organizationId"] as string,
+		userId: row["userId"] as string,
+		role: row["role"] as OrganizationRole,
+		status: row["status"] as MembershipStatus,
+		invitedById: asNullable(row["invitedById"] as string | null | undefined),
+		invitedAt: toIsoNullable(row["invitedAt"] as Date | null | undefined),
+		acceptedAt: toIsoNullable(row["acceptedAt"] as Date | null | undefined),
+		createdAt: toIso(row["createdAt"] as Date),
+		updatedAt: toIso(row["updatedAt"] as Date),
+	};
+	const org = row["organization"] as Record<string, unknown> | undefined;
+	if (org) dto.organization = toOrganizationDTO(org);
+	return dto;
 }
 
 export function toProjectDTO(row: Record<string, unknown>): ProjectDTO {
@@ -252,6 +293,7 @@ export function toSoilInterpretationDTO(
 	row: Record<string, unknown>
 ): SoilInterpretationDTO {
 	const warnings = row["warningsJson"];
+	const matrix = row["textureSuitabilityJson"];
 	return {
 		id: row["id"] as string,
 		soilTestId: row["soilTestId"] as string,
@@ -269,16 +311,56 @@ export function toSoilInterpretationDTO(
 		drainageClass: asNullable(row["drainageClass"] as string | null | undefined),
 		overallSoilRating: row["overallSoilRating"] as SoilInterpretationRating,
 		warningsJson: Array.isArray(warnings) ? (warnings as string[]) : [],
+		salinitySeverity: asNullable(
+			row["salinitySeverity"] as
+				| SoilInterpretationDTO["salinitySeverity"]
+				| undefined
+		),
+		sodicitySeverity: asNullable(
+			row["sodicitySeverity"] as
+				| SoilInterpretationDTO["sodicitySeverity"]
+				| undefined
+		),
+		organicMatterCategory: asNullable(
+			row["organicMatterCategory"] as string | null | undefined
+		),
+		infiltrationClass: asNullable(
+			row["infiltrationClass"] as string | null | undefined
+		),
+		compactionRisk: asNullable(
+			row["compactionRisk"] as
+				| SoilInterpretationDTO["compactionRisk"]
+				| undefined
+		),
+		textureSuitabilityJson:
+			matrix && typeof matrix === "object"
+				? (matrix as SoilInterpretationDTO["textureSuitabilityJson"])
+				: null,
 		createdAt: toIso(row["createdAt"] as Date),
 		updatedAt: toIso(row["updatedAt"] as Date),
 	};
 }
 
 export function toSoilReportDTO(row: Record<string, unknown>): SoilReportDTO {
+	const currentVersion = row["currentVersion"] as
+		| Record<string, unknown>
+		| null
+		| undefined;
+	const latestVersionNumber =
+		typeof currentVersion?.["versionNumber"] === "number"
+			? (currentVersion["versionNumber"] as number)
+			: 0;
 	return {
 		id: row["id"] as string,
 		soilTestId: row["soilTestId"] as string,
 		status: row["status"] as SoilReportStatus,
+		title: asNullable(row["title"] as string | null | undefined),
+		reportNumber: asNullable(row["reportNumber"] as string | null | undefined),
+		archived: Boolean(row["archived"] ?? false),
+		currentVersionId: asNullable(
+			row["currentVersionId"] as string | null | undefined
+		),
+		latestVersionNumber,
 		reportType: asNullable(row["reportType"] as string | null | undefined),
 		fileUrl: asNullable(row["fileUrl"] as string | null | undefined),
 		generatedAt: toIsoNullable(row["generatedAt"] as Date | null | undefined),

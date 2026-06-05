@@ -4,15 +4,26 @@
  * Exercises the full happy path through the v2 HTTP surface against a
  * real PostgreSQL database (and the generated Prisma v2 client):
  *
- *   1. POST  /api/v2/soil-samples          → create sample
- *   2. POST  /api/v2/soil-tests            → create test (PRELIMINARY +
+ *   0. POST  /api/v2/auth/register         → register a fresh user
+ *                                            (returns access token +
+ *                                            personal organization +
+ *                                            OWNER membership)
+ *   1. POST  /api/v2/projects              → create project
+ *   2. POST  /api/v2/soil-samples          → create sample
+ *   3. POST  /api/v2/soil-tests            → create test (PRELIMINARY +
  *                                            MODERATE inputs in one body)
- *   3. POST  /api/v2/soil-tests/:id/calculate
+ *   4. POST  /api/v2/soil-tests/:id/calculate
  *                                          → physics + chemistry +
  *                                            interpretation
- *   4. GET   /api/v2/soil-tests/:id        → fetch persisted state
- *   5. GET   /api/v2/soil-tests/:id/flahacalc-export
+ *   5. GET   /api/v2/soil-tests/:id        → fetch persisted state
+ *   6. GET   /api/v2/soil-tests/:id/flahacalc-export
  *                                          → downstream projection
+ *
+ * Phase 9A-D: every protected request carries `Authorization: Bearer
+ * <accessToken>` issued by the register endpoint, exercising the real
+ * JWT auth path end-to-end (no dev-auth fallback). The user is created
+ * with a unique email per run so the suite is idempotent against the
+ * non-truncated `user` / `organization` / `refreshToken` tables.
  *
  * The whole suite is gated on `getIntegrationDb`. When the harness
  * reports the database is unavailable (no `DATABASE_URL_V2`, db name
@@ -56,22 +67,48 @@ afterAll(async () => {
 const describeIfDb = () =>
 	availability?.available ? describe : describe.skip;
 
+/**
+ * Registers a fresh user with a unique email and returns the access
+ * token so the rest of the e2e flow can authenticate as the new tenant
+ * owner. Password meets the policy enforced by `assertPasswordPolicy`.
+ */
+async function registerE2EUser(): Promise<string> {
+	const suffix = `${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+	const res = await request(app)
+		.post("/api/v2/auth/register")
+		.send({
+			email: `e2e-${suffix}@flahasoil.test`,
+			password: "CorrectHorseBattery42!",
+			displayName: `E2E User ${suffix}`,
+		})
+		.set("Content-Type", "application/json");
+	expect(res.status).toBe(201);
+	const accessToken = res.body?.session?.accessToken as string | undefined;
+	expect(typeof accessToken).toBe("string");
+	expect((accessToken ?? "").length).toBeGreaterThan(20);
+	return accessToken as string;
+}
+
 describeIfDb()("v2 end-to-end flow (DB-backed)", () => {
-	it("creates project → sample → test → calculation → fetch → flahacalc-export", async () => {
-		// 0. Create the owning project (Phase 8A — required parent).
-		// Phase 8B: the API resolves the owning user from the dev-session
-		// middleware (seeded `user_dev_admin` fallback when no header is
-		// sent), so we no longer pass `userId` in the body.
+	it("registers → project → sample → test → calculation → fetch → flahacalc-export", async () => {
+		// 0. Register a brand-new tenant owner and capture the JWT.
+		const accessToken = await registerE2EUser();
+		const bearer = `Bearer ${accessToken}`;
+
+		// 1. Create the owning project (Phase 8A — required parent).
 		const projectRes = await request(app)
 			.post("/api/v2/projects")
-			.send({ name: "E2E Project" })
-			.set("Content-Type", "application/json");
+			.set("Authorization", bearer)
+			.set("Content-Type", "application/json")
+			.send({ name: "E2E Project" });
 		expect(projectRes.status).toBe(201);
 		const projectId = projectRes.body.project.id as string;
 
-		// 1. Create sample bound to the project.
+		// 2. Create sample bound to the project.
 		const sampleRes = await request(app)
 			.post("/api/v2/soil-samples")
+			.set("Authorization", bearer)
+			.set("Content-Type", "application/json")
 			.send({
 				projectId,
 				locationName: "E2E Field",
@@ -79,15 +116,16 @@ describeIfDb()("v2 end-to-end flow (DB-backed)", () => {
 				longitude: 51.520008,
 				depthFromCm: 0,
 				depthToCm: 30,
-			})
-			.set("Content-Type", "application/json");
+			});
 		expect(sampleRes.status).toBe(201);
 		const sampleId = sampleRes.body.sample.id as string;
 		expect(typeof sampleId).toBe("string");
 
-		// 2. Create test with PRELIMINARY + MODERATE inputs.
+		// 3. Create test with PRELIMINARY + MODERATE inputs.
 		const testRes = await request(app)
 			.post("/api/v2/soil-tests")
+			.set("Authorization", bearer)
+			.set("Content-Type", "application/json")
 			.send({
 				sampleId,
 				testLevel: SoilTestLevel.MODERATE,
@@ -113,41 +151,41 @@ describeIfDb()("v2 end-to-end flow (DB-backed)", () => {
 					p: 18,
 					source: SoilValueSource.LAB,
 				},
-			})
-			.set("Content-Type", "application/json");
+			});
 		expect(testRes.status).toBe(201);
 		const soilTestId = testRes.body.soilTest.id as string;
 
-		// 3. Calculate (physics + chemistry + interpretation).
+		// 4. Calculate (physics + chemistry + interpretation).
 		const calcRes = await request(app)
 			.post(`/api/v2/soil-tests/${soilTestId}/calculate`)
+			.set("Authorization", bearer)
+			.set("Content-Type", "application/json")
 			.send({
 				runPhysics: true,
 				runChemistry: true,
 				runInterpretation: true,
 				calculationMode: "LAB",
-			})
-			.set("Content-Type", "application/json");
+			});
 		expect(calcRes.status).toBe(200);
 		expect(calcRes.body.physicsResult).toBeDefined();
 		expect(calcRes.body.chemistryResult).toBeDefined();
 		expect(calcRes.body.interpretation).toBeDefined();
 		expect(Array.isArray(calcRes.body.warnings)).toBe(true);
 
-		// 4. Fetch the persisted soil test.
-		const getRes = await request(app).get(
-			`/api/v2/soil-tests/${soilTestId}`
-		);
+		// 5. Fetch the persisted soil test.
+		const getRes = await request(app)
+			.get(`/api/v2/soil-tests/${soilTestId}`)
+			.set("Authorization", bearer);
 		expect(getRes.status).toBe(200);
 		expect(getRes.body.soilTest.id).toBe(soilTestId);
 		expect(getRes.body.physicsResult).toBeDefined();
 		expect(getRes.body.chemistryResult).toBeDefined();
 		expect(getRes.body.interpretation).toBeDefined();
 
-		// 5. FlahaCalc export.
-		const expRes = await request(app).get(
-			`/api/v2/soil-tests/${soilTestId}/flahacalc-export`
-		);
+		// 6. FlahaCalc export.
+		const expRes = await request(app)
+			.get(`/api/v2/soil-tests/${soilTestId}/flahacalc-export`)
+			.set("Authorization", bearer);
 		expect(expRes.status).toBe(200);
 		const exp = expRes.body;
 		expect(exp.soilTestId).toBe(soilTestId);

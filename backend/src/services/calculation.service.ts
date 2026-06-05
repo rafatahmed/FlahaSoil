@@ -501,6 +501,14 @@ async function persistInterpretation(
 		drainageClass: raw.drainageClass ?? null,
 		overallSoilRating: toRatingEnum(raw.overallSoilRating),
 		warningsJson: raw.warnings,
+		// Phase 8D — extended classifications. Each field is independently
+		// nullable; the engine omits keys whose inputs are missing.
+		salinitySeverity: raw.salinitySeverity ?? null,
+		sodicitySeverity: raw.sodicitySeverity ?? null,
+		organicMatterCategory: raw.organicMatterCategory ?? null,
+		infiltrationClass: raw.infiltrationClass ?? null,
+		compactionRisk: raw.compactionRisk ?? null,
+		textureSuitabilityJson: raw.textureSuitability ?? null,
 	};
 	const row = (await prisma.soilInterpretation.upsert({
 		where: { soilTestId },

@@ -10,6 +10,7 @@
  * suite (which mounts the app into supertest without binding a port).
  */
 
+import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { type Express, type Request, type Response } from "express";
 import helmet from "helmet";
@@ -26,11 +27,32 @@ export function createApp(): Express {
 
 	app.disable("x-powered-by");
 	app.use(helmet());
-	app.use(cors());
+	// Phase 9A-G: the SPA reaches the API over an explicit origin (Vite
+	// dev server on :5173 in dev; the deployed SPA host in prod) and the
+	// auth flow ships the refresh token in a HttpOnly cookie. That
+	// requires `credentials: true` AND a non-wildcard `Origin`; the
+	// configured allowlist is enforced here so a misconfigured SPA host
+	// fails the CORS check loudly rather than silently dropping the
+	// cookie.
+	const corsAllowlist = new Set(env.corsOrigins);
+	app.use(
+		cors({
+			origin: (origin, cb) => {
+				// Same-origin / server-to-server (no `Origin` header).
+				if (!origin) return cb(null, true);
+				if (corsAllowlist.has(origin)) return cb(null, true);
+				return cb(new Error(`CORS: origin not allowed: ${origin}`));
+			},
+			credentials: true,
+		})
+	);
 	// Phase 8: cap JSON request bodies. Soil-test payloads are well
 	// under 100 KB in practice; 512 KB leaves comfortable headroom for
 	// large lab-value batches without inviting abuse.
 	app.use(express.json({ limit: "512kb" }));
+	// Phase 9A-C: refresh tokens travel in HttpOnly cookies. Cookie
+	// parsing is global so the rate-limiter sees `req.cookies` too.
+	app.use(cookieParser());
 	// Phase 8: shed-load protection. The limiter is a no-op under
 	// NODE_ENV=test so the supertest suite is unaffected.
 	app.use("/api/v2", createRateLimiter());

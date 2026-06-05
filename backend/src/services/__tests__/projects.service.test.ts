@@ -1,27 +1,29 @@
 /**
- * FlahaSOIL v2 API — Project service unit tests (Phase 8A → 8B).
+ * FlahaSOIL v2 API — Project service unit tests
+ * (Phase 8A → 9A-D.5, trimmed in 9A-E).
  *
  * Pure unit tests against a stub Prisma client injected via
  * `setPrismaClientForTesting`. They lock in the read/write contract
  * documented in `docs/v2-api-contracts.md`:
  *
- *   - createProject persists exactly the columns it should and rejects
- *     a duplicate (userId, code) with a typed 400 instead of a 500.
- *   - listProjects scopes by userId and exposes _count.samples.
- *   - getProjectById refuses to leak across users.
- *   - assertProjectOwnership (now in `auth/ownership`) throws 404 when
- *     the project does not belong to the calling user — the gate used
- *     by soilSamples.service.
+ *   - createProject persists exactly the columns it should (now
+ *     including the authoritative organizationId from the actor) and
+ *     rejects a duplicate (userId, code) with a typed 400 instead of
+ *     a 500.
+ *   - listProjects scopes by organizationId and exposes _count.samples.
+ *   - getProjectById refuses to leak across tenants.
  *
- * Phase 8B moved `userId` from a body/query field to a first positional
- * parameter resolved server-side from the dev-session middleware. The
- * tests below reflect that signature change.
+ * Phase 9A-D.5 swapped the first parameter of `createProject` for an
+ * `AuthorActor` ({ userId, organizationId }) and the lookup parameter
+ * of `listProjects` / `getProjectById` for `organizationId`. Phase
+ * 9A-E removed the legacy `assertProjectOwnership(id, userId)` helper;
+ * cross-tenant 404 coverage now lives in
+ * `auth/__tests__/ownership.test.ts` under `assertProjectTenancy`.
  */
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ProjectStatus } from "@flaha/shared-types";
 
-import { assertProjectOwnership } from "../../auth/ownership";
 import {
 	type PrismaClientLike,
 	setPrismaClientForTesting,
@@ -92,12 +94,14 @@ function makeProjectStub(opts: ProjectStubOptions = {}): {
 	return { client, calls };
 }
 
+const ACTOR = { userId: "u_1", organizationId: "org_acme" } as const;
+
 describe("createProject", () => {
 	it("persists only the supplied optional columns and defaults status to ACTIVE", async () => {
 		const { client, calls } = makeProjectStub();
 		setPrismaClientForTesting(client);
 
-		const res = await createProject("u_1", {
+		const res = await createProject(ACTOR, {
 			name: "Doha Pilot",
 			code: "DOHA-01",
 		});
@@ -105,6 +109,7 @@ describe("createProject", () => {
 		expect(calls.create).toHaveLength(1);
 		expect(calls.create[0]!.data).toEqual({
 			userId: "u_1",
+			organizationId: "org_acme",
 			name: "Doha Pilot",
 			status: ProjectStatus.ACTIVE,
 			code: "DOHA-01",
@@ -125,13 +130,29 @@ describe("createProject", () => {
 		setPrismaClientForTesting(client);
 
 		await expect(
-			createProject("u_1", { name: "Dup", code: "DOHA-01" })
+			createProject(ACTOR, { name: "Dup", code: "DOHA-01" })
 		).rejects.toBeInstanceOf(ApiError);
+	});
+
+	// Phase 9A-D.5 — the actor's organizationId is the authoritative
+	// tenant boundary, sourced from the resolved authSession at the
+	// controller layer and persisted verbatim onto the new row.
+	it("tags the new row with the actor's organizationId", async () => {
+		const { client, calls } = makeProjectStub();
+		setPrismaClientForTesting(client);
+
+		await createProject(
+			{ userId: "u_1", organizationId: "org_acme" },
+			{ name: "Acme Trial" }
+		);
+
+		expect(calls.create).toHaveLength(1);
+		expect(calls.create[0]!.data["organizationId"]).toBe("org_acme");
 	});
 });
 
 describe("listProjects", () => {
-	it("scopes by userId and reports _count.samples", async () => {
+	it("scopes by organizationId and reports _count.samples", async () => {
 		const { client, calls } = makeProjectStub({
 			findManyResult: [
 				{
@@ -147,20 +168,21 @@ describe("listProjects", () => {
 		});
 		setPrismaClientForTesting(client);
 
-		const res = await listProjects("u_1", {});
+		const res = await listProjects("org_acme", {});
 
-		expect(calls.findMany[0]!["where"]).toEqual({ userId: "u_1" });
+		expect(calls.findMany[0]!["where"]).toEqual({ organizationId: "org_acme" });
 		expect(res.projects).toHaveLength(1);
 		expect(res.projects[0]!.sampleCount).toBe(3);
 	});
 });
 
 describe("getProjectById", () => {
-	it("returns the project and its samples when the user owns it", async () => {
+	it("returns the project and its samples when the tenant owns it", async () => {
 		const { client, calls } = makeProjectStub({
 			findFirstResult: {
 				id: "p_1",
 				userId: "u_1",
+				organizationId: "org_acme",
 				name: "Doha",
 				code: null,
 				description: null,
@@ -187,46 +209,24 @@ describe("getProjectById", () => {
 		});
 		setPrismaClientForTesting(client);
 
-		const res = await getProjectById("p_1", "u_1");
+		const res = await getProjectById("p_1", "org_acme");
 
 		expect(calls.findFirst[0]!["where"]).toEqual({
 			id: "p_1",
-			userId: "u_1",
+			organizationId: "org_acme",
 		});
 		expect(res.project.id).toBe("p_1");
 		expect(res.samples).toHaveLength(1);
 		expect(res.samples[0]!.id).toBe("s_1");
 	});
 
-	it("throws ApiError.notFound when the project does not match the user", async () => {
+	it("throws ApiError.notFound when no row matches the tenant", async () => {
 		const { client } = makeProjectStub({ findFirstResult: null });
 		setPrismaClientForTesting(client);
 
-		await expect(getProjectById("p_x", "u_1")).rejects.toBeInstanceOf(
+		await expect(getProjectById("p_x", "org_acme")).rejects.toBeInstanceOf(
 			ApiError
 		);
-	});
-});
-
-describe("assertProjectOwnership", () => {
-	it("resolves silently when the project belongs to the user", async () => {
-		const { client } = makeProjectStub({
-			findFirstResult: { id: "p_1" },
-		});
-		setPrismaClientForTesting(client);
-
-		await expect(
-			assertProjectOwnership("p_1", "u_1")
-		).resolves.toBeUndefined();
-	});
-
-	it("throws ApiError.notFound when no row matches", async () => {
-		const { client } = makeProjectStub({ findFirstResult: null });
-		setPrismaClientForTesting(client);
-
-		await expect(
-			assertProjectOwnership("p_x", "u_1")
-		).rejects.toBeInstanceOf(ApiError);
 	});
 });
 

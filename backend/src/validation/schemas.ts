@@ -27,8 +27,9 @@ const projectStatusSchema = z.nativeEnum(ProjectStatus);
 // 0. POST /projects (Phase 8A)
 // ---------------------------------------------------------------------------
 
-// Phase 8B: `userId` was removed from the body — the controller now
-// pulls the owning user from `req.currentUser` (dev-session middleware).
+// Phase 8B / 9A-E: `userId` was removed from the body — the controller
+// pulls the owning user + tenant from `req.authSession` (authSession
+// middleware).
 export const createProjectSchema = z.object({
 	name: z.string().min(1, "name is required").max(200),
 	code: z.string().min(1).max(80).nullable().optional(),
@@ -49,10 +50,11 @@ export type ListProjectsQueryParsed = z.infer<typeof listProjectsQuerySchema>;
 // 1. POST /soil-samples
 // ---------------------------------------------------------------------------
 
-// Phase 8B: `userId` was removed from the body — the owning user is
-// pulled from `req.currentUser` (dev-session middleware). `projectId`
-// remains required for newly created samples; the nullable variant on
-// the read DTO is kept for back-compat with pre-Project-model rows.
+// Phase 8B / 9A-E: `userId` was removed from the body — the owning
+// user + tenant are pulled from `req.authSession` (authSession
+// middleware). `projectId` remains required for newly created samples;
+// the nullable variant on the read DTO is kept for back-compat with
+// pre-Project-model rows.
 export const createSoilSampleSchema = z
 	.object({
 		projectId: z.string().min(1, "projectId is required"),
@@ -284,9 +286,62 @@ export type CalculateSoilTestParsed = z.infer<typeof calculateSoilTestSchema>;
 // ---------------------------------------------------------------------------
 
 export const createSoilReportSchema = z.object({
-	reportType: z.string().min(1),
+	reportType: z.string().min(1).optional(),
 	includeTrace: z.boolean().optional(),
 	includeRawLabValues: z.boolean().optional(),
+	title: z.string().min(1).max(200).optional(),
+	reportNumber: z.string().min(1).max(64).optional(),
+	cover: z
+		.object({
+			clientName: z.string().max(200).optional(),
+			consultantName: z.string().max(200).optional(),
+			consultantRole: z.string().max(200).optional(),
+		})
+		.optional(),
 });
 
 export type CreateSoilReportParsed = z.infer<typeof createSoilReportSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 8D: PATCH /reports/:reportId
+// ---------------------------------------------------------------------------
+
+export const patchReportSchema = z.object({
+	title: z.string().min(1).max(200).optional(),
+	archived: z.boolean().optional(),
+});
+
+export type PatchReportParsed = z.infer<typeof patchReportSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 9A-C — Auth endpoints
+//
+// Password POLICY (length + character classes) is enforced separately
+// by `auth/password.ts` so the rule lives in exactly one place. These
+// schemas only check structural shape + obvious bounds.
+// ---------------------------------------------------------------------------
+
+const emailSchema = z
+	.string()
+	.trim()
+	.min(3, "email is required")
+	.max(254)
+	.email("email must be a valid address");
+
+const passwordSchema = z.string().min(1, "password is required").max(512);
+
+export const registerSchema = z.object({
+	email: emailSchema,
+	password: passwordSchema,
+	displayName: z.string().trim().min(1, "displayName is required").max(120),
+	organizationName: z.string().trim().min(1).max(200).optional(),
+});
+
+export type RegisterParsed = z.infer<typeof registerSchema>;
+
+export const loginSchema = z.object({
+	email: emailSchema,
+	password: passwordSchema,
+});
+
+export type LoginParsed = z.infer<typeof loginSchema>;

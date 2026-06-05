@@ -12,25 +12,32 @@ import type {
 } from "@flaha/shared-types";
 import { type SoilTestLevel } from "@flaha/shared-types";
 
-import { assertProjectOwnership } from "../auth/ownership";
+import { assertProjectTenancy } from "../auth/ownership";
+import type { AuthorActor } from "../auth/session.middleware";
 import { getPrismaClient } from "../prisma/client";
 import { ApiError } from "../utils/apiError";
 import { toIso, toSoilSampleDTO } from "../utils/serializers";
 import type { CreateSoilSampleParsed } from "../validation/schemas";
 
 export async function createSoilSample(
-	userId: string,
+	actor: AuthorActor,
 	input: CreateSoilSampleParsed
 ): Promise<CreateSoilSampleResponse> {
 	const prisma = getPrismaClient();
 
-	// Phase 8A: every newly created sample must belong to a Project owned
-	// by the same user. Reject before touching the soil_samples table so
-	// we don't rely on the database FK to produce a clean 404.
-	await assertProjectOwnership(input.projectId, userId);
+	// Phase 9A-D — the parent project must belong to the actor's tenant.
+	// Reject before touching the soil_samples table so we never rely on
+	// the database FK to produce a clean 404. `assertProjectTenancy`
+	// returns 404 on a cross-tenant project so we don't leak existence.
+	await assertProjectTenancy(input.projectId, actor.organizationId);
 
+	// Denormalised tenant pointer mirrored from the parent project so
+	// per-tenant queries can short-circuit at SoilSample. Projects never
+	// move between organizations, so the value resolved above is the
+	// authoritative source.
 	const data: Record<string, unknown> = {
-		userId,
+		userId: actor.userId,
+		organizationId: actor.organizationId,
 		projectId: input.projectId,
 	};
 	if (input.locationName !== undefined) data["locationName"] = input.locationName;
