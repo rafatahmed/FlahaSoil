@@ -5,6 +5,7 @@
  * No interpretation, no I/O, no UI.
  */
 export * from "./calculateSoilChemistry";
+export * from "./structureTriangle";
 export * from "./types";
 
 /**

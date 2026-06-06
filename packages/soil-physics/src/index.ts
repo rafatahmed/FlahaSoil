@@ -7,7 +7,9 @@
  * (see `docs/legacy-calculation-samples.md`).
  */
 export * from "./calculateSoilPhysics";
+export * from "./textureTriangle";
 export * from "./types";
+export * from "./waterRetentionCurve";
 
 /**
  * Phase-1 sentinel kept for backwards compatibility with any caller that

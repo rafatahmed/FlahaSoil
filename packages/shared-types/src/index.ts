@@ -15,4 +15,5 @@ export * from "./professional-report";
 export * from "./report-versions";
 export * from "./users";
 export * from "./organizations";
+export * from "./scientific-analysis";
 export * from "./warnings";
