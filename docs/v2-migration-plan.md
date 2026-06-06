@@ -1230,7 +1230,74 @@ Exit criteria: FlahaCalc consumes the engines; no soil math is duplicated.
 
 ---
 
-## Phase 10 — Retire legacy HTML
+## Phase 10A — Scientific engines & visual analytics ✅ COMPLETE
+
+**Goal:** Surface the three published soil-science visualisations
+(USDA texture triangle, Saxton-Rawls 2006 water-retention curve,
+Bear/Albrecht cation triangle) as first-class v2 engines, API surface
+and React components.
+
+Outputs (see `docs/v2-scientific-analysis.md`):
+
+- New engines in `@flaha/soil-physics` (`textureTriangle.ts`,
+  `waterRetentionCurve.ts`) and `@flaha/soil-chemistry`
+  (`structureTriangle.ts`).
+- Composite service
+  `backend/src/services/scientificAnalysis.service.ts` exposed via
+  `GET /api/v2/soil-tests/:soilTestId/scientific-analysis`.
+- Frontend components
+  `frontend/src/features/results/components/{TextureTriangle,
+WaterRetentionCurve, StructureTriangle}Chart.tsx` and the
+  `ScientificAnalysisPanel.tsx` container, tabbed into
+  `SoilTestDetailPage`.
+- API clients (`realApiV2Client.ts`, `mockApiV2Client.ts`,
+  `apiV2Client.ts` interface) updated with `getScientificAnalysis`.
+- Shared contracts in
+  `packages/shared-types/src/scientific-analysis.ts`.
+- 73 new engine tests; all 369 tests across the 5 workspaces pass.
+
+Exit criteria: every engine has a published reference, every formula
+is documented in `docs/v2-scientific-analysis.md`, the API endpoint
+is registered and tenancy-gated, and the visual components render
+without errors against both the mock client and the live backend.
+
+### Deferred to Phase 10C
+
+- Embedding the three charts into the PDF/Word reports.
+- SVG-snapshot Testing-Library tests for the three charts.
+- Per-organisation override of `STRUCTURE_THRESHOLDS`.
+- CSV / FlahaCalc export of the sampled retention curve.
+
+---
+
+## Phase 10B — Full-matrix audit ✅ COMPLETE
+
+**Goal:** Map every legacy soil-science symbol in
+`public/assets/js/main.js` and `public/assets/data/data.json` (and the
+legacy `/api/v1/*` controllers it called) onto its v2 engine
+equivalent, recording divergences explicitly.
+
+Outputs:
+
+- §5 of `docs/v2-scientific-analysis.md` ("Full-matrix audit") lists
+  every legacy symbol → v2 symbol mapping with file references.
+- §5.1 records the corrected polygon vertex (legacy `data.json`
+  "sandy loam" had a vertex summing to 105 %).
+- §1.1–1.3 of the same document list every engine, function and
+  constant introduced in Phase 10A.
+- §2 records the scientific assumptions baked into the engines.
+
+Exit criteria: no legacy formula is implicit; every Phase-10A symbol
+has a documented reference back to the legacy implementation or an
+explicit "new in v2" call-out.
+
+---
+
+## Phase 11 — Retire legacy HTML
+
+> Renumbered from "Phase 10" in Phase 10A to free the `10` slot for
+> the scientific-engines phase. Scope is unchanged from the original
+> Phase-10 plan.
 
 **Goal:** Remove `public/` and `api-implementation/` from runtime.
 
