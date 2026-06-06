@@ -609,7 +609,7 @@ Out of scope (deferred to Phase 9):
 
 ---
 
-## Phase 9A — Authentication & multi-tenant architecture 🚧 IN PROGRESS
+## Phase 9A — Authentication & multi-tenant architecture ✅ COMPLETE
 
 **Goal:** Replace the Phase 8B `x-dev-user-id` development header with
 production-grade authentication (argon2 + JWT access + hashed refresh
@@ -1037,11 +1037,105 @@ tenant switcher needs to render. The dev admin still owns
 - Invitations, member management write actions, email
   (Phase 9B).
 - Auth-endpoint rate limiting, account lockout, captcha
-  (Phase 9A-I).
+  — **delivered in Phase 9A-I.**
 - Production migration runbook + secret rotation playbook
-  (Phase 9A-M).
+  (Phase 9A-M, see close-out below).
 - `docs/v2-auth.md` and `docs/v2-multi-tenant-architecture.md`
-  detail papers (Phase 9A-L).
+  detail papers — **delivered in Phase 9A-L.**
+
+---
+
+## Phase 9A-I — Security hardening ✅ COMPLETE
+
+**Goal:** Lift the production-readiness baseline of the auth surface
+from "correct" to "hardened": throttle credential abuse, formalise
+the HTTP security headers, and ensure the audit trail captures every
+rejection.
+
+### Delivered
+
+- **Auth rate limiter + lockout** —
+  `backend/src/middleware/authRateLimit.ts` mounts two sliding
+  windows per protected surface:
+  - `/login`: 20 / 60 s per IP + 5 failures / 15-min window per
+    email → 15-min lockout.
+  - `/refresh`: 60 / 60 s per IP + 30 failures / 5-min window per
+    cookie hash → 5-min lockout.
+- **Audit actions** — `AUTH_LOCKOUT`,
+  `AUTH_LOGIN_RATE_LIMITED`, `AUTH_REFRESH_RATE_LIMITED` added
+  to `backend/src/auth/audit.ts` (all SECURITY severity).
+- **Controller feedback loop** — `postLogin` / `postRefresh` call
+  `req.authRateLimiter.recordSuccess(identity)` on the happy path
+  and `recordFailure(identity, req)` on a 401, so the per-identity
+  bucket stays accurate without race conditions.
+- **Explicit Helmet config** — `default-src 'none'` CSP,
+  `frame-ancestors 'none'`, `base-uri 'none'`,
+  `form-action 'none'`, HSTS in production, `no-referrer`,
+  `Cross-Origin-Resource-Policy: same-site`.
+- **Route-local CSP for report preview** — the only HTML response
+  the API serves; allows inline `<style>` and `data:` images
+  while forbidding scripts and external resources.
+
+### Tests
+
+- `backend/src/middleware/__tests__/authRateLimit.test.ts` — 3 unit
+  tests (IP cap, identity lockout, recordSuccess reset).
+- `backend/src/__tests__/app.test.ts` — new "security headers"
+  suite asserts CSP + nosniff + Referrer-Policy + X-Powered-By
+  suppression.
+- **Suite totals:** 172 backend tests pass + 1 skipped
+  (+4 vs. Phase 9A-H baseline). 24 frontend tests still pass.
+
+---
+
+## Phase 9A-L — Architecture documentation ✅ COMPLETE
+
+**Goal:** Capture the v2 auth + tenancy + security model in
+dedicated reference papers so onboarding does not require reading
+the source tree.
+
+### Delivered
+
+- [`docs/v2-auth.md`](./v2-auth.md) — token shapes, endpoint table,
+  password policy, refresh-token rotation, rate-limit / lockout
+  matrix, frontend flow, audit pointer, test inventory.
+- [`docs/v2-multi-tenant-architecture.md`](./v2-multi-tenant-architecture.md)
+  — tenancy model, identity vs. tenancy, role matrix, the
+  tri-layer isolation guarantees, org switching, demo seed,
+  Phase 9B roadmap.
+- [`docs/v2-security-architecture.md`](./v2-security-architecture.md)
+  — threat model & scope, transport headers, hardening summary,
+  CORS, request limits, full audit-action enumeration,
+  security-relevant test coverage, operational notes.
+- This section + the close-out below in the migration plan.
+
+---
+
+## Phase 9A — Close-out & sign-off ✅ COMPLETE
+
+**Goal:** Lock the Phase 9A baseline behind a single sign-off
+document that maps each exit criterion to an automated test,
+inventories the security controls, and assesses Phase 9B readiness.
+
+### Delivered
+
+- [`docs/v2-phase-9a-signoff.md`](./v2-phase-9a-signoff.md) — the
+  Phase 9A sign-off report:
+  - Sub-phase status table (9A-A through 9A-M).
+  - Security controls inventory (18 controls).
+  - Acceptance walk-through mapping all 15 exit criteria to the
+    automated suites that lock them (Phase 9A-J).
+  - Final test results: 172 backend pass + 1 skipped, 24
+    frontend pass (196 / 197 total green; the 1 skip is the
+    Postgres-only E2E suite).
+  - Phase 9B readiness assessment with a recommended kickoff
+    order.
+  - Operational follow-ups (JWT rotation cadence, edge limiter,
+    AuditLog partitioning) carried into the deploy runbook.
+
+### Recommendation
+
+Proceed to **Phase 9B — Organization administration**.
 
 ---
 
