@@ -64,6 +64,7 @@ import {
 	type RegisterRequest,
 	type RemoveMembershipResponse,
 	type RevokeInvitationResponse,
+	type ScientificAnalysisResponse,
 	type SwitchOrganizationRequest,
 	type SwitchOrganizationResponse,
 	type UserMembershipsResponse,
@@ -408,6 +409,12 @@ export const realApiV2Client: ApiV2Client = {
 	getFlahaCalcExport(soilTestId: string) {
 		return getJson<FlahaCalcExportResponse>(
 			`/soil-tests/${encodeURIComponent(soilTestId)}/flahacalc-export`
+		);
+	},
+
+	getScientificAnalysis(soilTestId: string) {
+		return getJson<ScientificAnalysisResponse>(
+			`/soil-tests/${encodeURIComponent(soilTestId)}/scientific-analysis`
 		);
 	},
 

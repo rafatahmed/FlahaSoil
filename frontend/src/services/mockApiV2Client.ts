@@ -64,6 +64,7 @@ import {
 	type RemoveMembershipResponse,
 	type ReportVersionDTO,
 	type RevokeInvitationResponse,
+	type ScientificAnalysisResponse,
 	type SoilReportDTO,
 	type SwitchOrganizationRequest,
 	type SwitchOrganizationResponse,
@@ -803,6 +804,57 @@ export const mockApiV2Client: ApiV2Client = {
 			cec: 18.2,
 			salinityRisk: "Low",
 			sodiumRisk: "Low",
+			warnings: [],
+		};
+	},
+
+	async getScientificAnalysis(
+		soilTestId: string
+	): Promise<ScientificAnalysisResponse> {
+		// Loam soil (~40 % sand, 40 % silt, 20 % clay) with a balanced
+		// Ca/Mg/K profile so the three triangles + retention curve all
+		// render against a realistic centroid in mock mode.
+		return {
+			soilTestId,
+			texture: {
+				sand: 40,
+				silt: 40,
+				clay: 20,
+				derived: null,
+				sumOk: true,
+				sumDelta: 0,
+				normalized: { sand: 40, silt: 40, clay: 20 },
+				point: { x: 0.4, y: Math.sqrt(3) / 2 - 0.2 * (Math.sqrt(3) / 2) },
+				classification: "Loam",
+				matched: true,
+			},
+			waterRetention: {
+				method: "saxton-rawls-2006",
+				textureClass: "Loam",
+				points: [
+					{ pF: 0, tensionKpa: 0, waterContentVolPercent: 45 },
+					{ pF: 2.53, tensionKpa: 33, waterContentVolPercent: 28 },
+					{ pF: 4.18, tensionKpa: 1500, waterContentVolPercent: 12 },
+				],
+				saturation: { pF: 0, tensionKpa: 0, waterContentVolPercent: 45, label: "Saturation" },
+				fieldCapacity: { pF: 2.53, tensionKpa: 33, waterContentVolPercent: 28, label: "FC" },
+				wiltingPoint: { pF: 4.18, tensionKpa: 1500, waterContentVolPercent: 12, label: "WP" },
+				irrigationThreshold: { pF: 2.9, tensionKpa: 80, waterContentVolPercent: 20, label: "MAD 50%" },
+				plantAvailableWater: 16,
+				madFraction: 0.5,
+				airEntryTensionKpa: 1.5,
+				parameterA: 1000,
+				parameterB: -4.5,
+			},
+			structure: {
+				ca: 12, mg: 3, k: 0.6, na: 0.2, cec: 18.2,
+				normalized: { ca: 76.9, mg: 19.2, k: 3.85 },
+				point: { x: 50, y: 30 },
+				classification: "Balanced",
+				matched: true,
+				caMgRatio: 4, caKRatio: 20, mgKRatio: 5,
+				basesTotal: 15.6,
+			},
 			warnings: [],
 		};
 	},
