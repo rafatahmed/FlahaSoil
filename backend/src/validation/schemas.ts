@@ -8,7 +8,13 @@
  * adds business rules (texture sum, test-level requirements).
  */
 
-import { ProjectStatus, SoilTestLevel, SoilValueSource } from "@flaha/shared-types";
+import {
+	OrganizationRole,
+	OrganizationType,
+	ProjectStatus,
+	SoilTestLevel,
+	SoilValueSource,
+} from "@flaha/shared-types";
 import { z } from "zod";
 
 // ---------------------------------------------------------------------------
@@ -355,3 +361,56 @@ export const switchOrganizationSchema = z.object({
 });
 
 export type SwitchOrganizationParsed = z.infer<typeof switchOrganizationSchema>;
+
+// ---------------------------------------------------------------------------
+// Phase 9B — Organization administration
+//
+// The schemas below mirror the request DTOs from
+// `@flaha/shared-types/organizations.ts`. Server-side authorisation
+// (caller must be ADMIN/OWNER of the path-target org, may not invite a
+// role higher than their own) lives in the service layer because it
+// depends on the resolved auth session, not the request body alone.
+// ---------------------------------------------------------------------------
+
+const orgRoleSchema = z.nativeEnum(OrganizationRole);
+const orgTypeSchema = z.nativeEnum(OrganizationType);
+
+// PATCH /organizations/:organizationId — partial update. At least one
+// field must be present; an empty body is a 400 (no-op patches usually
+// indicate a frontend bug, not a legitimate intent).
+export const patchOrganizationSchema = z
+	.object({
+		name: z.string().trim().min(1).max(200).optional(),
+		type: orgTypeSchema.optional(),
+	})
+	.refine((v) => v.name !== undefined || v.type !== undefined, {
+		message: "At least one field (name, type) must be provided.",
+	});
+
+export type PatchOrganizationParsed = z.infer<typeof patchOrganizationSchema>;
+
+// PATCH /organizations/:organizationId/members/:userId — only role
+// changes are supported in 9B. Status transitions (SUSPEND/REMOVE) are
+// surfaced as DELETE.
+export const patchMembershipSchema = z.object({
+	role: orgRoleSchema,
+});
+
+export type PatchMembershipParsed = z.infer<typeof patchMembershipSchema>;
+
+// POST /organizations/:organizationId/invitations
+export const createInvitationSchema = z.object({
+	email: emailSchema,
+	role: orgRoleSchema.refine((r) => r !== OrganizationRole.OWNER, {
+		message: "Cannot invite a user as OWNER. Transfer ownership separately.",
+	}),
+});
+
+export type CreateInvitationParsed = z.infer<typeof createInvitationSchema>;
+
+// POST /invitations/accept
+export const acceptInvitationSchema = z.object({
+	token: z.string().min(1, "token is required").max(512),
+});
+
+export type AcceptInvitationParsed = z.infer<typeof acceptInvitationSchema>;

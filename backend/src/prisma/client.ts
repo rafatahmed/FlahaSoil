@@ -70,6 +70,8 @@ export interface PrismaClientLike {
 	// Phase 9A — multi-tenant + auth delegates.
 	organization: PrismaModelDelegate<Record<string, unknown>>;
 	organizationMembership: PrismaModelDelegate<Record<string, unknown>>;
+	// Phase 9B — invitation surface.
+	organizationInvitation: PrismaModelDelegate<Record<string, unknown>>;
 	refreshToken: PrismaModelDelegate<Record<string, unknown>>;
 	auditLog: PrismaModelDelegate<Record<string, unknown>>;
 	project: PrismaModelDelegate<Record<string, unknown>>;

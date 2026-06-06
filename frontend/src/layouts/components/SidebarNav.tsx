@@ -19,14 +19,18 @@ import {
 	Typography,
 } from "@mui/material";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import BusinessIcon from "@mui/icons-material/Business";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import FolderIcon from "@mui/icons-material/Folder";
+import GroupIcon from "@mui/icons-material/Group";
 import HomeIcon from "@mui/icons-material/Home";
 import IosShareIcon from "@mui/icons-material/IosShare";
 import LibraryBooksIcon from "@mui/icons-material/LibraryBooks";
+import MailOutlineIcon from "@mui/icons-material/MailOutline";
 import PersonIcon from "@mui/icons-material/Person";
 import ScienceIcon from "@mui/icons-material/Science";
 import SettingsIcon from "@mui/icons-material/Settings";
+import { OrganizationRole } from "@flaha/shared-types";
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -40,6 +44,12 @@ interface NavItem {
 	placeholder?: boolean;
 	/** Phase 9A-G — only render when the user is authenticated. */
 	requiresAuth?: boolean;
+	/** Phase 9B-D — only render when the user holds OWNER or ADMIN in the
+	 * currently-active organization. Hidden for viewer-level memberships
+	 * and for personal-workspace tenants with no admin actions. */
+	requiresOrgAdmin?: boolean;
+	/** Phase 9B-D — only render when the user is OWNER of the active org. */
+	requiresOrgOwner?: boolean;
 }
 
 interface NavSection {
@@ -85,6 +95,33 @@ const SECTIONS: NavSection[] = [
 		],
 	},
 	{
+		id: "organization",
+		label: "Organization",
+		items: [
+			{
+				label: "Settings",
+				to: "/organization/settings",
+				icon: <BusinessIcon />,
+				requiresAuth: true,
+				requiresOrgAdmin: true,
+			},
+			{
+				label: "Members",
+				to: "/organization/members",
+				icon: <GroupIcon />,
+				requiresAuth: true,
+				requiresOrgAdmin: true,
+			},
+			{
+				label: "Invitations",
+				to: "/organization/invitations",
+				icon: <MailOutlineIcon />,
+				requiresAuth: true,
+				requiresOrgAdmin: true,
+			},
+		],
+	},
+	{
 		id: "account",
 		label: "Account",
 		items: [
@@ -106,14 +143,28 @@ interface SidebarNavProps {
 }
 
 export function SidebarNav({ onNavigate }: SidebarNavProps) {
-	const { status } = useAuth();
+	const { status, activeOrganization, memberships } = useAuth();
 	const isAuthed = status === "authenticated";
+
+	// Phase 9B-D — resolve caller's role in the active organization so
+	// org-admin nav items hide for viewer/non-admin memberships. The
+	// backend remains authoritative; this is purely UI noise reduction.
+	const activeRole = activeOrganization
+		? memberships.find((m) => m.organizationId === activeOrganization.id)?.role
+		: undefined;
+	const isOrgOwner = activeRole === OrganizationRole.OWNER;
+	const isOrgAdmin = isOrgOwner || activeRole === OrganizationRole.ADMIN;
 
 	// Hide protected items + drop sections that become empty after the
 	// filter so unauthenticated users don't see a wall of "Sign in" gates.
 	const visibleSections = SECTIONS.map((section) => ({
 		...section,
-		items: section.items.filter((item) => !item.requiresAuth || isAuthed),
+		items: section.items.filter((item) => {
+			if (item.requiresAuth && !isAuthed) return false;
+			if (item.requiresOrgAdmin && !isOrgAdmin) return false;
+			if (item.requiresOrgOwner && !isOrgOwner) return false;
+			return true;
+		}),
 	})).filter((section) => section.items.length > 0);
 
 	return (

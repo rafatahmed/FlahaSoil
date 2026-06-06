@@ -1,7 +1,9 @@
+<!-- @format -->
+
 # FlahaSOIL v2 — Multi-tenant architecture
 
-> Status: ✅ Phase 9A close-out.
-> Companion: [`docs/v2-auth.md`](./v2-auth.md), [`docs/v2-user-ownership.md`](./v2-user-ownership.md).
+> Status: ✅ Phase 9A close-out; extended in Phase 9B (administration surface).
+> Companion: [`docs/v2-auth.md`](./v2-auth.md), [`docs/v2-user-ownership.md`](./v2-user-ownership.md), [`docs/v2-organization-administration.md`](./v2-organization-administration.md).
 
 ## 1. Tenancy model
 
@@ -35,11 +37,11 @@ Role ladder defined in `backend/src/auth/guards.ts`:
 
 | Role         | Read | Create / edit projects | Create samples + tests | Generate / regen reports | Manage org / members |
 | ------------ | :--: | :--------------------: | :--------------------: | :----------------------: | :------------------: |
-| `VIEWER`     |  ✓   |           —            |           —            |             —            |          —           |
-| `LAB_TECH`   |  ✓   |           —            |           ✓            |             —            |          —           |
-| `AGRONOMIST` |  ✓   |           ✓            |           ✓            |             ✓            |          —           |
-| `ADMIN`      |  ✓   |           ✓            |           ✓            |             ✓            |          ✓           |
-| `OWNER`      |  ✓   |           ✓            |           ✓            |             ✓            |          ✓           |
+| `VIEWER`     |  ✓   |           —            |           —            |            —             |          —           |
+| `LAB_TECH`   |  ✓   |           —            |           ✓            |            —             |          —           |
+| `AGRONOMIST` |  ✓   |           ✓            |           ✓            |            ✓             |          —           |
+| `ADMIN`      |  ✓   |           ✓            |           ✓            |            ✓             |          ✓           |
+| `OWNER`      |  ✓   |           ✓            |           ✓            |            ✓             |          ✓           |
 
 Convenience role bundles exported from `guards.ts`:
 
@@ -75,20 +77,26 @@ Audit rows persist both `actorUserId` and `organizationId` whenever both are kno
 
 ## 8. Test coverage
 
-| Suite                                                     | Focus                                            | Count |
-| --------------------------------------------------------- | ------------------------------------------------ | :---: |
-| `backend/src/auth/__tests__/ownership.test.ts`            | Parent-child ownership rules                     | 14    |
-| `backend/src/__tests__/tenantIsolation.test.ts`           | Cross-tenant row leakage (404 vs 200)            |  9    |
-| `backend/src/__tests__/roleMatrix.test.ts`                | 5 roles × ~5 endpoints                           | 24    |
-| `backend/src/__tests__/auth.routes.test.ts` (switch-org)  | Membership validation + access-token rebind      |  4    |
-| `frontend/src/layouts/components/__tests__/TenantSwitcher.test.tsx` | Switcher UX                            |  5    |
+| Suite                                                                      | Focus                                       | Count |
+| -------------------------------------------------------------------------- | ------------------------------------------- | :---: |
+| `backend/src/auth/__tests__/ownership.test.ts`                             | Parent-child ownership rules                |  14   |
+| `backend/src/__tests__/tenantIsolation.test.ts`                            | Cross-tenant row leakage (404 vs 200)       |   9   |
+| `backend/src/__tests__/roleMatrix.test.ts`                                 | 5 roles × ~5 endpoints                      |  24   |
+| `backend/src/__tests__/auth.routes.test.ts` (switch-org)                   | Membership validation + access-token rebind |   4   |
+| `backend/src/services/__tests__/organization.service.test.ts` (Phase 9B)   | Org / member / invitation lifecycle         |  19   |
+| `frontend/src/layouts/components/__tests__/TenantSwitcher.test.tsx`        | Switcher UX                                 |   5   |
+| `frontend/src/features/organizations/__tests__/*` (Phase 9B)               | Active-org admin hook + invite dialog       |   7   |
+| `frontend/src/pages/__tests__/OrganizationMembersPage.test.tsx` (Phase 9B) | Role-change + remove under RBAC             |   3   |
 
-## 9. Roadmap into Phase 9B
+## 9. Phase 9B — Organization administration ✅ COMPLETE
 
-Phase 9B will layer **organization administration** on this foundation:
+Phase 9B layered self-service **organization administration** on this foundation **without altering the tenancy model**: no new tables, no token-shape change, no new role tier. The full surface (endpoints, authorization rules, invitation flow, audit actions, frontend routes) is documented in [`docs/v2-organization-administration.md`](./v2-organization-administration.md).
 
-- Member CRUD (invite via email, accept, role change, suspend, remove).
-- Organization settings (rename, logo, billing contact).
-- Audit-log viewer scoped to the active org.
+Net additions:
 
-No data-model changes are anticipated; Phase 9B is largely a new controller surface + UX over the existing `Organization` and `OrganizationMembership` tables.
+- 9 new `/api/v2` endpoints under `requireOrganizationMember` / `requireOrganizationAdmin`.
+- 7 new audit actions (`ORG_UPDATED`, `MEMBERSHIP_ROLE_CHANGED`, `MEMBERSHIP_REMOVED`, `INVITATION_*`).
+- Frontend admin pages + accept-link landing, sidebar-gated by `useActiveOrgAdmin().isAdmin`.
+- `EmailProvider` abstraction with a production-safe `ConsoleEmailProvider` default.
+
+Deferred to Phase 9C: ownership transfer, audit-log viewer UI, member SUSPEND status, real transactional email adapter.

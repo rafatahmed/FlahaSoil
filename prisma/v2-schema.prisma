@@ -136,6 +136,20 @@ enum MembershipStatus {
   REMOVED
 }
 
+/// Lifecycle of an OrganizationInvitation (Phase 9B).
+/// PENDING  = invitation issued, awaiting accept; valid until `expiresAt`.
+/// ACCEPTED = consumed exactly once; `acceptedAt` set, membership row created.
+/// EXPIRED  = past `expiresAt` without acceptance (lazy transition; the
+///            accept endpoint and admin listing both treat past-expiry
+///            PENDING rows as EXPIRED and may persist the status update).
+/// REVOKED  = explicitly cancelled by an org admin/owner; `revokedAt` set.
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 /// Severity classification for audit log entries (Phase 9A). SECURITY
 /// covers credential events (failed login, refresh reuse, lockouts) and
 /// MUST be alertable in production.
@@ -151,9 +165,12 @@ enum AuditAction {
   AUTH_REGISTER
   AUTH_LOGIN
   AUTH_LOGIN_FAILED
+  AUTH_LOGIN_RATE_LIMITED
   AUTH_LOGOUT
   AUTH_REFRESH
   AUTH_REFRESH_REUSE_DETECTED
+  AUTH_REFRESH_RATE_LIMITED
+  AUTH_LOCKOUT
   AUTH_TOKEN_REVOKED
   ORG_CREATED
   ORG_UPDATED
@@ -161,6 +178,10 @@ enum AuditAction {
   MEMBERSHIP_CREATED
   MEMBERSHIP_ROLE_CHANGED
   MEMBERSHIP_REMOVED
+  INVITATION_CREATED
+  INVITATION_ACCEPTED
+  INVITATION_REVOKED
+  INVITATION_EXPIRED
   PROJECT_CREATED
   PROJECT_UPDATED
   REPORT_GENERATED
@@ -201,6 +222,7 @@ model User {
   projects           Project[]
   memberships        OrganizationMembership[] @relation("MembershipUser")
   invitedMemberships OrganizationMembership[] @relation("MembershipInvitedBy")
+  sentInvitations    OrganizationInvitation[] @relation("InvitationInvitedBy")
   activeOrganization Organization?            @relation("UserActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
   refreshTokens      RefreshToken[]
   auditLogs          AuditLog[]               @relation("AuditActor")
@@ -228,6 +250,7 @@ model Organization {
   updatedAt DateTime           @updatedAt
 
   memberships    OrganizationMembership[]
+  invitations    OrganizationInvitation[]
   projects       Project[]
   samples        SoilSample[]
   auditLogs      AuditLog[]
@@ -268,6 +291,55 @@ model OrganizationMembership {
   @@index([role])
   @@index([status])
   @@map("organization_memberships")
+}
+
+// -----------------------------------------------------------------------------
+// MODEL -0.35 — OrganizationInvitation (Phase 9B)
+// Pending invitations issued by org admins/owners. The raw token is delivered
+// to the invitee exactly once via the email/link channel and NEVER stored;
+// only `tokenHash` (SHA-256 hex of the raw token) lives in the row so an
+// accept request can be matched in O(1). Acceptance is single-use: the row
+// transitions PENDING → ACCEPTED and an OrganizationMembership row is
+// created in the same transaction. Past-expiry PENDING rows are treated as
+// EXPIRED by the accept endpoint and admin listing.
+// -----------------------------------------------------------------------------
+model OrganizationInvitation {
+  id              String           @id @default(cuid())
+  organizationId  String
+  /// Canonicalised invitee email (trim + lowercase). Stored on the row
+  /// so the accept endpoint can match against the authenticated user's
+  /// email without a separate lookup. Not unique on its own — the same
+  /// address may receive multiple sequential invitations from one org.
+  email           String
+  /// Role that the invitee will hold on acceptance. Validated against
+  /// the inviter's role at creation time (OWNER may invite any role;
+  /// ADMIN may invite ADMIN and below).
+  role            OrganizationRole
+  status          InvitationStatus @default(PENDING)
+  /// SHA-256 hex of the raw invitation token. Unique so a presented
+  /// token can be matched in O(1).
+  tokenHash       String           @unique
+  /// FK to the user who issued the invitation. Always present (anonymous
+  /// invitations are not supported in v2).
+  invitedByUserId String
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InvitationInvitedBy", fields: [invitedByUserId], references: [id], onDelete: Cascade)
+
+  /// Only one PENDING invitation per (organization, email) is allowed in
+  /// application logic; the unique index is intentionally partial in
+  /// spirit and enforced by the service layer to keep the
+  /// PENDING→REVOKED→PENDING re-invite path simple. Composite index
+  /// below covers the common "list pending for org" query.
+  @@index([organizationId, status])
+  @@index([email])
+  @@index([expiresAt])
+  @@map("organization_invitations")
 }
 
 // -----------------------------------------------------------------------------

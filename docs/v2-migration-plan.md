@@ -1139,6 +1139,80 @@ Proceed to **Phase 9B — Organization administration**.
 
 ---
 
+## Phase 9B — Organization administration ✅ COMPLETE
+
+**Goal:** Self-service administration of organizations, memberships and
+invitations on top of the Phase 9A tenancy primitives — without
+altering the data model, the access-token shape, or the role ladder.
+
+Full surface documented in
+[`docs/v2-organization-administration.md`](./v2-organization-administration.md).
+
+### Delivered
+
+- **9B-A — Audit & guards.** Added `ORG_UPDATED`,
+  `MEMBERSHIP_ROLE_CHANGED`, `MEMBERSHIP_REMOVED`, and the four
+  `INVITATION_*` actions to `auth/audit.ts`. Two new path-aware guards
+  (`requireOrganizationMember`, `requireOrganizationAdmin`) in
+  `auth/guards.ts` resolve the caller's membership on the path-target
+  org and attach the resolved role to `req.callerOrgRole` so the
+  service layer never re-queries.
+- **9B-B — Service + controllers.** New
+  `services/organization.service.ts` (711 LOC) implements org read /
+  update, member list / role-change / remove (soft-delete to
+  `REMOVED`), and the invitation lifecycle (create → pending →
+  accepted / revoked / expired). New
+  `controllers/organizations.controller.ts` plus 9 routes wired into
+  `routes/v2.routes.ts`.
+- **9B-C — Validation.** `validation/schemas.ts` extended with
+  `patchOrganizationSchema`, `patchMembershipSchema`,
+  `createInvitationSchema` (rejects OWNER), and
+  `acceptInvitationSchema`.
+- **9B-D — Frontend UX.** Pages: `OrganizationSettingsPage`,
+  `OrganizationMembersPage`, `OrganizationInvitationsPage`,
+  `AcceptInvitationPage`. Components: `OrgAdminTabs`,
+  `InviteMemberDialog`. Hook: `useActiveOrgAdmin`. Routes and
+  sidebar entry registered; sidebar entry hidden for non-admins.
+- **9B-E — Email provider.** New `email/emailProvider.ts` with an
+  `EmailProvider` interface and `ConsoleEmailProvider` default that
+  refuses to log the token-bearing accept URL in `NODE_ENV=production`
+  and emits `email.console_provider_in_production` at ERROR instead.
+- **9B-F — Backend tests.** 19 service-level unit tests + 2 email
+  provider tests. Combined backend total: **197 (196 pass + 1
+  Postgres-only skip)**.
+- **9B-G(fe) — Frontend tests.** 10 new tests across
+  `useActiveOrgAdmin`, `InviteMemberDialog`, and
+  `OrganizationMembersPage`. Combined frontend total: **34**.
+- **9B-H — Documentation.** This entry plus
+  `docs/v2-organization-administration.md`; cross-links from
+  `docs/v2-multi-tenant-architecture.md` §8–§9.
+
+### Exit criteria
+
+- No change to `prisma/v2-schema.prisma`.
+- No change to the JWT claim shape or refresh-token rotation.
+- The Phase 9A role ladder (VIEWER / LAB_TECH / AGRONOMIST / ADMIN /
+  OWNER) is unchanged.
+- Cross-tenant access still returns 404, not 403.
+- `npm run typecheck`, `npm test`, and `npm run build` pass on both
+  workspaces.
+
+### Deferred to Phase 9C
+
+- Ownership-transfer endpoint (two-step confirmation).
+- Audit-log viewer UI scoped to the active org.
+- Member SUSPEND status (third value beyond ACTIVE / REMOVED).
+- Real transactional email adapter (Postmark / SES / SendGrid) wired
+  via `setEmailProvider(...)`.
+
+### Recommendation
+
+Proceed to **Phase 9C** — start with the audit-log viewer (read-only,
+zero schema risk) and the transactional email adapter (unblocks
+real-world invite delivery), then ownership transfer.
+
+---
+
 ## Phase 9 — Integrate with FlahaCalc
 
 **Goal:** Wire `@flahasoil/soil-physics`, `@flahasoil/soil-chemistry` and
