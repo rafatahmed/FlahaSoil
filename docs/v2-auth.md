@@ -1,3 +1,5 @@
+<!-- @format -->
+
 # FlahaSOIL v2 — Authentication
 
 > Status: ✅ Phase 9A close-out (9A-C through 9A-I).
@@ -5,24 +7,24 @@
 
 ## 1. Tokens
 
-| Token             | Type            | Lifetime    | Transport                         | Storage                                  |
-| ----------------- | --------------- | ----------- | --------------------------------- | ---------------------------------------- |
-| Access token      | JWT HS256       | 15 minutes  | `Authorization: Bearer <token>`   | In-memory only (React `accessTokenStore`) |
-| Refresh token     | Opaque (32-byte CSPRNG, base64url) | 30 days     | `HttpOnly`, `Secure`, `SameSite=Strict` cookie (`flaha_rt`) | SHA-256 hash persisted in `RefreshToken` table |
-| CSRF              | n/a (cookie is `SameSite=Strict` + JWT is bearer) | n/a | n/a | n/a |
+| Token         | Type                                              | Lifetime   | Transport                                                   | Storage                                        |
+| ------------- | ------------------------------------------------- | ---------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| Access token  | JWT HS256                                         | 15 minutes | `Authorization: Bearer <token>`                             | In-memory only (React `accessTokenStore`)      |
+| Refresh token | Opaque (32-byte CSPRNG, base64url)                | 30 days    | `HttpOnly`, `Secure`, `SameSite=Strict` cookie (`flaha_rt`) | SHA-256 hash persisted in `RefreshToken` table |
+| CSRF          | n/a (cookie is `SameSite=Strict` + JWT is bearer) | n/a        | n/a                                                         | n/a                                            |
 
 Access tokens carry `sub` (User.id), `oid` (active Organization.id or `null`), `role` (membership role on `oid`), and standard `iat`/`exp`/`jti`. Frontend never sees the refresh token.
 
 ## 2. Endpoints
 
-| Method | Path                                  | Auth        | Purpose                                                      |
-| ------ | ------------------------------------- | ----------- | ------------------------------------------------------------ |
-| POST   | `/api/v2/auth/register`               | Public      | Create User + personal Organization + OWNER membership.      |
-| POST   | `/api/v2/auth/login`                  | Public      | Verify credentials, issue access + refresh, audit `AUTH_LOGIN`. |
-| POST   | `/api/v2/auth/refresh`                | Cookie only | Rotate refresh token (single-use family), mint new access.   |
-| POST   | `/api/v2/auth/logout`                 | JWT         | Revoke the current refresh-token family.                     |
-| GET    | `/api/v2/auth/me`                     | JWT         | Echo current session (`AuthSessionDTO`).                     |
-| POST   | `/api/v2/auth/switch-organization`    | JWT         | Validate membership, mint new access token bound to the chosen org. |
+| Method | Path                               | Auth        | Purpose                                                             |
+| ------ | ---------------------------------- | ----------- | ------------------------------------------------------------------- |
+| POST   | `/api/v2/auth/register`            | Public      | Create User + personal Organization + OWNER membership.             |
+| POST   | `/api/v2/auth/login`               | Public      | Verify credentials, issue access + refresh, audit `AUTH_LOGIN`.     |
+| POST   | `/api/v2/auth/refresh`             | Cookie only | Rotate refresh token (single-use family), mint new access.          |
+| POST   | `/api/v2/auth/logout`              | JWT         | Revoke the current refresh-token family.                            |
+| GET    | `/api/v2/auth/me`                  | JWT         | Echo current session (`AuthSessionDTO`).                            |
+| POST   | `/api/v2/auth/switch-organization` | JWT         | Validate membership, mint new access token bound to the chosen org. |
 
 All write endpoints return a stable `ApiErrorResponse` envelope: `{ error: { code, message, details? } }`.
 
@@ -48,10 +50,10 @@ Single-use families with reuse detection (`backend/src/auth/refreshTokens.ts`):
 
 `backend/src/middleware/authRateLimit.ts` mounts two sliding-window counters per protected surface:
 
-| Surface     | Per-IP cap   | Identity cap (lockout trigger)            | Lockout window |
-| ----------- | ------------ | ----------------------------------------- | -------------- |
-| `/login`    | 20 / 60 s    | 5 failures keyed on email / 15-min window | 15 minutes     |
-| `/refresh`  | 60 / 60 s    | 30 failures keyed on SHA-256 of cookie    | 5 minutes      |
+| Surface    | Per-IP cap | Identity cap (lockout trigger)            | Lockout window |
+| ---------- | ---------- | ----------------------------------------- | -------------- |
+| `/login`   | 20 / 60 s  | 5 failures keyed on email / 15-min window | 15 minutes     |
+| `/refresh` | 60 / 60 s  | 30 failures keyed on SHA-256 of cookie    | 5 minutes      |
 
 - A blocked attempt returns HTTP `429` with a `Retry-After` header (seconds) and the `{ error: { code: "RATE_LIMITED" } }` envelope.
 - Hitting the identity cap writes an `AUTH_LOCKOUT` audit row at SECURITY severity (with the identity hash and lockout duration). Every blocked attempt also writes `AUTH_LOGIN_RATE_LIMITED` / `AUTH_REFRESH_RATE_LIMITED`.
@@ -72,16 +74,20 @@ The fetch client (`frontend/src/api/realApiV2Client.ts`) intercepts 401, calls t
 
 ## 7. Audit trail
 
-Every auth event lands in the `AuditLog` table via `writeAudit` / `writeAuditBestEffort`. See [`docs/v2-security-architecture.md`](./v2-security-architecture.md#audit-log) for the full action enumeration and severity mapping.
+Every auth event lands in the `AuditLog` table via `writeAudit` / `writeAuditBestEffort`. See [`docs/v2-security-architecture.md`](./v2-security-architecture.md#audit-log) for the full action enumeration and severity mapping. Phase 9B added organisation-administration actions (`ORG_UPDATED`, `MEMBERSHIP_ROLE_CHANGED`, `MEMBERSHIP_REMOVED`, `INVITATION_CREATED` / `_ACCEPTED` / `_REVOKED` / `_EXPIRED`) on the same table; see [`docs/v2-organization-administration.md`](./v2-organization-administration.md#6-audit-actions-added-in-phase-9b).
+
+## 7a. Organization administration
+
+Endpoints for self-service org / member / invitation management ride on the same session middleware and role-matrix presets documented above. They are out of scope for this file; the full surface (routes, authorization rules, invitation flow, frontend pages) lives in [`docs/v2-organization-administration.md`](./v2-organization-administration.md).
 
 ## 8. Test coverage
 
-| Suite                                                     | Focus                                       | Count |
-| --------------------------------------------------------- | ------------------------------------------- | :---: |
-| `backend/src/auth/__tests__/password.test.ts`             | Policy + argon2 round-trip                  | 12    |
-| `backend/src/auth/__tests__/jwt.test.ts`                  | Sign/verify, bearer parsing                 | 10    |
-| `backend/src/auth/__tests__/refreshTokens.test.ts`        | Rotation + reuse detection                  | 7     |
-| `backend/src/services/__tests__/auth.service.test.ts`    | Register / login / refresh / logout         | 11    |
-| `backend/src/__tests__/auth.routes.test.ts`              | HTTP integration incl. cookie handling      | 12    |
-| `backend/src/middleware/__tests__/authRateLimit.test.ts`  | IP cap + identity lockout + reset           | 3     |
-| `frontend/src/auth/__tests__/*`                           | Provider, coordinator, store, policy        | 19    |
+| Suite                                                    | Focus                                  | Count |
+| -------------------------------------------------------- | -------------------------------------- | :---: |
+| `backend/src/auth/__tests__/password.test.ts`            | Policy + argon2 round-trip             |  12   |
+| `backend/src/auth/__tests__/jwt.test.ts`                 | Sign/verify, bearer parsing            |  10   |
+| `backend/src/auth/__tests__/refreshTokens.test.ts`       | Rotation + reuse detection             |   7   |
+| `backend/src/services/__tests__/auth.service.test.ts`    | Register / login / refresh / logout    |  11   |
+| `backend/src/__tests__/auth.routes.test.ts`              | HTTP integration incl. cookie handling |  12   |
+| `backend/src/middleware/__tests__/authRateLimit.test.ts` | IP cap + identity lockout + reset      |   3   |
+| `frontend/src/auth/__tests__/*`                          | Provider, coordinator, store, policy   |  19   |
