@@ -27,6 +27,7 @@ import {
 	buildSoilTestReport,
 	buildSoilTestReportSummary,
 } from "../services/report.service";
+import { getScientificAnalysis } from "../services/scientificAnalysis.service";
 import {
 	createSoilReportRequest,
 	createSoilTest,
@@ -114,6 +115,15 @@ export async function getFlahaCalcExportHandler(
 ): Promise<void> {
 	const soilTestId = readSoilTestId(req);
 	const result = await getFlahaCalcExport(soilTestId);
+	res.status(200).json(result);
+}
+
+export async function getScientificAnalysisHandler(
+	req: Request,
+	res: Response
+): Promise<void> {
+	const soilTestId = readSoilTestId(req);
+	const result = await getScientificAnalysis(soilTestId);
 	res.status(200).json(result);
 }
 
