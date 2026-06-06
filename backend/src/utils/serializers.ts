@@ -8,9 +8,12 @@
  */
 
 import {
+	type InvitationStatus,
 	type IsoDateString,
 	type MembershipStatus,
 	type OrganizationDTO,
+	type OrganizationInvitationDTO,
+	type OrganizationMemberDTO,
 	type OrganizationMembershipDTO,
 	type OrganizationRole,
 	type OrganizationStatus,
@@ -133,6 +136,40 @@ export function toOrganizationMembershipDTO(
 	const org = row["organization"] as Record<string, unknown> | undefined;
 	if (org) dto.organization = toOrganizationDTO(org);
 	return dto;
+}
+
+// Phase 9B — `OrganizationMemberDTO` is `OrganizationMembershipDTO`
+// hydrated with the joined user's `email` / `displayName`. Sensitive
+// user columns (passwordHash, refresh tokens, audit rows, archivedAt)
+// are intentionally not exposed by this projection.
+export function toOrganizationMemberDTO(
+	row: Record<string, unknown>
+): OrganizationMemberDTO {
+	const base = toOrganizationMembershipDTO(row);
+	const user = row["user"] as Record<string, unknown> | undefined;
+	return {
+		...base,
+		userEmail: (user?.["email"] as string | undefined) ?? "",
+		userDisplayName: (user?.["displayName"] as string | undefined) ?? "",
+	};
+}
+
+export function toOrganizationInvitationDTO(
+	row: Record<string, unknown>
+): OrganizationInvitationDTO {
+	return {
+		id: row["id"] as string,
+		organizationId: row["organizationId"] as string,
+		email: row["email"] as string,
+		role: row["role"] as OrganizationRole,
+		status: row["status"] as InvitationStatus,
+		invitedByUserId: row["invitedByUserId"] as string,
+		expiresAt: toIso(row["expiresAt"] as Date),
+		acceptedAt: toIsoNullable(row["acceptedAt"] as Date | null | undefined),
+		revokedAt: toIsoNullable(row["revokedAt"] as Date | null | undefined),
+		createdAt: toIso(row["createdAt"] as Date),
+		updatedAt: toIso(row["updatedAt"] as Date),
+	};
 }
 
 export function toProjectDTO(row: Record<string, unknown>): ProjectDTO {

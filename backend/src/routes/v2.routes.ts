@@ -18,6 +18,8 @@ import { Router } from "express";
 
 import {
 	requireOrganization,
+	requireOrganizationAdmin,
+	requireOrganizationMember,
 	requireOrgRole,
 	requireProjectAccess,
 	requireReportAccess,
@@ -29,6 +31,17 @@ import {
 } from "../auth/guards";
 import { resolveAuthSession } from "../auth/session.middleware";
 import { getMe, getMyOrganizations } from "../controllers/me.controller";
+import {
+	deleteInvitationHandler,
+	getOrganizationHandler,
+	listInvitationsHandler,
+	listMembersHandler,
+	patchMembershipHandler,
+	patchOrganizationHandler,
+	postAcceptInvitationHandler,
+	postInvitationHandler,
+	removeMembershipHandler,
+} from "../controllers/organizations.controller";
 import { createAuthRouter } from "./auth.routes";
 import {
 	getProject,
@@ -174,6 +187,62 @@ export function createV2Router(): Router {
 		requireReportAccess(),
 		asyncHandler(getReportVersionPreview)
 	);
+
+	// -----------------------------------------------------------------
+	// Phase 9B — Organization administration
+	//
+	// Member-level reads (GET org, GET members) accept any ACTIVE role;
+	// every mutating endpoint plus invitation listing is gated by
+	// `requireOrganizationAdmin` (OWNER / ADMIN). Both guards return 404
+	// when the caller has no membership in the target org so existence
+	// never leaks across tenants.
+	//
+	// `POST /invitations/accept` is intentionally placed OUTSIDE the
+	// `/organizations/:organizationId` prefix: the caller is not yet a
+	// member of the target org, so an org-scoped guard would (correctly)
+	// reject them. The handler resolves the org from the token instead.
+	// -----------------------------------------------------------------
+	router.get(
+		"/organizations/:organizationId",
+		requireOrganizationMember,
+		asyncHandler(getOrganizationHandler)
+	);
+	router.patch(
+		"/organizations/:organizationId",
+		requireOrganizationAdmin,
+		asyncHandler(patchOrganizationHandler)
+	);
+	router.get(
+		"/organizations/:organizationId/members",
+		requireOrganizationMember,
+		asyncHandler(listMembersHandler)
+	);
+	router.patch(
+		"/organizations/:organizationId/members/:userId",
+		requireOrganizationAdmin,
+		asyncHandler(patchMembershipHandler)
+	);
+	router.delete(
+		"/organizations/:organizationId/members/:userId",
+		requireOrganizationAdmin,
+		asyncHandler(removeMembershipHandler)
+	);
+	router.get(
+		"/organizations/:organizationId/invitations",
+		requireOrganizationAdmin,
+		asyncHandler(listInvitationsHandler)
+	);
+	router.post(
+		"/organizations/:organizationId/invitations",
+		requireOrganizationAdmin,
+		asyncHandler(postInvitationHandler)
+	);
+	router.delete(
+		"/organizations/:organizationId/invitations/:invitationId",
+		requireOrganizationAdmin,
+		asyncHandler(deleteInvitationHandler)
+	);
+	router.post("/invitations/accept", asyncHandler(postAcceptInvitationHandler));
 
 	return router;
 }

@@ -46,6 +46,13 @@ export enum MembershipStatus {
 	REMOVED = "REMOVED",
 }
 
+export enum InvitationStatus {
+	PENDING = "PENDING",
+	ACCEPTED = "ACCEPTED",
+	EXPIRED = "EXPIRED",
+	REVOKED = "REVOKED",
+}
+
 // ---------------------------------------------------------------------------
 // Read DTOs
 // ---------------------------------------------------------------------------
@@ -156,3 +163,108 @@ export interface SwitchOrganizationRequest {
 }
 
 export type SwitchOrganizationResponse = AuthRefreshResponse;
+
+// ---------------------------------------------------------------------------
+// Phase 9B — Organization administration
+//
+// Endpoints (all under `/api/v2/organizations/:organizationId/*` unless
+// noted, gated by `requireOrganizationAdmin` which returns 404 when the
+// caller has no membership in the target org so existence does not leak):
+//
+//   GET  /organizations/:organizationId                — any active member
+//   PATCH /organizations/:organizationId               — OWNER/ADMIN
+//   GET  /organizations/:organizationId/members        — any active member
+//   PATCH /organizations/:organizationId/members/:userId   — OWNER/ADMIN
+//   DELETE /organizations/:organizationId/members/:userId  — OWNER/ADMIN
+//   GET  /organizations/:organizationId/invitations    — OWNER/ADMIN
+//   POST /organizations/:organizationId/invitations    — OWNER/ADMIN
+//   DELETE /organizations/:organizationId/invitations/:invitationId
+//                                                     — OWNER/ADMIN
+//   POST /invitations/accept                           — any authed user
+// ---------------------------------------------------------------------------
+
+export interface OrganizationInvitationDTO {
+	id: string;
+	organizationId: string;
+	email: string;
+	role: OrganizationRole;
+	status: InvitationStatus;
+	invitedByUserId: string;
+	expiresAt: IsoDateString;
+	acceptedAt: IsoDateString | null;
+	revokedAt: IsoDateString | null;
+	createdAt: IsoDateString;
+	updatedAt: IsoDateString;
+}
+
+/**
+ * Membership row hydrated with the user's display info for the org
+ * Members page. `userEmail` and `userDisplayName` come from a JOIN on
+ * `users`; sensitive fields (passwordHash, refresh tokens, audit rows)
+ * are never included.
+ */
+export interface OrganizationMemberDTO extends OrganizationMembershipDTO {
+	userEmail: string;
+	userDisplayName: string;
+}
+
+// --- GET / PATCH /organizations/:organizationId ----------------------------
+
+export interface GetOrganizationResponse {
+	organization: OrganizationDTO;
+}
+
+export interface PatchOrganizationRequest {
+	name?: string;
+	type?: OrganizationType;
+}
+
+export interface PatchOrganizationResponse {
+	organization: OrganizationDTO;
+}
+
+// --- Members ---------------------------------------------------------------
+
+export interface ListOrganizationMembersResponse {
+	members: OrganizationMemberDTO[];
+}
+
+export interface PatchMembershipRequest {
+	role: OrganizationRole;
+}
+
+export interface PatchMembershipResponse {
+	member: OrganizationMemberDTO;
+}
+
+export interface RemoveMembershipResponse {
+	ok: true;
+}
+
+// --- Invitations -----------------------------------------------------------
+
+export interface CreateInvitationRequest {
+	email: string;
+	role: OrganizationRole;
+}
+
+export interface CreateInvitationResponse {
+	invitation: OrganizationInvitationDTO;
+}
+
+export interface ListInvitationsResponse {
+	invitations: OrganizationInvitationDTO[];
+}
+
+export interface RevokeInvitationResponse {
+	invitation: OrganizationInvitationDTO;
+}
+
+export interface AcceptInvitationRequest {
+	token: string;
+}
+
+export interface AcceptInvitationResponse {
+	membership: OrganizationMembershipDTO;
+	organization: OrganizationDTO;
+}

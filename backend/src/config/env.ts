@@ -96,6 +96,14 @@ export interface ApiEnv {
 	 * `credentials: true` (the browser rejects them).
 	 */
 	corsOrigins: string[];
+	/**
+	 * Phase 9B — absolute base URL of the SPA. Used to render the
+	 * invitation accept link (`{appBaseUrl}/invitations/accept?token=...`)
+	 * delivered via email. Defaults to the first CORS origin so dev
+	 * setups work out of the box; production deploys SHOULD set
+	 * `APP_BASE_URL` explicitly to the canonical SPA host.
+	 */
+	appBaseUrl: string;
 }
 
 function resolveJwtSecret(
@@ -203,12 +211,17 @@ function readEnv(): ApiEnv {
 		);
 	}
 
+	const appBaseUrl = (
+		process.env.APP_BASE_URL ?? corsOrigins[0] ?? "http://localhost:5173"
+	).replace(/\/+$/, "");
+
 	return {
 		port: parsePort(process.env.PORT),
 		nodeEnv,
 		databaseUrlV2: process.env.DATABASE_URL_V2,
 		auth,
 		corsOrigins,
+		appBaseUrl,
 	};
 }
 

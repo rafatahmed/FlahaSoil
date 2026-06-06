@@ -25,6 +25,7 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 import { OrganizationRole } from "@flaha/shared-types";
 
+import { getMembershipForOrg } from "../services/organization.service";
 import { ApiError } from "../utils/apiError";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -36,12 +37,32 @@ import {
 	assertSoilTestTenancy,
 } from "./ownership";
 
+// Phase 9B — guard-resolved caller role for the path-target organization.
+// Populated by `requireOrganizationMember` / `requireOrganizationAdmin` so
+// downstream controllers can defer role-aware decisions (e.g. ADMIN may
+// not demote OWNER) without re-querying the membership row.
+declare module "express-serve-static-core" {
+	interface Request {
+		callerOrgRole?: OrganizationRole;
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Role matrix presets
 // ---------------------------------------------------------------------------
 
 /** Roles that may manage org settings + memberships. */
 export const ROLES_ADMIN: OrganizationRole[] = [
+	OrganizationRole.OWNER,
+	OrganizationRole.ADMIN,
+];
+
+/**
+ * Phase 9B alias — kept distinct from `ROLES_ADMIN` so future tightening
+ * of the org-admin matrix (e.g. requiring OWNER for destructive flows)
+ * does not have to thread through every resource guard.
+ */
+export const ROLES_ORG_ADMIN: OrganizationRole[] = [
 	OrganizationRole.OWNER,
 	OrganizationRole.ADMIN,
 ];
@@ -189,3 +210,45 @@ export const requireReportAccess = makeResourceGuard(
 	"reportId",
 	"report"
 );
+
+
+// ---------------------------------------------------------------------------
+// Phase 9B — organization-scoped guards
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolves the caller's role inside the path-target organization and
+ * gates the route on it. Used by `requireOrganizationMember` and
+ * `requireOrganizationAdmin`. Returns 404 when the caller has no
+ * ACTIVE membership in the target org — existence is never leaked
+ * across tenants (an outsider sees the same response as for a missing
+ * org id).
+ */
+function makeOrgGuard(
+	allowedRoles: OrganizationRole[],
+	paramName = "organizationId"
+): RequestHandler {
+	return asyncHandler(async (req: Request, _res: Response, next: NextFunction) => {
+		const s = req.authSession;
+		if (!s) throw ApiError.unauthorized("Authentication required.");
+		const orgId = req.params[paramName];
+		if (typeof orgId !== "string" || orgId.length === 0) {
+			throw ApiError.validation(`Missing path parameter: ${paramName}`);
+		}
+		const membership = await getMembershipForOrg(s.userId, orgId);
+		if (!membership) {
+			throw ApiError.notFound("Organization not found.");
+		}
+		if (!allowedRoles.includes(membership.role)) {
+			throw ApiError.forbidden("Insufficient role for this organization action.");
+		}
+		req.callerOrgRole = membership.role;
+		next();
+	});
+}
+
+/** Any ACTIVE membership in the path-target org may pass. */
+export const requireOrganizationMember: RequestHandler = makeOrgGuard(ROLES_ANY);
+
+/** OWNER or ADMIN of the path-target org may pass. */
+export const requireOrganizationAdmin: RequestHandler = makeOrgGuard(ROLES_ORG_ADMIN);
