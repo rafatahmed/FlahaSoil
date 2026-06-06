@@ -7,6 +7,8 @@
  * Phase 6 is a one-line change at the import site.
  */
 import {
+	type AcceptInvitationRequest,
+	type AcceptInvitationResponse,
 	type AuthLoginResponse,
 	type AuthLogoutResponse,
 	type AuthMeResponse,
@@ -15,6 +17,8 @@ import {
 	type AuthSessionDTO,
 	type CalculateSoilTestRequest,
 	type CalculateSoilTestResponse,
+	type CreateInvitationRequest,
+	type CreateInvitationResponse,
 	type CreateProjectRequest,
 	type CreateProjectResponse,
 	type CreateSoilReportRequest,
@@ -27,6 +31,7 @@ import {
 	type GenerateReportRequest,
 	type GenerateReportResponse,
 	type GetCurrentUserResponse,
+	type GetOrganizationResponse,
 	type GetProjectResponse,
 	type GetReportResponse,
 	type GetReportVersionResponse,
@@ -35,12 +40,20 @@ import {
 	type GetSoilTestReportResponse,
 	type GetSoilTestReportSummaryResponse,
 	type GetSoilTestResponse,
+	type ListInvitationsResponse,
+	type ListOrganizationMembersResponse,
 	type ListProjectReportsResponse,
 	type ListProjectsQuery,
 	type ListProjectsResponse,
 	type ListReportVersionsResponse,
 	type LoginRequest,
+	type OrganizationInvitationDTO,
+	type OrganizationMemberDTO,
 	type OrganizationMembershipDTO,
+	type PatchMembershipRequest,
+	type PatchMembershipResponse,
+	type PatchOrganizationRequest,
+	type PatchOrganizationResponse,
 	type PatchReportRequest,
 	type PatchReportResponse,
 	type ProfessionalReportDTO,
@@ -48,11 +61,14 @@ import {
 	type ProjectSummaryDTO,
 	type RegenerateReportResponse,
 	type RegisterRequest,
+	type RemoveMembershipResponse,
 	type ReportVersionDTO,
+	type RevokeInvitationResponse,
 	type SoilReportDTO,
 	type SwitchOrganizationRequest,
 	type SwitchOrganizationResponse,
 	type UserMembershipsResponse,
+	InvitationStatus,
 	MembershipStatus,
 	OrganizationRole,
 	OrganizationStatus,
@@ -188,6 +204,69 @@ function buildMockAuthSession(): AuthSessionDTO {
 	};
 }
 
+// Phase 9B — in-memory org admin stores. Mirror the backend's tenant
+// isolation: every member/invitation row carries an `organizationId` and
+// is filtered by it. The mock seeds both demo orgs with the dev user.
+const orgMemberStore = new Map<string, OrganizationMemberDTO[]>();
+const orgInvitationStore = new Map<string, OrganizationInvitationDTO[]>();
+
+function seedMockOrgState() {
+	const { personal, demo } = buildMockOrganizations();
+	orgMemberStore.set(personal.id, [
+		{
+			id: MOCK_MEMBERSHIP_ID,
+			organizationId: personal.id,
+			userId: MOCK_USER_ID,
+			role: OrganizationRole.OWNER,
+			status: MembershipStatus.ACTIVE,
+			invitedById: null,
+			invitedAt: null,
+			acceptedAt: NOW,
+			createdAt: NOW,
+			updatedAt: NOW,
+			organization: personal,
+			userEmail: "dev@flahasoil.local",
+			userDisplayName: "Development User",
+		},
+	]);
+	orgMemberStore.set(demo.id, [
+		{
+			id: MOCK_DEMO_MEMBERSHIP_ID,
+			organizationId: demo.id,
+			userId: MOCK_USER_ID,
+			role: OrganizationRole.AGRONOMIST,
+			status: MembershipStatus.ACTIVE,
+			invitedById: null,
+			invitedAt: null,
+			acceptedAt: NOW,
+			createdAt: NOW,
+			updatedAt: NOW,
+			organization: demo,
+			userEmail: "dev@flahasoil.local",
+			userDisplayName: "Development User",
+		},
+	]);
+	orgInvitationStore.set(personal.id, []);
+	orgInvitationStore.set(demo.id, []);
+}
+seedMockOrgState();
+
+function getMockOrgOrThrow(organizationId: string) {
+	const { personal, demo } = buildMockOrganizations();
+	if (organizationId === personal.id) return personal;
+	if (organizationId === demo.id) return demo;
+	throw new Error(`Mock organization not found: ${organizationId}`);
+}
+
+function nowIso(): string {
+	return new Date().toISOString();
+}
+
+function nextInvitationId(orgId: string): string {
+	const seq = (orgInvitationStore.get(orgId)?.length ?? 0) + 1;
+	return `inv_mock_${orgId.slice(-4)}_${seq.toString().padStart(3, "0")}`;
+}
+
 // In-memory project store so the wizard's "select project" dropdown and
 // the Projects pages stay consistent across navigations within a single
 // browser session. Seeded with one fixture so the empty-state can be
@@ -294,6 +373,153 @@ export const mockApiV2Client: ApiV2Client = {
 		}
 		mockActiveOrganizationId = body.organizationId;
 		return { session: buildMockAuthSession() };
+	},
+
+	// Phase 9B — Organization administration (mock). Operations mutate
+	// the module-scoped stores so a single browser session sees a
+	// consistent view across navigations.
+	async getOrganization(
+		organizationId: string
+	): Promise<GetOrganizationResponse> {
+		return { organization: getMockOrgOrThrow(organizationId) };
+	},
+
+	async patchOrganization(
+		organizationId: string,
+		body: PatchOrganizationRequest
+	): Promise<PatchOrganizationResponse> {
+		const org = getMockOrgOrThrow(organizationId);
+		const updated = {
+			...org,
+			...(body.name ? { name: body.name } : {}),
+			...(body.type ? { type: body.type } : {}),
+			updatedAt: nowIso(),
+		};
+		return { organization: updated };
+	},
+
+	async listOrganizationMembers(
+		organizationId: string
+	): Promise<ListOrganizationMembersResponse> {
+		getMockOrgOrThrow(organizationId);
+		return { members: orgMemberStore.get(organizationId) ?? [] };
+	},
+
+	async patchMembership(
+		organizationId: string,
+		userId: string,
+		body: PatchMembershipRequest
+	): Promise<PatchMembershipResponse> {
+		const rows = orgMemberStore.get(organizationId) ?? [];
+		const idx = rows.findIndex((r) => r.userId === userId);
+		if (idx < 0) throw new Error(`Mock membership not found: ${userId}`);
+		const next: OrganizationMemberDTO = {
+			...rows[idx]!,
+			role: body.role,
+			updatedAt: nowIso(),
+		};
+		rows[idx] = next;
+		orgMemberStore.set(organizationId, rows);
+		return { member: next };
+	},
+
+	async removeMembership(
+		organizationId: string,
+		userId: string
+	): Promise<RemoveMembershipResponse> {
+		const rows = orgMemberStore.get(organizationId) ?? [];
+		const next = rows.filter((r) => r.userId !== userId);
+		orgMemberStore.set(organizationId, next);
+		return { ok: true };
+	},
+
+	async listInvitations(
+		organizationId: string
+	): Promise<ListInvitationsResponse> {
+		getMockOrgOrThrow(organizationId);
+		return { invitations: orgInvitationStore.get(organizationId) ?? [] };
+	},
+
+	async createInvitation(
+		organizationId: string,
+		body: CreateInvitationRequest
+	): Promise<CreateInvitationResponse> {
+		getMockOrgOrThrow(organizationId);
+		const invitation: OrganizationInvitationDTO = {
+			id: nextInvitationId(organizationId),
+			organizationId,
+			email: body.email.trim().toLowerCase(),
+			role: body.role,
+			status: InvitationStatus.PENDING,
+			invitedByUserId: MOCK_USER_ID,
+			expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+			acceptedAt: null,
+			revokedAt: null,
+			createdAt: nowIso(),
+			updatedAt: nowIso(),
+		};
+		const rows = orgInvitationStore.get(organizationId) ?? [];
+		orgInvitationStore.set(organizationId, [invitation, ...rows]);
+		return { invitation };
+	},
+
+	async revokeInvitation(
+		organizationId: string,
+		invitationId: string
+	): Promise<RevokeInvitationResponse> {
+		const rows = orgInvitationStore.get(organizationId) ?? [];
+		const idx = rows.findIndex((r) => r.id === invitationId);
+		if (idx < 0) throw new Error(`Mock invitation not found: ${invitationId}`);
+		const next: OrganizationInvitationDTO = {
+			...rows[idx]!,
+			status: InvitationStatus.REVOKED,
+			revokedAt: nowIso(),
+			updatedAt: nowIso(),
+		};
+		rows[idx] = next;
+		orgInvitationStore.set(organizationId, rows);
+		return { invitation: next };
+	},
+
+	async acceptInvitation(
+		body: AcceptInvitationRequest
+	): Promise<AcceptInvitationResponse> {
+		// The mock doesn't generate real tokens; treat any non-empty token
+		// as accepting the first PENDING invitation in any org so the UI
+		// can be exercised end-to-end.
+		if (!body.token || body.token.length === 0) {
+			throw new Error("Mock: token is required");
+		}
+		for (const [orgId, rows] of orgInvitationStore) {
+			const idx = rows.findIndex((r) => r.status === InvitationStatus.PENDING);
+			if (idx >= 0) {
+				const inv = rows[idx]!;
+				const accepted: OrganizationInvitationDTO = {
+					...inv,
+					status: InvitationStatus.ACCEPTED,
+					acceptedAt: nowIso(),
+					updatedAt: nowIso(),
+				};
+				rows[idx] = accepted;
+				orgInvitationStore.set(orgId, rows);
+				const org = getMockOrgOrThrow(orgId);
+				const membership: OrganizationMembershipDTO = {
+					id: `mem_mock_${Date.now()}`,
+					organizationId: orgId,
+					userId: MOCK_USER_ID,
+					role: inv.role,
+					status: MembershipStatus.ACTIVE,
+					invitedById: inv.invitedByUserId,
+					invitedAt: inv.createdAt,
+					acceptedAt: accepted.acceptedAt,
+					createdAt: nowIso(),
+					updatedAt: nowIso(),
+					organization: org,
+				};
+				return { membership, organization: org };
+			}
+		}
+		throw new Error("Mock: no pending invitation to accept");
 	},
 
 	async createProject(

@@ -8,6 +8,8 @@
  * responsibility of `apiClientProvider.ts`.
  */
 import type {
+	AcceptInvitationRequest,
+	AcceptInvitationResponse,
 	AuthLoginResponse,
 	AuthLogoutResponse,
 	AuthMeResponse,
@@ -15,6 +17,8 @@ import type {
 	AuthRegisterResponse,
 	CalculateSoilTestRequest,
 	CalculateSoilTestResponse,
+	CreateInvitationRequest,
+	CreateInvitationResponse,
 	CreateProjectRequest,
 	CreateProjectResponse,
 	CreateSoilReportRequest,
@@ -27,6 +31,7 @@ import type {
 	GenerateReportRequest,
 	GenerateReportResponse,
 	GetCurrentUserResponse,
+	GetOrganizationResponse,
 	GetProjectResponse,
 	GetReportResponse,
 	GetReportVersionResponse,
@@ -35,15 +40,23 @@ import type {
 	GetSoilTestReportResponse,
 	GetSoilTestReportSummaryResponse,
 	GetSoilTestResponse,
+	ListInvitationsResponse,
+	ListOrganizationMembersResponse,
 	ListProjectReportsResponse,
 	ListProjectsQuery,
 	ListProjectsResponse,
 	ListReportVersionsResponse,
 	LoginRequest,
+	PatchMembershipRequest,
+	PatchMembershipResponse,
+	PatchOrganizationRequest,
+	PatchOrganizationResponse,
 	PatchReportRequest,
 	PatchReportResponse,
 	RegenerateReportResponse,
 	RegisterRequest,
+	RemoveMembershipResponse,
+	RevokeInvitationResponse,
 	SwitchOrganizationRequest,
 	SwitchOrganizationResponse,
 	UserMembershipsResponse,
@@ -91,6 +104,51 @@ export interface ApiV2Client {
 	switchOrganization(
 		body: SwitchOrganizationRequest
 	): Promise<SwitchOrganizationResponse>;
+
+	// ---------------------------------------------------------------
+	// Phase 9B — Organization administration
+	// ---------------------------------------------------------------
+	// All routes (except `acceptInvitation`) are gated by
+	// `requireOrganizationAdmin`/`requireOrganizationMember` server-side.
+	// The frontend role-gates the UI to avoid showing buttons that would
+	// 403, but the backend remains the authoritative check.
+	getOrganization(organizationId: string): Promise<GetOrganizationResponse>;
+
+	patchOrganization(
+		organizationId: string,
+		body: PatchOrganizationRequest
+	): Promise<PatchOrganizationResponse>;
+
+	listOrganizationMembers(
+		organizationId: string
+	): Promise<ListOrganizationMembersResponse>;
+
+	patchMembership(
+		organizationId: string,
+		userId: string,
+		body: PatchMembershipRequest
+	): Promise<PatchMembershipResponse>;
+
+	removeMembership(
+		organizationId: string,
+		userId: string
+	): Promise<RemoveMembershipResponse>;
+
+	listInvitations(organizationId: string): Promise<ListInvitationsResponse>;
+
+	createInvitation(
+		organizationId: string,
+		body: CreateInvitationRequest
+	): Promise<CreateInvitationResponse>;
+
+	revokeInvitation(
+		organizationId: string,
+		invitationId: string
+	): Promise<RevokeInvitationResponse>;
+
+	acceptInvitation(
+		body: AcceptInvitationRequest
+	): Promise<AcceptInvitationResponse>;
 
 	// Projects (Phase 8A) — agronomic container for samples.
 	// Phase 8B: `userId` was removed from these signatures; the owning

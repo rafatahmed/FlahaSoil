@@ -15,6 +15,8 @@
  *     of `apiClientProvider.ts`.
  */
 import {
+	type AcceptInvitationRequest,
+	type AcceptInvitationResponse,
 	type AuthLoginResponse,
 	type AuthLogoutResponse,
 	type AuthMeResponse,
@@ -22,6 +24,8 @@ import {
 	type AuthRegisterResponse,
 	type CalculateSoilTestRequest,
 	type CalculateSoilTestResponse,
+	type CreateInvitationRequest,
+	type CreateInvitationResponse,
 	type CreateProjectRequest,
 	type CreateProjectResponse,
 	type CreateSoilReportRequest,
@@ -34,6 +38,7 @@ import {
 	type GenerateReportRequest,
 	type GenerateReportResponse,
 	type GetCurrentUserResponse,
+	type GetOrganizationResponse,
 	type GetProjectResponse,
 	type GetReportResponse,
 	type GetReportVersionResponse,
@@ -42,15 +47,23 @@ import {
 	type GetSoilTestReportResponse,
 	type GetSoilTestReportSummaryResponse,
 	type GetSoilTestResponse,
+	type ListInvitationsResponse,
+	type ListOrganizationMembersResponse,
 	type ListProjectReportsResponse,
 	type ListProjectsQuery,
 	type ListProjectsResponse,
 	type ListReportVersionsResponse,
 	type LoginRequest,
+	type PatchMembershipRequest,
+	type PatchMembershipResponse,
+	type PatchOrganizationRequest,
+	type PatchOrganizationResponse,
 	type PatchReportRequest,
 	type PatchReportResponse,
 	type RegenerateReportResponse,
 	type RegisterRequest,
+	type RemoveMembershipResponse,
+	type RevokeInvitationResponse,
 	type SwitchOrganizationRequest,
 	type SwitchOrganizationResponse,
 	type UserMembershipsResponse,
@@ -152,7 +165,7 @@ async function parseJsonOrThrow<T>(res: Response): Promise<T> {
  *     signal and must propagate.
  */
 interface FetchOptions {
-	method: "GET" | "POST" | "PATCH";
+	method: "GET" | "POST" | "PATCH" | "DELETE";
 	body?: unknown;
 	retryOn401?: boolean;
 }
@@ -200,6 +213,10 @@ function postJson<T>(path: string, body: unknown): Promise<T> {
 
 function patchJson<T>(path: string, body: unknown): Promise<T> {
 	return apiFetch<T>(path, { method: "PATCH", body });
+}
+
+function deleteJson<T>(path: string): Promise<T> {
+	return apiFetch<T>(path, { method: "DELETE" });
 }
 
 /** POST helper for `/auth/*` — never retries on 401. */
@@ -255,6 +272,66 @@ export const realApiV2Client: ApiV2Client = {
 			"/auth/switch-organization",
 			body
 		);
+	},
+
+	// Phase 9B — Organization administration.
+	getOrganization(organizationId: string) {
+		return getJson<GetOrganizationResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}`
+		);
+	},
+
+	patchOrganization(organizationId: string, body: PatchOrganizationRequest) {
+		return patchJson<PatchOrganizationResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}`,
+			body
+		);
+	},
+
+	listOrganizationMembers(organizationId: string) {
+		return getJson<ListOrganizationMembersResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}/members`
+		);
+	},
+
+	patchMembership(
+		organizationId: string,
+		userId: string,
+		body: PatchMembershipRequest
+	) {
+		return patchJson<PatchMembershipResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`,
+			body
+		);
+	},
+
+	removeMembership(organizationId: string, userId: string) {
+		return deleteJson<RemoveMembershipResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}/members/${encodeURIComponent(userId)}`
+		);
+	},
+
+	listInvitations(organizationId: string) {
+		return getJson<ListInvitationsResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}/invitations`
+		);
+	},
+
+	createInvitation(organizationId: string, body: CreateInvitationRequest) {
+		return postJson<CreateInvitationResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}/invitations`,
+			body
+		);
+	},
+
+	revokeInvitation(organizationId: string, invitationId: string) {
+		return deleteJson<RevokeInvitationResponse>(
+			`/organizations/${encodeURIComponent(organizationId)}/invitations/${encodeURIComponent(invitationId)}`
+		);
+	},
+
+	acceptInvitation(body: AcceptInvitationRequest) {
+		return postJson<AcceptInvitationResponse>("/invitations/accept", body);
 	},
 
 	createProject(body: CreateProjectRequest) {

@@ -24,12 +24,16 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute, PublicOnlyRoute } from "../auth";
 import { AppLayout } from "../layouts/AppLayout";
 import { AuthLayout } from "../layouts/AuthLayout";
+import { AcceptInvitationPage } from "../pages/AcceptInvitationPage";
 import { AccountPage } from "../pages/AccountPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { FlahaCalcExportPage } from "../pages/FlahaCalcExportPage";
 import { LandingPage } from "../pages/LandingPage";
 import { LoginPage } from "../pages/LoginPage";
 import { LogoutPage } from "../pages/LogoutPage";
+import { OrganizationInvitationsPage } from "../pages/OrganizationInvitationsPage";
+import { OrganizationMembersPage } from "../pages/OrganizationMembersPage";
+import { OrganizationSettingsPage } from "../pages/OrganizationSettingsPage";
 import { ProfilePage } from "../pages/ProfilePage";
 import { ProjectDetailPage } from "../pages/ProjectDetailPage";
 import { ProjectReportsPage } from "../pages/ProjectReportsPage";
@@ -92,6 +96,44 @@ export function AppRoutes() {
 					<Route path="account" element={<AccountPage />} />
 					<Route path="profile" element={<ProfilePage />} />
 					<Route path="settings" element={<SettingsPage />} />
+
+					{/* Phase 9B-D — Organization administration. */}
+					<Route
+						path="organizations/:organizationId/settings"
+						element={<OrganizationSettingsPage />}
+					/>
+					<Route
+						path="organizations/:organizationId/members"
+						element={<OrganizationMembersPage />}
+					/>
+					<Route
+						path="organizations/:organizationId/invitations"
+						element={<OrganizationInvitationsPage />}
+					/>
+					{/* Convenience redirect: /organizations/:id → settings tab. */}
+					<Route
+						path="organizations/:organizationId"
+						element={
+							<Navigate to="settings" replace relative="path" />
+						}
+					/>
+					{/* Top-level "Organization" link resolves to the active org's
+					    settings. The page handles the no-active-org case. */}
+					<Route
+						path="organization/settings"
+						element={<OrganizationSettingsPage />}
+					/>
+					<Route
+						path="organization/members"
+						element={<OrganizationMembersPage />}
+					/>
+					<Route
+						path="organization/invitations"
+						element={<OrganizationInvitationsPage />}
+					/>
+
+					{/* Phase 9B-D — Invitation accept landing. */}
+					<Route path="invite/:token" element={<AcceptInvitationPage />} />
 				</Route>
 
 				<Route path="*" element={<Navigate to="/" replace />} />
