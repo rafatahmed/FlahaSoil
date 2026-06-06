@@ -64,6 +64,7 @@ import {
 } from "../controllers/reports.controller";
 import {
 	getFlahaCalcExportHandler,
+	getScientificAnalysisHandler,
 	getSoilInterpretation,
 	getSoilTest,
 	getSoilTestReport,
@@ -149,6 +150,11 @@ export function createV2Router(): Router {
 		"/soil-tests/:soilTestId/flahacalc-export",
 		requireSoilTestAccess(),
 		asyncHandler(getFlahaCalcExportHandler)
+	);
+	router.get(
+		"/soil-tests/:soilTestId/scientific-analysis",
+		requireSoilTestAccess(),
+		asyncHandler(getScientificAnalysisHandler)
 	);
 
 	// Phase 8D report management.

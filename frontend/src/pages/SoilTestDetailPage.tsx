@@ -14,6 +14,8 @@ import {
 	Divider,
 	Grid,
 	Stack,
+	Tab,
+	Tabs,
 	Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -24,10 +26,13 @@ import { SoilReportStatus } from "@flaha/shared-types";
 import { ChemistryResultCard } from "../features/results/components/ChemistryResultCard";
 import { InterpretationCard } from "../features/results/components/InterpretationCard";
 import { PhysicsResultCard } from "../features/results/components/PhysicsResultCard";
+import { ScientificAnalysisPanel } from "../features/results/components/ScientificAnalysisPanel";
 import { SoilTestSummaryHeader } from "../features/results/components/SoilTestSummaryHeader";
 import { WarningList } from "../features/results/components/WarningList";
 import { usePageHeader } from "../layouts/PageHeaderContext";
 import { getApiClient } from "../services/apiClientProvider";
+
+type SoilTestTab = "results" | "scientific";
 
 export function SoilTestDetailPage() {
 	const { soilTestId = "" } = useParams<{ soilTestId: string }>();
@@ -35,6 +40,7 @@ export function SoilTestDetailPage() {
 	const [data, setData] = useState<GetSoilTestResponse | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [generating, setGenerating] = useState(false);
+	const [tab, setTab] = useState<SoilTestTab>("results");
 
 	const onGenerateReport = async () => {
 		if (generating) return;
@@ -125,53 +131,67 @@ export function SoilTestDetailPage() {
 				interpretation={data.interpretation}
 			/>
 
-			<Box sx={{ mb: 3 }}>
+			<Box sx={{ mb: 2 }}>
 				<WarningList warnings={warnings} />
 			</Box>
 
-			<Grid container spacing={3}>
-				<Grid item xs={12} md={6}>
-					<PhysicsResultCard result={data.physicsResult} />
+			<Tabs
+				value={tab}
+				onChange={(_, v: SoilTestTab) => setTab(v)}
+				aria-label="Soil test sections"
+				sx={{ mb: 2 }}
+			>
+				<Tab value="results" label="Results" />
+				<Tab value="scientific" label="Scientific Analysis" />
+			</Tabs>
+
+			{tab === "results" ? (
+				<Grid container spacing={3}>
+					<Grid item xs={12} md={6}>
+						<PhysicsResultCard result={data.physicsResult} />
+					</Grid>
+					<Grid item xs={12} md={6}>
+						<ChemistryResultCard result={data.chemistryResult} />
+					</Grid>
+					<Grid item xs={12} md={6}>
+						<InterpretationCard interpretation={data.interpretation} />
+					</Grid>
+					<Grid item xs={12} md={6}>
+						<Card variant="outlined">
+							<CardHeader title="Reports" />
+							<Divider />
+							<CardContent>
+								{data.reports.length === 0 ? (
+									<Typography variant="body2" color="text.secondary">
+										No reports generated yet. Use &quot;Generate
+										report&quot; above to create the first version.
+									</Typography>
+								) : (
+									<Stack spacing={1}>
+										{data.reports.map((r) => (
+											<Button
+												key={r.id}
+												component={RouterLink}
+												to={`/reports/${r.id}`}
+												variant="text"
+												sx={{ justifyContent: "flex-start" }}
+											>
+												{r.title ?? r.reportNumber ?? "Report"} — v
+												{r.latestVersionNumber} ·{" "}
+												{r.status === SoilReportStatus.READY
+													? "Ready"
+													: r.status}
+											</Button>
+										))}
+									</Stack>
+								)}
+							</CardContent>
+						</Card>
+					</Grid>
 				</Grid>
-				<Grid item xs={12} md={6}>
-					<ChemistryResultCard result={data.chemistryResult} />
-				</Grid>
-				<Grid item xs={12} md={6}>
-					<InterpretationCard interpretation={data.interpretation} />
-				</Grid>
-				<Grid item xs={12} md={6}>
-					<Card variant="outlined">
-						<CardHeader title="Reports" />
-						<Divider />
-						<CardContent>
-							{data.reports.length === 0 ? (
-								<Typography variant="body2" color="text.secondary">
-									No reports generated yet. Use &quot;Generate
-									report&quot; above to create the first version.
-								</Typography>
-							) : (
-								<Stack spacing={1}>
-									{data.reports.map((r) => (
-										<Button
-											key={r.id}
-											component={RouterLink}
-											to={`/reports/${r.id}`}
-											variant="text"
-											sx={{ justifyContent: "flex-start" }}
-										>
-											{r.title ?? r.reportNumber ?? "Report"} — v
-											{r.latestVersionNumber} ·{" "}
-											{r.status === SoilReportStatus.READY
-												? "Ready"
-												: r.status}
-										</Button>
-									))}
-								</Stack>
-							)}
-						</CardContent>
-					</Card>
-				</Grid>
-			</Grid>
+			) : (
+				<ScientificAnalysisPanel soilTestId={data.soilTest.id} />
+			)}
 		</Box>
 	);
 }

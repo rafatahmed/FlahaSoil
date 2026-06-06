@@ -31,6 +31,7 @@ import type {
 	ListProjectsResponse,
 } from "./projects";
 import type { SoilReportEnvelope, SoilReportSummary } from "./reports";
+import type { ScientificAnalysisResponse } from "./scientific-analysis";
 import type { GetCurrentUserResponse } from "./users";
 import type { SystemWarning } from "./warnings";
 
@@ -265,6 +266,7 @@ export interface ApiV2RouteResponseMap {
 	"GET /api/v2/soil-tests/:soilTestId/report": GetSoilTestReportResponse;
 	"GET /api/v2/soil-tests/:soilTestId/report?format=summary": GetSoilTestReportSummaryResponse;
 	"GET /api/v2/soil-tests/:soilTestId/flahacalc-export": FlahaCalcExportResponse;
+	"GET /api/v2/soil-tests/:soilTestId/scientific-analysis": ScientificAnalysisResponse;
 }
 
 // Re-export the source enums so consumers can import everything from one place.

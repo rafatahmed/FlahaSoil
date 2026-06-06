@@ -34,20 +34,23 @@ contracts.
 
 ## 2. Route table
 
-| #   | Method | Path                                              | Purpose                                                  | Request                    | Response                        |
-| --- | ------ | ------------------------------------------------- | -------------------------------------------------------- | -------------------------- | ------------------------------- |
-| 1   | POST   | `/api/v2/soil-samples`                            | Register a physical sample                               | `CreateSoilSampleRequest`  | `CreateSoilSampleResponse`      |
-| 2   | GET    | `/api/v2/soil-samples/:sampleId`                  | Fetch sample + summary of its tests                      | —                          | `GetSoilSampleResponse`         |
-| 3   | POST   | `/api/v2/soil-tests`                              | Create a test event for a sample, optionally with inputs | `CreateSoilTestRequest`    | `CreateSoilTestResponse`        |
-| 4   | GET    | `/api/v2/soil-tests/:soilTestId`                  | Fetch a test with all inputs and results                 | —                          | `GetSoilTestResponse`           |
-| 5   | POST   | `/api/v2/soil-tests/:soilTestId/calculate`        | Run physics / chemistry / interpretation engines         | `CalculateSoilTestRequest` | `CalculateSoilTestResponse`     |
-| 6   | GET    | `/api/v2/soil-tests/:soilTestId/interpretation`   | Fetch the latest interpretation only                     | —                          | `GetSoilInterpretationResponse` |
-| 7   | POST   | `/api/v2/soil-tests/:soilTestId/reports`          | Generate a report (PDF / CSV)                            | `CreateSoilReportRequest`  | `CreateSoilReportResponse`      |
-| 8   | GET    | `/api/v2/soil-tests/:soilTestId/flahacalc-export` | Stable contract consumed by FlahaCalc                    | —                          | `FlahaCalcExportResponse`       |
+| #   | Method | Path                                                 | Purpose                                                                  | Request                    | Response                        |
+| --- | ------ | ---------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------- | ------------------------------- |
+| 1   | POST   | `/api/v2/soil-samples`                               | Register a physical sample                                               | `CreateSoilSampleRequest`  | `CreateSoilSampleResponse`      |
+| 2   | GET    | `/api/v2/soil-samples/:sampleId`                     | Fetch sample + summary of its tests                                      | —                          | `GetSoilSampleResponse`         |
+| 3   | POST   | `/api/v2/soil-tests`                                 | Create a test event for a sample, optionally with inputs                 | `CreateSoilTestRequest`    | `CreateSoilTestResponse`        |
+| 4   | GET    | `/api/v2/soil-tests/:soilTestId`                     | Fetch a test with all inputs and results                                 | —                          | `GetSoilTestResponse`           |
+| 5   | POST   | `/api/v2/soil-tests/:soilTestId/calculate`           | Run physics / chemistry / interpretation engines                         | `CalculateSoilTestRequest` | `CalculateSoilTestResponse`     |
+| 6   | GET    | `/api/v2/soil-tests/:soilTestId/interpretation`      | Fetch the latest interpretation only                                     | —                          | `GetSoilInterpretationResponse` |
+| 7   | POST   | `/api/v2/soil-tests/:soilTestId/reports`             | Generate a report (PDF / CSV)                                            | `CreateSoilReportRequest`  | `CreateSoilReportResponse`      |
+| 8   | GET    | `/api/v2/soil-tests/:soilTestId/flahacalc-export`    | Stable contract consumed by FlahaCalc                                    | —                          | `FlahaCalcExportResponse`       |
+| 9   | GET    | `/api/v2/soil-tests/:soilTestId/scientific-analysis` | Composite payload for the texture / retention / structure visualisations | —                          | `ScientificAnalysisResponse`    |
 
 Routes 1–4 are CRUD-shaped. Route 5 is the only route that runs
-engines. Route 6 is a read-optimised projection of route 4. Routes 7–8
-are downstream-consumer surfaces.
+engines. Route 6 is a read-optimised projection of route 4. Routes 7–9
+are downstream-consumer surfaces. Route 9 was added in Phase 10A —
+see `docs/v2-scientific-analysis.md` for the engines it composes and
+the soft-fail warning catalogue.
 
 ---
 

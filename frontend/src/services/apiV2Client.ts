@@ -57,6 +57,7 @@ import type {
 	RegisterRequest,
 	RemoveMembershipResponse,
 	RevokeInvitationResponse,
+	ScientificAnalysisResponse,
 	SwitchOrganizationRequest,
 	SwitchOrganizationResponse,
 	UserMembershipsResponse,
@@ -194,6 +195,15 @@ export interface ApiV2Client {
 	): Promise<GetSoilTestReportSummaryResponse>;
 
 	getFlahaCalcExport(soilTestId: string): Promise<FlahaCalcExportResponse>;
+
+	// Phase 10A — Scientific Analysis (texture triangle + water-retention
+	// curve + cation/structure triangle), returned together so the
+	// Scientific Analysis tab loads in one round-trip. Independent blocks
+	// are nullable so a partially-entered soil test renders meaningful
+	// empty-state cards instead of failing.
+	getScientificAnalysis(
+		soilTestId: string
+	): Promise<ScientificAnalysisResponse>;
 
 	// Phase 8D — Report management surface.
 	generateReport(
