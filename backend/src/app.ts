@@ -26,7 +26,43 @@ export function createApp(): Express {
 	const app = express();
 
 	app.disable("x-powered-by");
-	app.use(helmet());
+	// Phase 9A-I — explicit Helmet configuration.
+	//
+	// This service is a JSON API consumed by the React SPA at a
+	// different origin; it serves NO HTML to a browser directly. The
+	// CSP is therefore the tightest practical baseline: `default-src
+	// 'none'`. The SPA's own CSP (set by its hosting layer / Vite
+	// production build) is what guards the executed application; the
+	// API just needs to make sure that if a browser ever does render
+	// an API response (e.g. a misconfigured proxy), nothing executes.
+	//
+	// Other headers (X-Content-Type-Options=nosniff, Referrer-Policy,
+	// X-DNS-Prefetch-Control, HSTS in production) come from Helmet
+	// defaults. HSTS is only sensible behind HTTPS, so we toggle it on
+	// in production runtime only.
+	app.use(
+		helmet({
+			contentSecurityPolicy: {
+				useDefaults: false,
+				directives: {
+					defaultSrc: ["'none'"],
+					frameAncestors: ["'none'"],
+					baseUri: ["'none'"],
+					formAction: ["'none'"],
+				},
+			},
+			crossOriginEmbedderPolicy: false,
+			crossOriginResourcePolicy: { policy: "same-site" },
+			referrerPolicy: { policy: "no-referrer" },
+			hsts: env.nodeEnv === "production"
+				? {
+						maxAge: 60 * 60 * 24 * 365,
+						includeSubDomains: true,
+						preload: false,
+					}
+				: false,
+		})
+	);
 	// Phase 9A-G: the SPA reaches the API over an explicit origin (Vite
 	// dev server on :5173 in dev; the deployed SPA host in prod) and the
 	// auth flow ships the refresh token in a HttpOnly cookie. That

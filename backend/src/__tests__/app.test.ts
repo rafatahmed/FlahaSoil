@@ -181,6 +181,23 @@ describe("liveness probes", () => {
 	});
 });
 
+describe("security headers (Phase 9A-I)", () => {
+	it("sets the locked-down CSP and core hardening headers on JSON API responses", async () => {
+		const res = await request(app).get("/healthz");
+		expect(res.status).toBe(200);
+		expect(res.headers["content-security-policy"]).toContain(
+			"default-src 'none'"
+		);
+		expect(res.headers["content-security-policy"]).toContain(
+			"frame-ancestors 'none'"
+		);
+		expect(res.headers["x-content-type-options"]).toBe("nosniff");
+		expect(res.headers["referrer-policy"]).toBe("no-referrer");
+		// x-powered-by must be stripped so the framework is not leaked.
+		expect(res.headers["x-powered-by"]).toBeUndefined();
+	});
+});
+
 describe("404 fallthrough", () => {
 	it("returns the standard error envelope for unknown routes", async () => {
 		const res = await request(app).get("/api/v2/does-not-exist");

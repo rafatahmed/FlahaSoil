@@ -127,10 +127,26 @@ export async function postRegister(req: Request, res: Response): Promise<void> {
 export async function postLogin(req: Request, res: Response): Promise<void> {
 	const parsed = loginSchema.parse(req.body);
 	const ctx = readContext(req);
-	const { session, refreshToken } = await loginUser(parsed, ctx);
-	setRefreshCookie(res, refreshToken.rawToken, refreshToken.expiresAt);
-	const payload: AuthLoginResponse = { session };
-	res.status(200).json(payload);
+	// Phase 9A-I — feed the rate limiter regardless of how the call
+	// resolves. The limiter's identity bucket is keyed on email; a
+	// successful login clears the bucket, a failure advances it (and
+	// may trigger the temporary lockout).
+	const limiter = req.authRateLimiter;
+	const identity = parsed.email
+		? `email:${parsed.email.trim().toLowerCase()}`
+		: undefined;
+	try {
+		const { session, refreshToken } = await loginUser(parsed, ctx);
+		setRefreshCookie(res, refreshToken.rawToken, refreshToken.expiresAt);
+		limiter?.recordSuccess(identity);
+		const payload: AuthLoginResponse = { session };
+		res.status(200).json(payload);
+	} catch (err) {
+		if (err instanceof ApiError && err.statusCode === 401) {
+			limiter?.recordFailure(identity, req);
+		}
+		throw err;
+	}
 }
 
 export async function postRefresh(req: Request, res: Response): Promise<void> {
@@ -139,10 +155,32 @@ export async function postRefresh(req: Request, res: Response): Promise<void> {
 		throw ApiError.unauthorized("Missing refresh token.");
 	}
 	const ctx = readContext(req);
-	const { session, refreshToken } = await refreshAuthTokens(raw, ctx);
-	setRefreshCookie(res, refreshToken.rawToken, refreshToken.expiresAt);
-	const payload: AuthRefreshResponse = { session };
-	res.status(200).json(payload);
+	const limiter = req.authRateLimiter;
+	// Hash the refresh cookie so the limiter identity matches the one
+	// computed by the middleware extractor.
+	const identity = limiter ? hashIdentityForRefresh(raw) : undefined;
+	try {
+		const { session, refreshToken } = await refreshAuthTokens(raw, ctx);
+		setRefreshCookie(res, refreshToken.rawToken, refreshToken.expiresAt);
+		limiter?.recordSuccess(identity);
+		const payload: AuthRefreshResponse = { session };
+		res.status(200).json(payload);
+	} catch (err) {
+		if (err instanceof ApiError && err.statusCode === 401) {
+			limiter?.recordFailure(identity, req);
+		}
+		throw err;
+	}
+}
+
+// Mirrors the identity extractor wired into the refresh limiter in
+// routes/auth.routes.ts. Kept here so the controller can feed back
+// success/failure without a circular import.
+function hashIdentityForRefresh(rawCookie: string): string {
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const { createHash } = require("node:crypto") as typeof import("node:crypto");
+	const hash = createHash("sha256").update(rawCookie).digest("hex");
+	return `rt:${hash.slice(0, 32)}`;
 }
 
 export async function postLogout(req: Request, res: Response): Promise<void> {

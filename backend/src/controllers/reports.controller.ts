@@ -124,6 +124,16 @@ export async function getReportVersionPreview(
 	const reportId = readReportId(req);
 	const versionNumber = readVersionNumber(req);
 	const { html } = await renderVersionHtml(reportId, versionNumber);
+	// Phase 9A-I — the global Helmet CSP is `default-src 'none'` for
+	// JSON API responses. This endpoint is the one exception: it serves
+	// a fully self-contained HTML document with inline <style>. Allow
+	// inline styles for this response only; no scripts, no external
+	// resources, no framing. `frame-ancestors 'none'` keeps the preview
+	// from being embedded by a third-party page.
+	res.setHeader(
+		"Content-Security-Policy",
+		"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+	);
 	res.status(200).type("html").send(html);
 }
 
