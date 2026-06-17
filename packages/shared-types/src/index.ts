@@ -17,5 +17,6 @@ export * from "./users";
 export * from "./organizations";
 export * from "./scientific-analysis";
 export * from "./scientific-coverage";
+export * from "./scientificCalibration";
 export * from "./warnings";
 export * from "./formatting";
