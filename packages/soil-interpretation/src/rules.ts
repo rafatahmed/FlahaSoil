@@ -95,13 +95,21 @@ export function classifyCationBalance(input: CationBalanceInput): string {
 // ---------------------------------------------------------------------------
 // Water-holding class — operates on `plantAvailableWater` from physics.
 //
-// Note: legacy physics output emits PAW as a percent (e.g. "13.1"); the
-// thresholds here (50 / 150) are the spec-supplied buckets. They are
-// applied to whatever numeric value is passed in without unit assumptions.
+// Phase 10A.7 (Scientific Audit R1): the upstream physics engine emits
+// PAW as **volumetric percent** (θFC − θWP, %v/v), typically in the
+// 3–25 % range across mineral soils. The pre-correction thresholds
+// (50 / 150) were anchored to a depth-integrated mm-per-metre scale
+// (1000 × %v/v), so every realistic %v/v PAW value collapsed to "Low".
+//
+// Corrected thresholds (volumetric %, per Brady & Weil 14 ed. Table 5.3
+// and the USDA NRCS Soil Survey Manual interpretive ranges):
+//   < 10 %   → Low      (most sands and loamy sands)
+//   10–15 %  → Moderate (sandy loams, loams)
+//   ≥ 15 %   → High     (silt loams, clay loams, well-aggregated clays)
 // ---------------------------------------------------------------------------
 export function classifyWaterHolding(paw: number): string {
-	if (paw < 50) return "Low";
-	if (paw <= 150) return "Moderate";
+	if (paw < 10) return "Low";
+	if (paw < 15) return "Moderate";
 	return "High";
 }
 

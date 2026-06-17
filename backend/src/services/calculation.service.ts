@@ -355,6 +355,7 @@ function runPhysicsEngine(test: LoadedTest): SoilPhysicsResult {
 	const clay = requireNum(test.texture["clayPercent"], "clayPercent", "physics");
 	const om = num(test.texture["organicMatterPercent"]);
 	const gravel = num(test.texture["gravelPercent"]);
+	const bulkDensity = num(test.texture["bulkDensity"]);
 	const ec = test.chemistry ? num(test.chemistry["ecDsM"]) : undefined;
 
 	try {
@@ -363,6 +364,7 @@ function runPhysicsEngine(test: LoadedTest): SoilPhysicsResult {
 			clay,
 			...(om !== undefined ? { organicMatter: om } : {}),
 			...(gravel !== undefined ? { gravelContent: gravel } : {}),
+			...(bulkDensity !== undefined ? { densityFactor: bulkDensity } : {}),
 			...(ec !== undefined ? { electricalConductivity: ec } : {}),
 			userPlan: "PROFESSIONAL",
 		});

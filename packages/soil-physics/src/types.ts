@@ -60,6 +60,27 @@ export interface BaseSoilPhysicsResult {
 	bulkDensityFactor: string;
 	inputBulkDensity: number | undefined;
 
+	/**
+	 * Phase 10A.7 — Scientific Audit R2 (traceability).
+	 *
+	 * `bulkDensity` (above) preserves legacy semantics: the **predicted**
+	 * ρN from Saxton-Rawls Eq 6 (`(1 − θS) × 2.65`). The downstream math
+	 * (porosity, void ratio, all density-adjusted moisture and tension
+	 * equations) actually uses **ρDF**, which equals the user-supplied
+	 * `inputBulkDensity` when provided, or the engine default otherwise.
+	 *
+	 * The three fields below make this discrepancy explicit so reports
+	 * and UIs can show *which* bulk density value drove the result:
+	 *
+	 *   - `predictedBulkDensity` : ρN from texture (Saxton-Rawls Eq 6).
+	 *   - `bulkDensityUsed`      : ρDF — the value actually fed to the
+	 *                              density-adjusted equations.
+	 *   - `bulkDensitySource`    : provenance of `bulkDensityUsed`.
+	 */
+	predictedBulkDensity: string;
+	bulkDensityUsed: string;
+	bulkDensitySource: "USER_INPUT" | "DEFAULT";
+
 	porosity: string;
 	voidRatio: string;
 	particleDensity: string;

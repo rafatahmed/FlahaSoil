@@ -137,7 +137,7 @@ describe("interpretSoil — Phase 8D outputs", () => {
 				textureClass: "Loam",
 				saturatedConductivity: 12,
 				drainageClass: "Good",
-				plantAvailableWater: "120",
+				plantAvailableWater: "12", // %v/v (post-R1)
 			},
 			chemistry: {
 				ph: 7.4,

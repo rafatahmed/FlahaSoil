@@ -46,15 +46,19 @@ describe("issueAccessToken + verifyAccessToken", () => {
 
 	it("rejects a tampered signature with a generic 401", async () => {
 		const { token } = await issueAccessToken("user_3", null);
-		// Flip the last char of the signature segment.
+		// Mutate the first char of the PAYLOAD segment. Unlike flipping
+		// the final base64url char of the signature (whose trailing bits
+		// are padding and may decode to identical bytes), changing a
+		// payload byte always invalidates the HS256 signature, so the
+		// tamper is deterministic.
 		const segments = token.split(".");
-		const sig = segments[2] ?? "";
+		const payload = segments[1] ?? "";
+		const tamperedPayload =
+			payload.charAt(0) === "A"
+				? `B${payload.slice(1)}`
+				: `A${payload.slice(1)}`;
 		const tampered =
-			segments[0] +
-			"." +
-			segments[1] +
-			"." +
-			(sig.endsWith("A") ? `${sig.slice(0, -1)}B` : `${sig.slice(0, -1)}A`);
+			segments[0] + "." + tamperedPayload + "." + (segments[2] ?? "");
 
 		try {
 			await verifyAccessToken(tampered);

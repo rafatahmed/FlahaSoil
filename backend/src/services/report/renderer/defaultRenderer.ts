@@ -20,6 +20,7 @@ import {
 import {
 	agronomicTemplate,
 	appendixTemplate,
+	evidenceTemplate,
 	irrigationTemplate,
 	notesTemplate,
 	recommendationsTemplate,
@@ -46,6 +47,7 @@ const TEMPLATE_ORDER: ReportTemplate[] = [
 	agronomicTemplate,
 	recommendationsTemplate,
 	notesTemplate,
+	evidenceTemplate,
 	appendixTemplate,
 ];
 

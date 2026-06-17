@@ -193,6 +193,98 @@ describe("calculateSoilTest — salinity normalization wiring", () => {
 	});
 });
 
+describe("calculateSoilTest — bulk-density USER_INPUT wiring (regression)", () => {
+	// Regression for the Phase 10A.7 release-gate defect: a user/lab
+	// supplied `bulkDensity` on the texture input was dropped in
+	// `runPhysicsEngine` and never reached `calculateSoilPhysics`, so the
+	// engine always fell back to the 1.30 g/cm³ DEFAULT. The report then
+	// showed `used = 1.30 / source = DEFAULT` even when the lab measured
+	// a real value.
+	const advancedTexture = {
+		sandPercent: 35,
+		siltPercent: 35,
+		clayPercent: 30,
+		organicMatterPercent: 1.8,
+		bulkDensity: 1.42,
+		gravelPercent: 5,
+		source: "LAB",
+	};
+
+	const phEcChemistry = { pH: 8.3, ecDsM: 4.5, source: "LAB" };
+
+	const physicsTraceFrom = (
+		upserts: { model: string; data: Record<string, unknown> }[]
+	): Record<string, unknown> => {
+		const physics = upserts.find((u) => u.model === "physics");
+		expect(physics).toBeDefined();
+		return physics!.data["calculationTraceJson"] as Record<string, unknown>;
+	};
+
+	it("passes a supplied bulkDensity through to the engine as USER_INPUT", async () => {
+		const { client, upserts } = makeStubPrisma({
+			id: "t_bd_user",
+			textureInput: advancedTexture,
+			chemistryInput: phEcChemistry,
+			physicsResult: null,
+			chemistryResult: null,
+		});
+		setPrismaClientForTesting(client);
+
+		await calculateSoilTest("t_bd_user", {
+			runPhysics: true,
+			runChemistry: true,
+			runInterpretation: true,
+			calculationMode: "LAB",
+			includeTrace: true,
+		});
+
+		const trace = physicsTraceFrom(upserts);
+		expect(parseFloat(String(trace["bulkDensityUsed"]))).toBeCloseTo(1.42, 2);
+		expect(trace["bulkDensitySource"]).toBe("USER_INPUT");
+		// Predicted (ρN, Saxton-Rawls) is texture-driven and must remain a
+		// separate trace value, not collapsed onto the used value.
+		const predicted = parseFloat(String(trace["predictedBulkDensity"]));
+		expect(predicted).not.toBeCloseTo(1.42, 2);
+
+		// Porosity/saturation must be consistent with the USED bulk
+		// density (1.42), not the 1.30 default. φ = 1 − ρDF/ρparticle.
+		const physics = upserts.find((u) => u.model === "physics")!.data;
+		const particleDensity = parseFloat(String(trace["particleDensity"]));
+		const expectedPorosity = (1 - 1.42 / particleDensity) * 100;
+		expect(physics["porosity"] as number).toBeCloseTo(expectedPorosity, 0);
+	});
+
+	it("falls back to the DEFAULT source when no bulkDensity is supplied", async () => {
+		const { client, upserts } = makeStubPrisma({
+			id: "t_bd_default",
+			textureInput: {
+				sandPercent: 35,
+				siltPercent: 35,
+				clayPercent: 30,
+				organicMatterPercent: 1.8,
+				gravelPercent: 5,
+				source: "LAB",
+			},
+			chemistryInput: phEcChemistry,
+			physicsResult: null,
+			chemistryResult: null,
+		});
+		setPrismaClientForTesting(client);
+
+		await calculateSoilTest("t_bd_default", {
+			runPhysics: true,
+			runChemistry: true,
+			runInterpretation: true,
+			calculationMode: "LAB",
+			includeTrace: true,
+		});
+
+		const trace = physicsTraceFrom(upserts);
+		expect(parseFloat(String(trace["bulkDensityUsed"]))).toBeCloseTo(1.3, 2);
+		expect(trace["bulkDensitySource"]).toBe("DEFAULT");
+	});
+});
+
 describe("calculateSoilTest — MODERATE with full cation panel", () => {
 	const fullChemistry = {
 		pH: 7.4, ecDsM: 0.8,

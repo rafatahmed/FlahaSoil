@@ -92,6 +92,64 @@ function Test-Postgres {
     return $false
 }
 
+# Probe the backend `/health` endpoint. Port-listening alone is not
+# enough — the Express process can bind 3002 while Prisma queries 500
+# (see Phase 10S, where a missing v2 schema produced 200 ports + 500
+# auth). This returns a structured result so callers can decide whether
+# to fail the launch or just flag a warning.
+function Test-BackendHealth {
+    param([int]$TimeoutSec = 3)
+    try {
+        $r = Invoke-RestMethod -Uri "http://localhost:$BACKEND_PORT/health" `
+            -TimeoutSec $TimeoutSec -ErrorAction Stop
+        if ($r.status -eq 'ok') {
+            return @{ Ok = $true; Service = $r.service; Env = $r.env }
+        }
+        return @{ Ok = $false; Reason = "unexpected payload: $($r | ConvertTo-Json -Compress)" }
+    }
+    catch {
+        return @{ Ok = $false; Reason = $_.Exception.Message }
+    }
+}
+
+# Probe the Vite dev server. -UseBasicParsing avoids the IE-engine
+# prompt under Windows PowerShell 5.x. We only require status 200 + the
+# `id="root"` marker — the React bundle itself is mounted client-side
+# and is not visible from the initial HTML.
+function Test-FrontendHealth {
+    param([int]$TimeoutSec = 3)
+    try {
+        $r = Invoke-WebRequest -Uri "http://localhost:$FRONTEND_PORT/" `
+            -TimeoutSec $TimeoutSec -UseBasicParsing -ErrorAction Stop
+        $hasRoot = $r.Content -match 'id="root"'
+        if ($r.StatusCode -eq 200 -and $hasRoot) {
+            return @{ Ok = $true; Status = $r.StatusCode; HasRoot = $true }
+        }
+        return @{ Ok = $false; Reason = "status=$($r.StatusCode) hasRoot=$hasRoot" }
+    }
+    catch {
+        return @{ Ok = $false; Reason = $_.Exception.Message }
+    }
+}
+
+# Scan the recent backend log for well-known failure signatures and
+# return remediation hints. Today we only diagnose the Phase 10S
+# missing-schema case; new signatures can be appended as they show up.
+function Get-BackendLogHints {
+    if (-not (Test-Path $BackendLog)) { return @() }
+    $tail = Get-Content $BackendLog -Tail 200 -ErrorAction SilentlyContinue
+    if (-not $tail) { return @() }
+    $joined = ($tail -join "`n")
+    $hints = @()
+    if ($joined -match 'does not exist in the current database') {
+        $hints += "Backend log shows Prisma 'table/column does not exist' errors."
+        $hints += "Sync the v2 schema and re-seed the dev database:"
+        $hints += "  npm run prisma:db:push:v2 --workspace @flaha/api"
+        $hints += "  npm run prisma:seed:v2 --workspace @flaha/api"
+    }
+    return $hints
+}
+
 function Start-Detached {
     param([string]$Name, [string]$Command, [string]$LogPath, [string]$PidFile)
     $launcher = "Set-Location -Path `"$Root`"; & $Command *>&1 | Tee-Object -FilePath `"$LogPath`""
@@ -134,10 +192,22 @@ function Stop-Tracked {
 
 function Show-Status {
     $rows = @()
-    $rows += [pscustomobject]@{ Service = 'Postgres'; Port = $POSTGRES_PORT; Listening = (Test-PortListening -Port $POSTGRES_PORT); TrackedPid = '(external)' }
-    $rows += [pscustomobject]@{ Service = 'Backend  (@flaha/api)'; Port = $BACKEND_PORT; Listening = (Test-PortListening -Port $BACKEND_PORT); TrackedPid = (Get-TrackedPid -PidFile $BackendPidFile) }
-    $rows += [pscustomobject]@{ Service = 'Frontend (@flaha/web)'; Port = $FRONTEND_PORT; Listening = (Test-PortListening -Port $FRONTEND_PORT); TrackedPid = (Get-TrackedPid -PidFile $FrontendPidFile) }
+    $rows += [pscustomobject]@{ Service = 'Postgres'; Port = $POSTGRES_PORT; Listening = (Test-PortListening -Port $POSTGRES_PORT); Health = '(external)'; TrackedPid = '(external)' }
+
+    $beListen = Test-PortListening -Port $BACKEND_PORT
+    $beHealth = if ($beListen) { if ((Test-BackendHealth -TimeoutSec 2).Ok) { 'ok' } else { 'FAIL' } } else { '-' }
+    $rows += [pscustomobject]@{ Service = 'Backend  (@flaha/api)'; Port = $BACKEND_PORT; Listening = $beListen; Health = $beHealth; TrackedPid = (Get-TrackedPid -PidFile $BackendPidFile) }
+
+    $feListen = Test-PortListening -Port $FRONTEND_PORT
+    $feHealth = if ($feListen) { if ((Test-FrontendHealth -TimeoutSec 2).Ok) { 'ok' } else { 'FAIL' } } else { '-' }
+    $rows += [pscustomobject]@{ Service = 'Frontend (@flaha/web)'; Port = $FRONTEND_PORT; Listening = $feListen; Health = $feHealth; TrackedPid = (Get-TrackedPid -PidFile $FrontendPidFile) }
+
     $rows | Format-Table -AutoSize
+
+    if ($beListen -and $beHealth -eq 'FAIL') {
+        Write-Err "Backend port is listening but health endpoint failed. Check $BackendLog."
+        foreach ($hint in (Get-BackendLogHints)) { Write-Warn $hint }
+    }
 }
 
 
@@ -190,16 +260,56 @@ function Start-DevV2 {
         -Command 'npm.cmd run dev --workspace @flaha/web' `
         -LogPath $FrontendLog -PidFile $FrontendPidFile
 
+    # Backend: first wait for the port to bind, then poll /health.
+    # Phase 10S — the bind-only check used to falsely pass when the v2
+    # schema was missing (port opened, every DB query 500'd).
     Write-Info "Waiting for backend on $BACKEND_PORT (up to 30s)..."
+    $beListening = $false
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
-        if (Test-PortListening -Port $BACKEND_PORT) { Write-Ok "Backend listening on $BACKEND_PORT."; break }
+        if (Test-PortListening -Port $BACKEND_PORT) { Write-Ok "Backend listening on $BACKEND_PORT."; $beListening = $true; break }
     }
+    if (-not $beListening) {
+        Write-Err "Backend did not bind $BACKEND_PORT within 30s. Check $BackendLog."
+        Show-Status
+        exit 1
+    }
+    Write-Info "Polling backend /health (up to 30s)..."
+    $beHealthy = $false
+    for ($i = 0; $i -lt 30; $i++) {
+        $h = Test-BackendHealth -TimeoutSec 2
+        if ($h.Ok) { Write-Ok "Backend /health = ok (service=$($h.Service) env=$($h.Env))."; $beHealthy = $true; break }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $beHealthy) {
+        Write-Err "Backend port is listening but health endpoint failed. Check $BackendLog."
+        foreach ($hint in (Get-BackendLogHints)) { Write-Warn $hint }
+        Show-Status
+        exit 1
+    }
+
+    # Frontend: wait for the port, then verify Vite returns the SPA HTML.
     Write-Info "Waiting for frontend on $FRONTEND_PORT (up to 30s)..."
+    $feListening = $false
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
-        if (Test-PortListening -Port $FRONTEND_PORT) { Write-Ok "Frontend listening on $FRONTEND_PORT."; break }
+        if (Test-PortListening -Port $FRONTEND_PORT) { Write-Ok "Frontend listening on $FRONTEND_PORT."; $feListening = $true; break }
     }
+    if ($feListening) {
+        $feOk = $false
+        for ($i = 0; $i -lt 10; $i++) {
+            $f = Test-FrontendHealth -TimeoutSec 2
+            if ($f.Ok) { Write-Ok "Frontend / = 200 (id=`"root`" present)."; $feOk = $true; break }
+            Start-Sleep -Seconds 1
+        }
+        if (-not $feOk) {
+            Write-Warn "Frontend HTML probe failed: $($f.Reason). Vite is listening, but the SPA shell did not respond as expected."
+        }
+    }
+    else {
+        Write-Warn "Frontend did not bind $FRONTEND_PORT within 30s. Check $FrontendLog."
+    }
+
     Show-Status
     Write-Ok "Open http://localhost:$FRONTEND_PORT/  |  API: http://localhost:$BACKEND_PORT/api/v2"
 }
@@ -216,11 +326,22 @@ function Show-Help {
 FlahaSOIL v2 dev launcher
 
 Actions:
-  start    Verify env + Postgres, run prisma generate, start backend + frontend.
+  start    Verify env + Postgres, run prisma generate, start backend + frontend,
+           then poll backend /health and frontend / for SPA HTML before reporting OK.
   stop     Stop tracked backend + frontend processes and free their ports.
   restart  stop then start.
-  status   Show Postgres / backend / frontend port + tracked-PID state.
+  status   Show Postgres / backend / frontend port, /health probe, and tracked-PID state.
   help     Show this message.
+
+Health policy:
+  - Backend is considered healthy only when GET http://localhost:$BACKEND_PORT/health
+    returns {"status":"ok"} within 30s after the port binds.
+  - Frontend is considered healthy when GET http://localhost:$FRONTEND_PORT/ returns 200
+    and contains the SPA root element. A bound port without HTML is a warning, not a hard fail.
+  - If the backend log contains Prisma 'does not exist in the current database' errors,
+    the launcher prints a hint to run:
+      npm run prisma:db:push:v2 --workspace @flaha/api
+      npm run prisma:seed:v2 --workspace @flaha/api
 
 Flags:
   -NoGenerate    Skip 'prisma generate' before backend start.

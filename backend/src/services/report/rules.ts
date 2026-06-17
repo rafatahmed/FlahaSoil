@@ -85,7 +85,11 @@ export const RECOMMENDATION_RULES: RecommendationRule[] = [
 		horizon: "SHORT",
 		category: "AMENDMENT",
 		title: "Apply gypsum to displace exchangeable sodium",
-		body: "Sodicity is high enough to degrade soil structure and infiltration. Apply agricultural gypsum at the rate calculated from the gypsum requirement (ESP/SAR target ≤ 6 / 13).",
+		// Phase 10A.7 (B9) — engine does NOT compute a gypsum requirement
+		// in cmol(+)/kg or t/ha; rate calculation needs depth, ρb, and a
+		// target ESP supplied by the agronomist. Body now flags gypsum
+		// as indicated without claiming a calculated rate.
+		body: "Sodicity is high enough to degrade soil structure and infiltration. Gypsum is indicated to displace exchangeable sodium toward an ESP ≤ 6 / SAR ≤ 13 target. A site-specific rate (t/ha) must be derived by the consulting agronomist from bulk density, sampling depth, and the target ESP — the report does not compute that rate.",
 		bullets: [
 			"Incorporate gypsum into the top 15 cm.",
 			"Follow with a leaching irrigation to flush displaced Na.",

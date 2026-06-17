@@ -17,11 +17,17 @@
  *
  * Output: `ProfessionalReportDTO` with `schemaVersion: "1.0"`.
  */
-import type {
-	ProfessionalReportDTO,
-	RecommendationSetDTO,
-	SoilReportEnvelope,
+import {
+	computeScientificCoverage,
+	SoilTestLevel,
+	type BulkDensityTrace,
+	type CecSource,
+	type CompletenessSection,
+	type ProfessionalReportDTO,
+	type RecommendationSetDTO,
+	type SoilReportEnvelope,
 } from "@flaha/shared-types";
+import { STRUCTURE_TRIANGLE_DISCLAIMER } from "@flaha/soil-chemistry";
 
 import { runRecommendations } from "./recommendations";
 
@@ -69,6 +75,7 @@ export function composeProfessionalReport(
 		recommendations,
 		texture
 	);
+	const completeness = buildCompleteness(args);
 
 	return {
 		schemaVersion: "1.0",
@@ -84,6 +91,7 @@ export function composeProfessionalReport(
 		recommendations,
 		notes,
 		appendix,
+		completeness,
 		source: envelope,
 	};
 
@@ -156,6 +164,7 @@ function buildTexture(
 
 function buildPhysics(env: SoilReportEnvelope): ProfessionalReportDTO["physics"] {
 	const p = env.physics;
+	const bulkDensityTrace = extractBulkDensityTrace(p);
 	return {
 		fieldCapacity: p?.fieldCapacity ?? null,
 		wiltingPoint: p?.wiltingPoint ?? null,
@@ -164,12 +173,44 @@ function buildPhysics(env: SoilReportEnvelope): ProfessionalReportDTO["physics"]
 		porosity: p?.porosity ?? null,
 		saturation: p?.saturation ?? null,
 		saturatedConductivity: p?.saturatedConductivity ?? null,
+		// Phase 10A.7 (B2) — water-content fields are persisted as % v/v
+		// (the engine multiplies θ by 100 in `formatResultsByPlan`). The
+		// renderer now labels them honestly instead of the previous
+		// "cm³/cm³" mis-label which was off by a factor of 100.
 		units: {
-			moisture: "cm³/cm³",
+			moisture: "% v/v",
 			bulkDensity: "g/cm³",
 			conductivity: "mm/h",
+			porosity: "% v/v",
+			saturation: "% v/v",
 		},
+		bulkDensityTrace,
 	};
+}
+
+/**
+ * Phase 10A.7 (B3) — extract the predicted / used / source trio from
+ * the persisted `calculationTraceJson`. When trace is missing (older
+ * snapshots or `includeTrace=false`) we fall back to echoing the stored
+ * scalar `bulkDensity` as both predicted and used with source UNKNOWN
+ * so the renderer never reports a fictional provenance.
+ */
+function extractBulkDensityTrace(
+	p: SoilReportEnvelope["physics"]
+): BulkDensityTrace {
+	const stored = p?.bulkDensity ?? null;
+	const trace = (p?.calculationTraceJson as Record<string, unknown> | null) ?? null;
+	if (!trace) {
+		return { predicted: stored, used: stored, source: "UNKNOWN", unit: "g/cm³" };
+	}
+	const predicted = num(trace["predictedBulkDensity"]) ?? stored;
+	const used = num(trace["bulkDensityUsed"]) ?? stored;
+	const rawSource = trace["bulkDensitySource"];
+	const source: BulkDensityTrace["source"] =
+		rawSource === "USER_INPUT" || rawSource === "DEFAULT"
+			? rawSource
+			: "UNKNOWN";
+	return { predicted, used, source, unit: "g/cm³" };
 }
 
 function buildChemistry(
@@ -180,21 +221,47 @@ function buildChemistry(
 	const ph = chemInput ? num(chemInput["pH"]) : null;
 	const ec = chemInput ? num(chemInput["ecDsM"]) : null;
 	const om = chemInput ? num(chemInput["organicMatter"]) : null;
+	// Phase 10A.7 (B4) — Ca/Mg/K/Na in the chemistry input row are
+	// EXCHANGEABLE cations stored in cmol(+)/kg (see
+	// `packages/soil-chemistry/src/types.ts`). The fertility
+	// "secondary nutrients" column carries only S (mg/kg); Ca and Mg
+	// must NEVER appear under the mg/kg block since the magnitudes
+	// would mis-lead by ≈ a factor of 100.
+	const ca = chemInput ? num(chemInput["ca"]) : null;
+	const mg = chemInput ? num(chemInput["mg"]) : null;
+	const k = chemInput ? num(chemInput["k"]) : null;
+	const na = chemInput ? num(chemInput["na"]) : null;
+	// Phase 10A.7 R2 (B6) — macronutrient K (mg/kg, plant-available)
+	// must NOT be mirrored from the exchangeable K column. The
+	// chemistry input row stores `k` as exchangeable K in cmol(+)/kg
+	// (see `packages/soil-chemistry/src/types.ts`); promoting it into
+	// the mg/kg macronutrient cell drops the unit and mis-leads by a
+	// factor of ~390 (cmol(+)/kg × 391 → mg/kg of K). A dedicated
+	// `kMgKg` field on the chemistry input row would unlock this cell;
+	// until then the report renders it as missing.
+	const kMgKg = chemInput ? num(chemInput["kMgKg"]) : null;
+	// Phase 10A.7 (WS5 — R3) — include the Bear/Albrecht (BCSR) disclaimer
+	// whenever at least the three primary exchangeable cations are supplied
+	// so the report PDF always shows the Kopittke & Menzies caveat alongside
+	// the cation data.
+	const hasExchangeable = ca !== null || mg !== null || k !== null;
 	return {
 		pH: ph,
 		ece: ec,
 		organicMatter: om,
 		cec: c?.cec ?? null,
+		cecSource: deriveCecSource(c, chemInput),
 		macroNutrients: {
 			n: chemInput ? num(chemInput["n"]) : null,
 			p: chemInput ? num(chemInput["p"]) : null,
-			k: chemInput ? num(chemInput["k"]) : null,
+			k: kMgKg,
 		},
 		secondaryNutrients: {
-			ca: chemInput ? num(chemInput["ca"]) : null,
-			mg: chemInput ? num(chemInput["mg"]) : null,
+			ca: null,
+			mg: null,
 			s: chemInput ? num(chemInput["s"]) : null,
 		},
+		exchangeableCations: { ca, mg, k, na, unit: "cmol(+)/kg" },
 		micronutrients: {
 			fe: chemInput ? num(chemInput["fe"]) : null,
 			mn: chemInput ? num(chemInput["mn"]) : null,
@@ -207,7 +274,24 @@ function buildChemistry(
 			: c?.calculationMode === "ESTIMATED"
 			? "ESTIMATED"
 			: null,
+		...(hasExchangeable ? { structureDisclaimer: STRUCTURE_TRIANGLE_DISCLAIMER } : {}),
 	};
+}
+
+/**
+ * Phase 10A.7 (B5) — CEC provenance derivation. We do NOT silently
+ * promote a derived cation-sum CEC to a "lab CEC"; the report renders
+ * an explicit "Provisional" badge whenever the value did not come from
+ * a lab measurement.
+ */
+function deriveCecSource(
+	chem: SoilReportEnvelope["chemistry"],
+	chemInput: Record<string, unknown> | null
+): CecSource {
+	if (!chem) return "MISSING";
+	if (chem.calculationMode === "ESTIMATED") return "ESTIMATED";
+	const labCec = chemInput ? num(chemInput["cec"]) : null;
+	return labCec !== null ? "LAB" : "DERIVED_CATION_SUM";
 }
 
 function buildSalinity(
@@ -260,8 +344,6 @@ function buildIrrigation(
 	if (whc === "Low" || whc === "Very Low") {
 		notes.push("Plan more frequent, lighter irrigations.");
 	}
-	const ec = env.chemistry?.cec ? null : null; // placeholder
-	void ec;
 	return {
 		infiltrationClass: infil,
 		drainageClass: drainage,
@@ -311,6 +393,13 @@ function buildAgronomic(
 }
 
 function buildNotes(env: SoilReportEnvelope): ProfessionalReportDTO["notes"] {
+	// Phase 10A.7 R2 (B8) — `missingValues` enumerates ONLY
+	// engine-output gaps (physics / chemistry / interpretation modules
+	// that failed to produce a result). Evidence-level coverage
+	// (declared SoilTestLevel vs submitted lab fields) is reported in
+	// the dedicated Evidence Completeness section and must not be
+	// duplicated here. `calculationWarnings` retains engine-emitted
+	// warning records verbatim so the two surfaces never collide.
 	const missing: string[] = [];
 	const estimated: string[] = [];
 	if (!env.chemistry) missing.push("Chemistry engine output");
@@ -425,4 +514,34 @@ function ratingFromCategory(
 		return v === "high" ? "poor" : v === "moderate" ? "fair" : "good";
 	}
 	return "fair";
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10A.7 (Correction) — SoilTestLevel-anchored evidence coverage
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the evidence-completeness section anchored on the
+ * `SoilTestLevel` declared on the SoilTest row. The composer delegates
+ * to the canonical `computeScientificCoverage()` so the report, the
+ * `/scientific-analysis` API, and the frontend all read the same DTOs.
+ *
+ * The composer NEVER silently downgrades: the declared level is
+ * preserved verbatim; missing modules are reported through the level
+ * statement and per-module status.
+ */
+function buildCompleteness(args: ComposeReportArgs): CompletenessSection {
+	const declaredLevel = readDeclaredLevel(args.envelope.metadata.testLevel);
+	const coverage = computeScientificCoverage(declaredLevel, {
+		texture: args.textureInputRow,
+		chemistry: args.chemistryInputRow,
+	});
+	return { level: coverage.level, modules: coverage.modules };
+}
+
+function readDeclaredLevel(value: unknown): SoilTestLevel {
+	if (value === SoilTestLevel.ADVANCED || value === SoilTestLevel.MODERATE) {
+		return value;
+	}
+	return SoilTestLevel.PRELIMINARY;
 }

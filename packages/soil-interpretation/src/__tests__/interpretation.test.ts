@@ -14,7 +14,7 @@ describe("interpretSoil — ideal soil", () => {
 	it("classifies a balanced loam as Good with no warnings", () => {
 		const result = interpretSoil({
 			physics: {
-				plantAvailableWater: "120", // moderate
+				plantAvailableWater: "12", // %v/v → Moderate (R1 fix)
 				drainageClass: "Good",
 				electricalConductivity: "1.0",
 			},
@@ -129,7 +129,7 @@ describe("interpretSoil — missing chemistry", () => {
 	it("does not crash when chemistry is omitted; emits physics fields only", () => {
 		const result = interpretSoil({
 			physics: {
-				plantAvailableWater: "180",
+				plantAvailableWater: "18", // %v/v → High (R1 fix)
 				drainageClass: "Excellent",
 			},
 		});

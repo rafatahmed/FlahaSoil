@@ -14,6 +14,10 @@
  * translations) can re-render the same recommendation in any locale.
  */
 
+import type {
+	CoverageModule,
+	LevelCompleteness,
+} from "./scientific-analysis";
 import type { IsoDateString } from "./soil-domain";
 import type { SoilReportEnvelope } from "./reports";
 import type { SystemWarning } from "./warnings";
@@ -119,6 +123,21 @@ export interface TextureSection {
 	organicMatterPercent?: number | null;
 }
 
+/**
+ * Phase 10A.7 (B3) — bulk-density traceability echoed into the report.
+ * `predicted` is the engine's Saxton-Rawls ρN; `used` is the value that
+ * actually entered every density-coupled equation (ρDF); `source` flags
+ * whether `used` came from a USER_INPUT or fell back to the engine
+ * DEFAULT. All three live alongside the legacy `bulkDensity` field so
+ * snapshots predating the correction continue to render.
+ */
+export interface BulkDensityTrace {
+	predicted: number | null;
+	used: number | null;
+	source: "USER_INPUT" | "DEFAULT" | "UNKNOWN";
+	unit: "g/cm³";
+}
+
 export interface PhysicsSection {
 	fieldCapacity?: number | null;
 	wiltingPoint?: number | null;
@@ -129,10 +148,45 @@ export interface PhysicsSection {
 	saturatedConductivity?: number | null;
 	/** Units, one-shot for the table footer. */
 	units: {
-		moisture: string; // e.g. "cm/cm" or "%"
+		moisture: string; // Phase 10A.7 (B2) — water content is stored as % v/v.
 		bulkDensity: string; // e.g. "g/cm³"
 		conductivity: string; // e.g. "mm/h"
+		porosity: string; // Phase 10A.7 (B2) — explicit "% v/v" anchor.
+		saturation: string; // Phase 10A.7 (B2) — explicit "% v/v" anchor.
 	};
+	/**
+	 * Phase 10A.7 (B3) — bulk-density traceability. Optional for back-compat
+	 * with snapshots persisted before the correction; new snapshots always
+	 * populate it from `calculationTraceJson`.
+	 */
+	bulkDensityTrace?: BulkDensityTrace;
+}
+
+/**
+ * Phase 10A.7 (B5) — provenance of the CEC value rendered in the report.
+ *
+ *   LAB                 — `cec` came directly from the chemistry input row.
+ *   DERIVED_CATION_SUM  — LAB mode with no CEC input; engine summed cations.
+ *   ESTIMATED           — ESTIMATED mode (clay × 0.5 + OM × 2).
+ *   MISSING             — no chemistry result was produced.
+ */
+export type CecSource =
+	| "LAB"
+	| "DERIVED_CATION_SUM"
+	| "ESTIMATED"
+	| "MISSING";
+
+/**
+ * Phase 10A.7 (B4) — exchangeable cations expressed in cmol(+)/kg.
+ * Distinct from the fertility `secondaryNutrients` block which carries
+ * mg/kg quantities. The two MUST NOT be merged at the renderer.
+ */
+export interface ExchangeableCationsBlock {
+	ca?: number | null;
+	mg?: number | null;
+	k?: number | null;
+	na?: number | null;
+	unit: "cmol(+)/kg";
 }
 
 export interface ChemistrySection {
@@ -140,6 +194,8 @@ export interface ChemistrySection {
 	ece?: number | null;
 	organicMatter?: number | null;
 	cec?: number | null;
+	/** Phase 10A.7 (B5) — CEC provenance flag. Optional for back-compat. */
+	cecSource?: CecSource;
 	macroNutrients: {
 		n?: number | null;
 		p?: number | null;
@@ -157,7 +213,19 @@ export interface ChemistrySection {
 		cu?: number | null;
 		b?: number | null;
 	};
+	/**
+	 * Phase 10A.7 (B4) — exchangeable cation block (cmol(+)/kg). Optional
+	 * for back-compat with snapshots persisted before the correction.
+	 */
+	exchangeableCations?: ExchangeableCationsBlock;
 	calculationMode?: "LAB" | "ESTIMATED" | null;
+	/**
+	 * Phase 10A.7 (WS5 — R3) — Bear/Albrecht (BCSR) mandatory caveat from
+	 * Kopittke & Menzies (2007). Present whenever exchangeable Ca, Mg, K
+	 * are all supplied so the report surface is complete. The renderer MUST
+	 * display this under a "CEC structure triangle" heading.
+	 */
+	structureDisclaimer?: string;
 }
 
 export interface SalinityAssessmentSection {
@@ -221,6 +289,23 @@ export interface AppendixSection {
 	inputs: Record<string, unknown>;
 }
 
+/**
+ * Phase 10A.7 (Correction) — evidence-contract completeness section.
+ *
+ * Replaces the earlier `Basic / Professional / Advanced` panel model
+ * with one anchored on the SoilTest's declared `SoilTestLevel`. The
+ * composer NEVER silently downgrades the test level; instead it reports
+ * what was *expected at the declared level* vs what was *submitted*,
+ * and lists any extras as supplementary evidence.
+ *
+ * Field shape mirrors the wire contract in `./scientific-analysis.ts`
+ * so frontend and PDF report read the same DTOs end-to-end.
+ */
+export interface CompletenessSection {
+	level: LevelCompleteness;
+	modules: CoverageModule[];
+}
+
 // ---------------------------------------------------------------------------
 // Top-level DTO
 // ---------------------------------------------------------------------------
@@ -240,6 +325,13 @@ export interface ProfessionalReportDTO {
 	recommendations: RecommendationSetDTO;
 	notes: NotesAndWarningsSection;
 	appendix: AppendixSection;
+	/**
+	 * Phase 10A.7 (Correction) — evidence-contract coverage anchored on
+	 * the SoilTest's declared `SoilTestLevel`. Optional for backward
+	 * compatibility with snapshots persisted before the correction; new
+	 * snapshots always emit it.
+	 */
+	completeness?: CompletenessSection;
 	/**
 	 * The raw assembled envelope used as the source for this snapshot.
 	 * Embedded for audit / debugging — never used for rendering.

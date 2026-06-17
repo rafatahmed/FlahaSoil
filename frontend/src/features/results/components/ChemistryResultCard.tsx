@@ -19,15 +19,31 @@ import {
 	Stack,
 	Typography,
 } from "@mui/material";
-import type { SoilChemistryResultDTO } from "@flaha/shared-types";
+import type { SoilChemistryInputDTO, SoilChemistryResultDTO } from "@flaha/shared-types";
+import { SoilTestLevel } from "@flaha/shared-types";
 
 import { CHEMISTRY_HELP } from "../utils/agronomicCopy";
 
 interface ChemistryResultCardProps {
 	result: SoilChemistryResultDTO | null | undefined;
+	/**
+	 * Phase 10A.7 (Correction) — declared test level drives the empty-
+	 * state messaging. When omitted the legacy generic message is used.
+	 */
+	testLevel?: SoilTestLevel | null | undefined;
+	/**
+	 * Phase 10A.7 (Correction) — submitted chemistry inputs (pH / EC /
+	 * TDS) so a PRELIMINARY test that has no cation result still
+	 * surfaces the salinity panel inline instead of looking empty.
+	 */
+	chemistryInput?: SoilChemistryInputDTO | null | undefined;
 }
 
-export function ChemistryResultCard({ result }: ChemistryResultCardProps) {
+export function ChemistryResultCard({
+	result,
+	testLevel,
+	chemistryInput,
+}: ChemistryResultCardProps) {
 	return (
 		<Card variant="outlined">
 			<CardHeader
@@ -40,16 +56,22 @@ export function ChemistryResultCard({ result }: ChemistryResultCardProps) {
 							variant="outlined"
 							label={`Mode: ${result.calculationMode}`}
 						/>
+					) : testLevel ? (
+						<Chip
+							size="small"
+							variant="outlined"
+							label={`Level: ${testLevel}`}
+						/>
 					) : null
 				}
 			/>
 			<Divider />
 			<CardContent>
 				{!result ? (
-					<Typography variant="body2" color="text.secondary">
-						No chemistry result yet — this test was processed without a
-						full cation panel.
-					</Typography>
+					<EmptyChemistryState
+						testLevel={testLevel ?? null}
+						chemistryInput={chemistryInput ?? null}
+					/>
 				) : (
 					<Stack spacing={2.5}>
 						<Grid container spacing={2}>
@@ -223,4 +245,61 @@ function DetailRow({
 function fmt(n: number | null | undefined): string {
 	if (n === null || n === undefined) return "\u2014";
 	return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
+/**
+ * Phase 10A.7 (Correction) — level-aware empty state.
+ *
+ * The cation panel is *not required* at PRELIMINARY level; the legacy
+ * "No chemistry result yet" copy implied a defect where none existed.
+ * For PRELIMINARY tests we now surface the salinity inputs (pH / EC /
+ * TDS) inline so the section still carries information. MODERATE /
+ * ADVANCED tests retain the action-oriented "submit cations" prompt.
+ */
+function EmptyChemistryState({
+	testLevel,
+	chemistryInput,
+}: {
+	testLevel: SoilTestLevel | null;
+	chemistryInput: SoilChemistryInputDTO | null;
+}) {
+	if (testLevel === SoilTestLevel.PRELIMINARY) {
+		const pH = chemistryInput?.pH ?? null;
+		const ec = chemistryInput?.ecDsM ?? null;
+		const tds = chemistryInput?.tdsMgL ?? null;
+		const hasSalinity = pH !== null || ec !== null || tds !== null;
+		return (
+			<Stack spacing={1.5} data-testid="chemistry-empty-preliminary">
+				<Typography variant="body2" color="text.secondary">
+					Cation balance is not required at the Preliminary test level.
+					The pH / salinity panel below is the expected evidence for
+					this level.
+				</Typography>
+				{hasSalinity ? (
+					<Stack spacing={1}>
+						<DetailRow label="pH (1:5 water)" value={fmt(pH)} />
+						<DetailRow label="EC (dS/m)" value={fmt(ec)} />
+						{tds !== null ? (
+							<DetailRow label="TDS (mg/L)" value={fmt(tds)} />
+						) : null}
+					</Stack>
+				) : (
+					<Typography variant="caption" color="text.secondary">
+						No salinity inputs submitted yet — add pH and either EC or
+						TDS to complete the Preliminary evidence contract.
+					</Typography>
+				)}
+			</Stack>
+		);
+	}
+	return (
+		<Typography
+			variant="body2"
+			color="text.secondary"
+			data-testid="chemistry-empty-moderate"
+		>
+			Cation panel results not yet calculated. Submit Ca / Mg / K / Na and
+			CEC to populate the {testLevel ?? "Moderate"} evidence contract.
+		</Typography>
+	);
 }
