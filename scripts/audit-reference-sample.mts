@@ -1,13 +1,28 @@
 /**
- * Phase 10S-4 — Scientific Calculation Audit driver.
+ * FlahaSOIL v2 — Phase 10S-4 Scientific Calculation Audit driver.
  *
- * Runs the canonical reference sample (Sand 60, Silt 25, Clay 15, OM 2.5,
- * CEC 18, Ca 11, Mg 3, K 0.6, Na 0.4, pH 7.2, EC 1.0) through every
- * production engine and prints a structured trace so the audit report
- * can be derived from real, in-tree numbers (no hand-recomputed values).
+ * Purpose:
+ *   Runs the Phase 10A.7 canonical MODERATE reference sample (Sand 60,
+ *   Silt 25, Clay 15, OM 2.5, CEC 18, Ca 11, Mg 3, K 0.6, Na 0.4,
+ *   pH 7.2, EC 1.0) through every production engine and prints a
+ *   structured trace so the audit report can be derived from real,
+ *   in-tree numbers — no hand-recomputed values.
  *
- * Read-only: imports from the workspace source, never writes to disk
- * or the database.
+ * Required environment:
+ *   Node ≥ 20 with `--experimental-vm-modules` or tsx; workspace
+ *   packages (@flaha/soil-physics, @flaha/soil-chemistry,
+ *   @flaha/soil-interpretation) must be built first.
+ *
+ * Expected output:
+ *   USDA texture class, Saxton-Rawls physics, CEC-source trace,
+ *   exchangeable cation block, sodicity (SAR/ESP), interpretation
+ *   summary — all printed to stdout as a structured audit trace.
+ *
+ * CI-safe: YES — read-only, no database, no network.
+ *           Run with: `npx tsx scripts/audit-reference-sample.mts`
+ *
+ * Read-only: imports from the workspace source; never writes to disk
+ *   or the database.
  */
 
 // Use dynamic imports to avoid the ESM static-link issue caused by

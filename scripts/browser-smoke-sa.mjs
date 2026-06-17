@@ -1,10 +1,28 @@
-// FlahaSOIL v2 — Phase 10S browser smoke (CDP-driven).
+/** @format */
+
+// =============================================================================
+// FlahaSOIL v2 — Phase 10S browser smoke test (CDP-driven)
+// =============================================================================
+// Purpose:
+//   Spawns headless Chrome against the live SPA, logs the demo owner in via
+//   the SPA's own /auth/login flow, navigates to a soil-test detail page,
+//   clicks the Scientific Analysis tab, and reports what actually rendered:
+//   SVG count, sample-point anchors, console errors, network failures.
+//   Pure stdlib — zero npm dependencies.
 //
-// Spawns headless Chrome against the live SPA, programmatically logs
-// the demo owner in via the SPA's own /auth/login flow, navigates to
-// the soil-test detail page, clicks the Scientific Analysis tab, and
-// reports what actually rendered (SVG count, sample-point anchors,
-// console errors, network failures). Pure stdlib — no npm deps.
+// Required environment:
+//   • Google Chrome installed at the hard-coded Windows path (see CHROME const).
+//   • Frontend dev server running on http://localhost:5173
+//   • Backend running on http://localhost:3002
+//   • Demo seed account: owner@flahademo.test / FlahaDemo!2026
+//   • A valid soilTestId (numeric string) as the sole CLI argument.
+//
+// Expected output:
+//   PASS / FAIL lines for SVG presence, sample-point anchors, console errors,
+//   and network failures, followed by an overall exit code (0 = all pass).
+//
+// CI-safe: NO — requires live servers, a seeded DB, and Chrome on Windows.
+//           Run locally when verifying front-end Scientific Analysis rendering.
 //
 // Usage:
 //   node scripts/browser-smoke-sa.mjs <soilTestId>
@@ -15,7 +33,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const SOIL_TEST_ID = process.argv[2];
-if (!SOIL_TEST_ID) { console.error("usage: browser-smoke-sa.mjs <soilTestId>"); process.exit(2); }
+if (!SOIL_TEST_ID) {
+	console.error("usage: browser-smoke-sa.mjs <soilTestId>");
+	process.exit(2);
+}
 
 const EMAIL = "owner@flahademo.test";
 const PASSWORD = "FlahaDemo!2026";
@@ -26,12 +47,28 @@ const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const USER_DIR = mkdtempSync(join(tmpdir(), "flaha-cdp-"));
 const PORT = 9333;
 
-const chrome = spawn(CHROME, [
-	"--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
-	`--remote-debugging-port=${PORT}`, `--user-data-dir=${USER_DIR}`, "about:blank",
-], { stdio: "ignore" });
+const chrome = spawn(
+	CHROME,
+	[
+		"--headless=new",
+		"--disable-gpu",
+		"--no-first-run",
+		"--no-default-browser-check",
+		`--remote-debugging-port=${PORT}`,
+		`--user-data-dir=${USER_DIR}`,
+		"about:blank",
+	],
+	{ stdio: "ignore" },
+);
 
-const cleanup = () => { try { chrome.kill(); } catch {} try { rmSync(USER_DIR, { recursive: true, force: true }); } catch {} };
+const cleanup = () => {
+	try {
+		chrome.kill();
+	} catch {}
+	try {
+		rmSync(USER_DIR, { recursive: true, force: true });
+	} catch {}
+};
 process.on("exit", cleanup);
 
 async function waitForCdp() {
@@ -59,7 +96,10 @@ function send(ws, method, params = {}, sessionId) {
 async function attachPageSession(ws) {
 	const { targetInfos } = await send(ws, "Target.getTargets");
 	const page = targetInfos.find((t) => t.type === "page");
-	const { sessionId } = await send(ws, "Target.attachToTarget", { targetId: page.targetId, flatten: true });
+	const { sessionId } = await send(ws, "Target.attachToTarget", {
+		targetId: page.targetId,
+		flatten: true,
+	});
 	return sessionId;
 }
 
@@ -72,15 +112,44 @@ async function main() {
 	await new Promise((r) => ws.addEventListener("open", r, { once: true }));
 	ws.addEventListener("message", (ev) => {
 		const m = JSON.parse(ev.data);
-		if (m.id && pending.has(m.id)) { pending.get(m.id).resolve(m.result ?? m.error); pending.delete(m.id); return; }
-		if (m.method === "Runtime.consoleAPICalled") {
-			consoleMessages.push({ level: m.params.type, text: m.params.args.map((a) => a.value ?? a.description ?? "").join(" ") });
+		if (m.id && pending.has(m.id)) {
+			pending.get(m.id).resolve(m.result ?? m.error);
+			pending.delete(m.id);
+			return;
 		}
-		if (m.method === "Log.entryAdded") consoleMessages.push({ level: m.params.entry.level, text: m.params.entry.text });
-		if (m.method === "Runtime.exceptionThrown") consoleMessages.push({ level: "exception", text: m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text });
-		if (m.method === "Network.loadingFailed") networkFailures.push({ url: m.params.requestId, error: m.params.errorText });
-		if (m.method === "Network.responseReceived" && m.params.response.status >= 400) {
-			networkFailures.push({ url: m.params.response.url, status: m.params.response.status });
+		if (m.method === "Runtime.consoleAPICalled") {
+			consoleMessages.push({
+				level: m.params.type,
+				text: m.params.args
+					.map((a) => a.value ?? a.description ?? "")
+					.join(" "),
+			});
+		}
+		if (m.method === "Log.entryAdded")
+			consoleMessages.push({
+				level: m.params.entry.level,
+				text: m.params.entry.text,
+			});
+		if (m.method === "Runtime.exceptionThrown")
+			consoleMessages.push({
+				level: "exception",
+				text:
+					m.params.exceptionDetails.exception?.description ??
+					m.params.exceptionDetails.text,
+			});
+		if (m.method === "Network.loadingFailed")
+			networkFailures.push({
+				url: m.params.requestId,
+				error: m.params.errorText,
+			});
+		if (
+			m.method === "Network.responseReceived" &&
+			m.params.response.status >= 400
+		) {
+			networkFailures.push({
+				url: m.params.response.url,
+				status: m.params.response.status,
+			});
 		}
 	});
 
@@ -110,12 +179,22 @@ async function main() {
 			return { ok: true, hasToken: !!data.session?.accessToken };
 		})();
 	`;
-	const login = await send(ws, "Runtime.evaluate", { expression: loginScript, awaitPromise: true, returnByValue: true }, sid);
+	const login = await send(
+		ws,
+		"Runtime.evaluate",
+		{ expression: loginScript, awaitPromise: true, returnByValue: true },
+		sid,
+	);
 	console.log("LOGIN:", JSON.stringify(login.result?.value));
 
 	// Step 3: navigate to the soil test detail page (cookie now set, SPA will
 	// silently refresh and mount).
-	await send(ws, "Page.navigate", { url: `${SPA}/soil-tests/${SOIL_TEST_ID}` }, sid);
+	await send(
+		ws,
+		"Page.navigate",
+		{ url: `${SPA}/soil-tests/${SOIL_TEST_ID}` },
+		sid,
+	);
 	await new Promise((r) => setTimeout(r, 4000));
 
 	// Step 4: click the Scientific Analysis tab and wait for the panel.
@@ -135,7 +214,12 @@ async function main() {
 			return { ok: false, error: "panel-never-appeared", rootHtml: root ? root.innerHTML.slice(-500) : null };
 		})();
 	`;
-	const click = await send(ws, "Runtime.evaluate", { expression: clickScript, awaitPromise: true, returnByValue: true }, sid);
+	const click = await send(
+		ws,
+		"Runtime.evaluate",
+		{ expression: clickScript, awaitPromise: true, returnByValue: true },
+		sid,
+	);
 	console.log("CLICK:", JSON.stringify(click.result?.value));
 
 	// Step 5: inventory SVGs.
@@ -147,13 +231,36 @@ async function main() {
 		panelBox: (() => { const p = document.querySelector('[data-testid="scientific-analysis-panel"]'); if (!p) return null; const r = p.getBoundingClientRect(); return { w: r.width, h: r.height }; })(),
 		firstSvgBox: (() => { const s = document.querySelector('[data-testid="scientific-analysis-panel"] svg'); if (!s) return null; const r = s.getBoundingClientRect(); return { w: r.width, h: r.height }; })(),
 	})`;
-	const inv = await send(ws, "Runtime.evaluate", { expression: invScript, returnByValue: true }, sid);
+	const inv = await send(
+		ws,
+		"Runtime.evaluate",
+		{ expression: invScript, returnByValue: true },
+		sid,
+	);
 	console.log("INVENTORY:", JSON.stringify(inv.result?.value));
-	console.log("CONSOLE:", JSON.stringify(consoleMessages.filter((m) => m.level !== "log" && m.level !== "info").slice(0, 20)));
-	console.log("NETWORK_FAILURES:", JSON.stringify(networkFailures.filter((f) => !String(f.url).includes("favicon")).slice(0, 20)));
+	console.log(
+		"CONSOLE:",
+		JSON.stringify(
+			consoleMessages
+				.filter((m) => m.level !== "log" && m.level !== "info")
+				.slice(0, 20),
+		),
+	);
+	console.log(
+		"NETWORK_FAILURES:",
+		JSON.stringify(
+			networkFailures
+				.filter((f) => !String(f.url).includes("favicon"))
+				.slice(0, 20),
+		),
+	);
 
 	ws.close();
 	cleanup();
 }
 
-main().catch((e) => { console.error("FATAL:", e); cleanup(); process.exit(1); });
+main().catch((e) => {
+	console.error("FATAL:", e);
+	cleanup();
+	process.exit(1);
+});
