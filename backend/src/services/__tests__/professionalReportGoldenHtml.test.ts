@@ -45,10 +45,11 @@ describe("golden HTML — PRELIMINARY", () => {
 	it("executive summary section", async () => {
 		const h = await getHtml(GOLDEN_PRELIMINARY);
 		assertContains(h, 'id="executive"', "executive section id");
-		// 65/15/20 Loam EC 6.0 → Moderate salinity → Poor overall
+		// 65/15/20 Sandy Clay Loam EC 6.0 → Moderate salinity → Poor overall
+		// BUG-10C-C-01 FIX: 65/15/20 now correctly classified as Sandy Clay Loam.
 		assertContains(h, "Poor", "overall rating Poor");
 		assertContains(h, "0 action items", "action item badge");
-		assertContains(h, "USDA texture class: Loam.", "texture headline Loam");
+		assertContains(h, "USDA texture class: Sandy Clay Loam.", "texture headline Sandy Clay Loam");
 		assertContains(h, "Salinity severity: Moderate.", "salinity headline Moderate");
 	});
 

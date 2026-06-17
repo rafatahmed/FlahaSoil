@@ -221,7 +221,14 @@ export function calculateDensityEffects(
 		thetaSDF: Math.min(CLAMPS.thetaSDFMax, Math.max(CLAMPS.thetaSDFMin, thetaSDF)),
 		theta33DF: Math.min(CLAMPS.theta33DFMax, Math.max(CLAMPS.theta33DFMin, theta33DF)),
 		thetaS33DF: Math.max(CLAMPS.thetaS33DFMin, thetaS33DF),
-		theta1500DF: theta1500t + (0.14 * theta1500t - 0.02),
+		// BUG-10C-C-02 — clamp to CLAMPS.theta1500DFMin (0.001) so that
+		// Math.log(theta1500DF) in Equations 11–12 never receives a non-positive
+		// argument.  The clamp fires only at the sand apex where clay≈0 and
+		// OM≈0; typical soils have theta1500DF >> 0.001.
+		theta1500DF: Math.max(
+			CLAMPS.theta1500DFMin,
+			theta1500t + (0.14 * theta1500t - 0.02)
+		),
 	};
 }
 
@@ -506,6 +513,11 @@ export function determineSoilTextureClass(sand: number, clay: number): string {
 	}
 
 	if (clay >= 20) {
+		// BUG-10C-C-01 FIX: USDA Sandy Clay Loam requires clay 20-35%, silt <28%,
+		// sand >45%. The clay>=27 branch above only covers the upper half of this
+		// range. For clay 20-26% the same sand/silt conditions must be checked
+		// before defaulting to Loam.
+		if (sand > 45 && silt < 28) return "Sandy Clay Loam";
 		return "Loam";
 	}
 
