@@ -12,6 +12,8 @@
  * data states so the UI can render explanatory empty-state cards.
  */
 
+import type { SoilTestLevel } from "./soil-domain";
+
 /** 2-D Cartesian point on a normalised equilateral triangle (side = 100). */
 export interface TrianglePoint {
 	x: number;
@@ -24,6 +26,18 @@ export interface RetentionCurvePointDTO {
 	tensionKpa: number;
 	waterContentVolPercent: number;
 	label?: string;
+}
+
+/**
+ * Phase 10A.7 (WS1) — explicit unit labels so every downstream surface
+ * (UI cards, PDF report, JSON export) renders volumes as `% v/v` and
+ * tensions as `kPa`, eliminating the depth-integrated `mm/m` ambiguity
+ * that motivated the R1 unit-mismatch defect.
+ */
+export interface WaterRetentionUnits {
+	waterContent: "% v/v";
+	tension: "kPa";
+	plantAvailableWater: "% v/v";
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +81,18 @@ export interface WaterRetentionAnalysisBlock {
 	airEntryTensionKpa: number;
 	parameterA: number;
 	parameterB: number;
+	/** Phase 10A.7 (WS1) — explicit unit anchors for downstream rendering. */
+	units: WaterRetentionUnits;
+	/**
+	 * Phase 10A.7 (WS2 — R2) — bulk-density traceability echo, sourced
+	 * directly from the physics engine.
+	 */
+	bulkDensity: {
+		predicted: number;
+		used: number;
+		source: "USER_INPUT" | "DEFAULT";
+		unit: "g/cm³";
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +117,17 @@ export interface StructureAnalysisBlock {
 	caKRatio: number;
 	mgKRatio: number;
 	basesTotal: number;
+	/**
+	 * Phase 10A.7 (WS5 — R3) — unit of the absolute cation values. The
+	 * normalized triple is dimensionless percent of (Ca + Mg + K).
+	 */
+	unit: "cmol(+)/kg";
+	/**
+	 * Phase 10A.7 (WS5 — R3) — mandatory Bear/Albrecht (BCSR) caveat
+	 * sourced from `@flaha/soil-chemistry` so the UI, the JSON export,
+	 * and the PDF report all surface the same disclaimer text.
+	 */
+	disclaimer: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,4 +146,91 @@ export interface ScientificAnalysisResponse {
 	 *   - "Texture fractions sum to 101 % — engine normalised"
 	 */
 	warnings: string[];
+	/**
+	 * Phase 10A.7 (Correction) — evidence-contract coverage, anchored on
+	 * the SoilTest's declared `SoilTestLevel`. Optional for backward
+	 * compatibility with snapshots persisted before the correction; new
+	 * responses always emit it.
+	 */
+	coverage?: ScientificCoverage;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 10A.7 (Correction) — SoilTestLevel-anchored coverage contract
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-module / per-level evidence status.
+ *
+ *   - `Met`         — every expected field for this module was submitted.
+ *   - `Partial`     — some expected fields submitted, others missing.
+ *   - `Missing`     — no expected fields submitted, but the module is
+ *                     expected at the declared level.
+ *   - `NotRequired` — the module is not expected at the declared level.
+ *                     Any submitted fields are still reported as
+ *                     `extraSubmittedFields` for transparency.
+ */
+export type CoverageStatus = "Met" | "Partial" | "Missing" | "NotRequired";
+
+/**
+ * Coverage for a single thematic module (texture, basic chemistry,
+ * cations, etc.). The module always reports both what was expected at
+ * the declared level *and* what was actually submitted — extras are
+ * never blocked, they are just labelled as supplementary.
+ */
+export interface CoverageModule {
+	/** Stable machine id, e.g. `"texture"`, `"basicChemistry"`. */
+	id: string;
+	/** Human-readable module name, e.g. `"Soil texture"`. */
+	label: string;
+	/**
+	 * Minimum `SoilTestLevel` at which this module is expected. `null`
+	 * means the module is always optional regardless of declared level.
+	 */
+	requiredFrom: SoilTestLevel | null;
+	/** True when `requiredFrom` is satisfied by the declared level. */
+	required: boolean;
+	/** Stable display keys for every field the module looks for. */
+	expectedFields: string[];
+	/** Display keys that were present in the submitted lab inputs. */
+	submittedFields: string[];
+	/**
+	 * Expected fields that were NOT submitted. Empty for `NotRequired`
+	 * modules (everything is optional by definition).
+	 */
+	missingExpectedFields: string[];
+	/**
+	 * Fields that were submitted but are not on the expected list for the
+	 * declared level — they are still reported so consumers can credit
+	 * the lab for extra work.
+	 */
+	extraSubmittedFields: string[];
+	status: CoverageStatus;
+}
+
+/**
+ * Roll-up of evidence completeness for the declared `SoilTestLevel`.
+ *
+ * `coveragePercent` is the ratio of required-field slots that were
+ * satisfied, expressed as percent (0-100, one decimal). Alternate
+ * groups (e.g. EC OR TDS) count as a single slot.
+ */
+export interface LevelCompleteness {
+	declaredLevel: SoilTestLevel;
+	status: CoverageStatus;
+	coveragePercent: number;
+	/** Pre-formatted single-sentence summary safe to render verbatim. */
+	statement: string;
+	/** Module ids whose status is `"Met"`. */
+	metModules: string[];
+	/** Module ids whose status is `"Partial"`. */
+	partialModules: string[];
+	/** Module ids whose status is `"Missing"`. */
+	missingModules: string[];
+}
+
+/** Top-level evidence contract — `level` summary + per-module detail. */
+export interface ScientificCoverage {
+	level: LevelCompleteness;
+	modules: CoverageModule[];
 }

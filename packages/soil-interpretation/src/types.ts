@@ -71,4 +71,29 @@ export interface SoilInterpretationResult {
 		agriculture: { verdict: "Suitable" | "Marginal" | "Unsuitable"; reasons: string[] };
 		irrigation: { verdict: "Suitable" | "Marginal" | "Unsuitable"; reasons: string[] };
 	};
+
+	/**
+	 * Phase 10A.7 (WS3) — overall-rating transparency trace.
+	 *
+	 * Lists every signal that contributed to `overallSoilRating`, the
+	 * bucket it landed in (severe / moderateNegative / positive), and a
+	 * human-readable note. Always present; empty arrays when no inputs
+	 * supplied. Consumers (UI, PDF report) should render this so the
+	 * user can see *why* the engine reported Good / Fair / Poor.
+	 */
+	ratingTrace: {
+		severe: RatingTraceEntry[];
+		moderateNegative: RatingTraceEntry[];
+		positive: RatingTraceEntry[];
+		decision: "Poor" | "Fair" | "Good";
+	};
+}
+
+export interface RatingTraceEntry {
+	/** Category name (e.g. "salinityRisk", "phCategory"). */
+	category: string;
+	/** Engine-emitted value (e.g. "High", "Strongly Acidic"). */
+	value: string;
+	/** Short explanation of why it lands in this bucket. */
+	note: string;
 }

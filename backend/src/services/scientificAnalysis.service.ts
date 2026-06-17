@@ -12,13 +12,18 @@
  * service trusts its `soilTestId` and never re-checks cross-tenant.
  */
 
-import type {
-	ScientificAnalysisResponse,
-	StructureAnalysisBlock,
-	TextureAnalysisBlock,
-	WaterRetentionAnalysisBlock,
+import {
+	computeScientificCoverage,
+	SoilTestLevel,
+	type ScientificAnalysisResponse,
+	type StructureAnalysisBlock,
+	type TextureAnalysisBlock,
+	type WaterRetentionAnalysisBlock,
 } from "@flaha/shared-types";
-import { classifyCationStructure } from "@flaha/soil-chemistry";
+import {
+	classifyCationStructure,
+	STRUCTURE_TRIANGLE_DISCLAIMER,
+} from "@flaha/soil-chemistry";
 import {
 	barycentricToCartesian,
 	buildWaterRetentionCurve,
@@ -108,6 +113,19 @@ function buildRetentionBlock(t: TextureRow): WaterRetentionAnalysisBlock | null 
 		airEntryTensionKpa: curve.airEntryTensionKpa,
 		parameterA: curve.parameterA,
 		parameterB: curve.parameterB,
+		// Phase 10A.7 (WS1) — explicit unit anchors.
+		units: {
+			waterContent: "% v/v",
+			tension: "kPa",
+			plantAvailableWater: "% v/v",
+		},
+		// Phase 10A.7 (WS2 — R2) — bulk-density traceability echo.
+		bulkDensity: {
+			predicted: curve.bulkDensity.predicted,
+			used: curve.bulkDensity.used,
+			source: curve.bulkDensity.source,
+			unit: "g/cm³",
+		},
 	};
 }
 
@@ -140,6 +158,9 @@ function buildStructureBlock(c: ChemistryRow): StructureAnalysisBlock | null {
 		caKRatio: s.caKRatio,
 		mgKRatio: s.mgKRatio,
 		basesTotal: s.basesTotal,
+		// Phase 10A.7 (WS5 — R3) — explicit unit + mandatory Bear/Albrecht caveat.
+		unit: "cmol(+)/kg",
+		disclaimer: STRUCTURE_TRIANGLE_DISCLAIMER,
 	};
 }
 
@@ -209,5 +230,25 @@ export async function getScientificAnalysis(
 		warnings.push("Chemistry inputs missing — structure triangle unavailable.");
 	}
 
-	return { soilTestId, texture, waterRetention, structure, warnings };
+	const declaredLevel = readLevel(row["testLevel"]);
+	const coverage = computeScientificCoverage(declaredLevel, {
+		texture: textureRow,
+		chemistry: chemistryRow,
+	});
+
+	return {
+		soilTestId,
+		texture,
+		waterRetention,
+		structure,
+		warnings,
+		coverage,
+	};
+}
+
+function readLevel(value: unknown): SoilTestLevel {
+	if (value === SoilTestLevel.ADVANCED || value === SoilTestLevel.MODERATE) {
+		return value;
+	}
+	return SoilTestLevel.PRELIMINARY;
 }

@@ -24,6 +24,31 @@
  */
 
 // ---------------------------------------------------------------------------
+// Scientific disclaimer (Phase 10A.7 — Scientific Audit R3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Mandatory caveat that MUST accompany every visual or report surface
+ * that renders the Bear/Albrecht structural cation triangle.
+ *
+ * The Basic Cation Saturation Ratio (BCSR) school is widely used in
+ * commercial lab interpretations (Eurofins, BLGG, Brookside) but its
+ * predictive power for yield, soil structure, and aggregate stability
+ * is **not supported** by controlled trials when sufficiency-level
+ * cation supplies are already met (Kopittke & Menzies 2007, SSSAJ
+ * 71:259–265). The triangle is provided as a diagnostic visualisation
+ * of relative cation balance only; agronomic decisions should also
+ * weigh absolute sufficiency, pH, OM, texture, and crop demand.
+ */
+export const STRUCTURE_TRIANGLE_DISCLAIMER =
+	"Bear/Albrecht (BCSR) cation balance is a diagnostic visualisation only. " +
+	"Per Kopittke & Menzies (2007, SSSAJ 71:259–265), the basic cation " +
+	"saturation ratio concept lacks consistent peer-reviewed support for " +
+	"predicting crop yield once sufficiency-level supplies of Ca, Mg, and K " +
+	"are met. Treat the triangle as a balance indicator, not a yield model; " +
+	"interpret alongside absolute sufficiency, pH, OM, texture, and crop demand.";
+
+// ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 

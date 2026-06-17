@@ -845,6 +845,18 @@ export const mockApiV2Client: ApiV2Client = {
 				airEntryTensionKpa: 1.5,
 				parameterA: 1000,
 				parameterB: -4.5,
+				// Phase 10A.7 (WS1 / WS2) — units + bulk-density traceability.
+				units: {
+					waterContent: "% v/v",
+					tension: "kPa",
+					plantAvailableWater: "% v/v",
+				},
+				bulkDensity: {
+					predicted: 1.45,
+					used: 1.4,
+					source: "USER_INPUT",
+					unit: "g/cm³",
+				},
 			},
 			structure: {
 				ca: 12, mg: 3, k: 0.6, na: 0.2, cec: 18.2,
@@ -854,6 +866,10 @@ export const mockApiV2Client: ApiV2Client = {
 				matched: true,
 				caMgRatio: 4, caKRatio: 20, mgKRatio: 5,
 				basesTotal: 15.6,
+				// Phase 10A.7 (WS5 — R3) — unit + Bear/Albrecht disclaimer.
+				unit: "cmol(+)/kg",
+				disclaimer:
+					"Bear/Albrecht (BCSR) cation balance is a diagnostic visualisation only.",
 			},
 			warnings: [],
 		};
@@ -1067,7 +1083,7 @@ function mockProfessionalReport(): ProfessionalReportDTO {
 		physics: {
 			fieldCapacity: 0.28, wiltingPoint: 0.12, plantAvailableWater: 0.16,
 			bulkDensity: 1.35, porosity: 0.49, saturation: 0.45, saturatedConductivity: 12.5,
-			units: { moisture: "cm/cm", bulkDensity: "g/cm³", conductivity: "mm/h" },
+			units: { moisture: "% v/v", bulkDensity: "g/cm³", conductivity: "mm/h", porosity: "% v/v", saturation: "% v/v" },
 		},
 		chemistry: {
 			pH: 7.6, ece: 1.2, organicMatter: 2.5, cec: 18.2,

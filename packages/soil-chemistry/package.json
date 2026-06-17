@@ -6,7 +6,8 @@
 	"main": "src/index.ts",
 	"types": "src/index.ts",
 	"scripts": {
-		"build": "echo \"[packages/soil-chemistry] build placeholder — wired in Phase 3\"",
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"build": "npm run typecheck",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},

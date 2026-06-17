@@ -9,6 +9,7 @@
  */
 
 import type {
+	RatingTraceEntry,
 	SoilInterpretationInput,
 	SoilInterpretationResult,
 } from "./types";
@@ -50,6 +51,12 @@ export function interpretSoil(
 	const result: SoilInterpretationResult = {
 		overallSoilRating: "Fair",
 		warnings: [],
+		ratingTrace: {
+			severe: [],
+			moderateNegative: [],
+			positive: [],
+			decision: "Fair",
+		},
 	};
 
 	// -------------------------------------------------------------------
@@ -215,39 +222,88 @@ export function interpretSoil(
 		result.waterHoldingClass,
 	];
 
-	// Per spec: any "High" or "Severe" risk → Poor.
-	const hasSevere =
-		result.salinityRisk === "Severe" ||
-		result.salinityRisk === "High" ||
-		result.sodiumRisk === "High" ||
-		result.phCategory === "Strongly Acidic" ||
-		result.phCategory === "Highly Alkaline" ||
-		result.cecLevel === "Very Low" ||
-		result.cationBalance === "Imbalanced";
+	// Per spec: any "High" or "Severe" risk → Poor. The trace records
+	// every contributor so the UI/report can explain the decision.
+	const severe: RatingTraceEntry[] = [];
+	const moderateNegative: RatingTraceEntry[] = [];
+	const positive: RatingTraceEntry[] = [];
 
-	const hasModerateNegative =
-		result.salinityRisk === "Moderate" ||
-		result.sodiumRisk === "Moderate" ||
-		result.cecLevel === "Low" ||
-		result.baseSaturationCategory === "Low" ||
-		result.waterHoldingClass === "Low";
+	const push = (
+		bucket: RatingTraceEntry[],
+		category: string,
+		value: string | undefined,
+		note: string
+	) => {
+		if (value !== undefined) bucket.push({ category, value, note });
+	};
 
-	const positiveSignals = categories.filter(
-		(c) =>
-			c === "Neutral" ||
-			c === "Low" || // salinity / sodium "Low" is positive
-			c === "Moderate" ||
-			c === "High" || // CEC / water-holding "High" is positive
-			c === "Balanced"
-	).length;
-
-	if (hasSevere) {
-		result.overallSoilRating = "Poor";
-	} else if (hasModerateNegative) {
-		result.overallSoilRating = "Fair";
-	} else if (positiveSignals > 0) {
-		result.overallSoilRating = "Good";
+	if (result.salinityRisk === "Severe" || result.salinityRisk === "High") {
+		push(severe, "salinityRisk", result.salinityRisk, "EC ≥ 4 dS/m (FAO-29)");
 	}
+	if (result.sodiumRisk === "High") {
+		push(severe, "sodiumRisk", result.sodiumRisk, "ESP > 15 % (sodic)");
+	}
+	if (result.phCategory === "Strongly Acidic" || result.phCategory === "Highly Alkaline") {
+		push(severe, "phCategory", result.phCategory, "pH < 5.5 or ≥ 8.5");
+	}
+	if (result.cecLevel === "Very Low") {
+		push(severe, "cecLevel", result.cecLevel, "CEC < 5 cmol(+)/kg");
+	}
+	if (result.cationBalance === "Imbalanced") {
+		push(severe, "cationBalance", result.cationBalance,
+			"Outside Ca 60–75 % / Mg 10–20 % / K 2–5 % windows");
+	}
+
+	if (result.salinityRisk === "Moderate") {
+		push(moderateNegative, "salinityRisk", result.salinityRisk, "EC 2–4 dS/m");
+	}
+	if (result.sodiumRisk === "Moderate") {
+		push(moderateNegative, "sodiumRisk", result.sodiumRisk, "ESP 6–15 %");
+	}
+	if (result.cecLevel === "Low") {
+		push(moderateNegative, "cecLevel", result.cecLevel, "CEC 5–15 cmol(+)/kg");
+	}
+	if (result.baseSaturationCategory === "Low") {
+		push(moderateNegative, "baseSaturationCategory", result.baseSaturationCategory,
+			"BS < 50 %");
+	}
+	if (result.waterHoldingClass === "Low") {
+		push(moderateNegative, "waterHoldingClass", result.waterHoldingClass,
+			"PAW < 10 % v/v");
+	}
+
+	const positiveMatchers: Array<[string, string | undefined, string]> = [
+		["phCategory", result.phCategory === "Neutral" ? result.phCategory : undefined, "pH 6.5–7.5"],
+		["salinityRisk", result.salinityRisk === "Low" ? result.salinityRisk : undefined, "EC < 2 dS/m"],
+		["sodiumRisk", result.sodiumRisk === "Low" ? result.sodiumRisk : undefined, "ESP < 6 %"],
+		["cecLevel", result.cecLevel === "High" || result.cecLevel === "Moderate"
+			? result.cecLevel : undefined, "CEC ≥ 15 cmol(+)/kg"],
+		["baseSaturationCategory", result.baseSaturationCategory === "High" ||
+			result.baseSaturationCategory === "Moderate" ? result.baseSaturationCategory : undefined,
+			"BS ≥ 50 %"],
+		["cationBalance", result.cationBalance === "Balanced" ? result.cationBalance : undefined,
+			"Ca/Mg/K within windows"],
+		["waterHoldingClass", result.waterHoldingClass === "High" ||
+			result.waterHoldingClass === "Moderate" ? result.waterHoldingClass : undefined,
+			"PAW ≥ 10 % v/v"],
+	];
+	for (const [cat, val, note] of positiveMatchers) push(positive, cat, val, note);
+
+	const decision: "Poor" | "Fair" | "Good" =
+		severe.length > 0
+			? "Poor"
+			: moderateNegative.length > 0
+				? "Fair"
+				: positive.length > 0
+					? "Good"
+					: "Fair";
+
+	result.overallSoilRating = decision;
+	result.ratingTrace = { severe, moderateNegative, positive, decision };
+
+	// `categories` retained for downstream consumers that introspect the
+	// classification dictionary; mark as intentionally used.
+	void categories;
 
 	return result;
 }

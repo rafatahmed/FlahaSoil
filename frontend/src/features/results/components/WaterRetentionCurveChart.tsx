@@ -110,7 +110,12 @@ export function WaterRetentionCurveChart({ retention }: WaterRetentionCurveChart
 				))}
 			</Box>
 			<Typography variant="body2" color="text.secondary">
-				{`PAW = ${retention.plantAvailableWater.toFixed(1)} % · MAD ${(retention.madFraction * 100).toFixed(0)} % · ${retention.textureClass} (Saxton-Rawls 2006)`}
+				{`PAW = ${retention.plantAvailableWater.toFixed(1)} ${retention.units.plantAvailableWater} · MAD ${(retention.madFraction * 100).toFixed(0)} % · ${retention.textureClass} (Saxton-Rawls 2006)`}
+			</Typography>
+			<Typography variant="caption" color="text.secondary" data-testid="bulk-density-trace">
+				{`Bulk density — predicted ${retention.bulkDensity.predicted.toFixed(3)} ${retention.bulkDensity.unit}, used ${retention.bulkDensity.used.toFixed(3)} ${retention.bulkDensity.unit} (${
+					retention.bulkDensity.source === "USER_INPUT" ? "user input" : "engine default"
+				})`}
 			</Typography>
 		</Stack>
 	);

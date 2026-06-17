@@ -118,6 +118,21 @@ export interface WaterRetentionCurveResult {
 	/** USDA texture class (PascalCase) used as the curve label. */
 	textureClass: string;
 
+	/**
+	 * Phase 10A.7 (WS2 — R2) — bulk-density traceability.
+	 *
+	 *   - `predicted` : ρN from Saxton-Rawls Eq 6 ((1 − θS) × 2.65), g/cm³.
+	 *   - `used`      : ρDF — the value actually fed to the density-
+	 *                   adjusted equations (= user `densityFactor` when
+	 *                   supplied, else engine default).
+	 *   - `source`    : provenance flag for `used`.
+	 */
+	bulkDensity: {
+		predicted: number;
+		used: number;
+		source: "USER_INPUT" | "DEFAULT";
+	};
+
 	/** Engine identifier — locked to the published Saxton-Rawls calibration. */
 	method: "saxton-rawls-2006";
 }
@@ -218,6 +233,10 @@ export function buildWaterRetentionCurve(
 	const clay = input.clay;
 	const om = input.organicMatter ?? DEFAULTS.organicMatter;
 	const densityFactor = input.densityFactor ?? DEFAULTS.densityFactor;
+	const densityFactorSource: "USER_INPUT" | "DEFAULT" =
+		input.densityFactor !== undefined && Number.isFinite(input.densityFactor)
+			? "USER_INPUT"
+			: "DEFAULT";
 
 	if (sand < 0 || sand > 100 || clay < 0 || clay > 100 || sand + clay > 100) {
 		throw new Error("Invalid sand/clay percentages");
@@ -233,6 +252,9 @@ export function buildWaterRetentionCurve(
 	const moisture = calculateMoistureRegressions(S, C, OM);
 	const density = calculateDensityEffects(moisture, densityFactor);
 	const tension = calculateMoistureTensionRelationships(S, C, OM, density);
+	// Phase 10A.7 R2 — capture the predicted vs. used bulk density.
+	const predictedBulkDensity = density.rhoN;
+	const usedBulkDensity = density.rhoDF;
 	const { A, B } = calibrateSrCoefficients(density.theta33DF, density.theta1500DF);
 
 	const params: CurveParameters = {
@@ -296,6 +318,11 @@ export function buildWaterRetentionCurve(
 		parameterB: params.B,
 		airEntryTensionKpa: params.psiE,
 		textureClass: determineSoilTextureClass(sand, clay),
+		bulkDensity: {
+			predicted: predictedBulkDensity,
+			used: usedBulkDensity,
+			source: densityFactorSource,
+		},
 		method: "saxton-rawls-2006",
 	};
 }

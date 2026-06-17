@@ -151,7 +151,11 @@ export function SoilTestDetailPage() {
 						<PhysicsResultCard result={data.physicsResult} />
 					</Grid>
 					<Grid item xs={12} md={6}>
-						<ChemistryResultCard result={data.chemistryResult} />
+						<ChemistryResultCard
+							result={data.chemistryResult}
+							testLevel={data.soilTest.testLevel}
+							chemistryInput={data.chemistryInput}
+						/>
 					</Grid>
 					<Grid item xs={12} md={6}>
 						<InterpretationCard interpretation={data.interpretation} />

@@ -123,6 +123,8 @@ interface InputParametersEcho {
 	densityFactor: number;
 	gravelContent: number;
 	electricalConductivity: number;
+	/** Phase 10A.7 R2 — provenance of `densityFactor` (ρDF). */
+	densityFactorSource: "USER_INPUT" | "DEFAULT";
 }
 
 // ---------------------------------------------------------------------------
@@ -555,10 +557,13 @@ export function formatResultsByPlan(
 		compactionRisk: qualityIndicators.compactionRisk,
 		erosionRisk: qualityIndicators.erosionRisk,
 
-		// Bulk density information with clarification
-		bulkDensity: densityResults.rhoN.toFixed(3), // CALCULATED bulk density (Eq 6)
+		// Bulk density information with clarification (Phase 10A.7 R2)
+		bulkDensity: densityResults.rhoN.toFixed(3), // CALCULATED ρN (Eq 6); legacy field — see predictedBulkDensity
 		bulkDensityFactor: densityResults.rhoN.toFixed(2),
 		inputBulkDensity: inputParameters.densityFactor,
+		predictedBulkDensity: densityResults.rhoN.toFixed(3),
+		bulkDensityUsed: densityResults.rhoDF.toFixed(3),
+		bulkDensitySource: inputParameters.densityFactorSource,
 
 		// Additional soil properties
 		porosity: additionalProperties.porosity,
@@ -655,6 +660,10 @@ export function calculateSoilPhysics(
 	const clay = input.clay;
 	const om = input.organicMatter ?? DEFAULTS.organicMatter;
 	const densityFactor = input.densityFactor ?? DEFAULTS.densityFactor;
+	const densityFactorSource: "USER_INPUT" | "DEFAULT" =
+		input.densityFactor !== undefined && Number.isFinite(input.densityFactor)
+			? "USER_INPUT"
+			: "DEFAULT";
 	const gravelContent = input.gravelContent ?? DEFAULTS.gravelContent;
 	const electricalConductivity =
 		input.electricalConductivity ?? DEFAULTS.electricalConductivity;
@@ -738,6 +747,7 @@ export function calculateSoilPhysics(
 			densityFactor,
 			gravelContent,
 			electricalConductivity,
+			densityFactorSource,
 		}
 	);
 }
