@@ -165,6 +165,27 @@ Existing tests updated to assert the new `ratingTrace` shape:
 
 ---
 
+## 5. Test Infrastructure Stability (Post-Commit Fixes)
+
+The Phase 10A.7 verification revealed two pre-existing stability issues in the backend test suite on Windows.
+
+### 5.1 Native Module Crash (argon2)
+
+- **Root Cause**: Vitest's default multi-fork pool loads the `argon2` native module concurrently in multiple processes, triggering a Windows access violation (`0xC0000005`).
+- **Fix**: Added `backend/vitest.config.ts` to force `poolOptions.forks.singleFork = true`. This ensures deterministic, serial execution of backend tests, eliminating the crash.
+
+### 5.2 Flaky JWT Tamper Test
+
+- **Root Cause**: `jwt.test.ts` tampered with tokens by flipping the final character of the base64url signature. Due to padding/encoding rules, this occasionally resulted in a valid (unchanged) signature, causing intermittent test failure.
+- **Fix**: Updated the test to mutate a character in the JWT payload section, which guaranteed a signature mismatch.
+
+### 5.3 Cross-Test Environment Leak
+
+- **Root Cause**: `app.test.ts` set `process.env.ALLOW_DEV_AUTH="true"` at module load without restoration. Under the new `singleFork` model, this leaked into `emailProvider.test.ts`, causing production-mode validation to fail.
+- **Fix**: Added `afterAll` cleanup in `app.test.ts` to restore the environment state.
+
+---
+
 ## 5. References
 
 - USDA NRCS Soil Survey Manual (Handbook 18), Ch. 3 (texture) and Ch. 5 (water).

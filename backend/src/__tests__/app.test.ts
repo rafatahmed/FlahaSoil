@@ -22,7 +22,11 @@
  */
 
 // MUST run before importing `createApp` / `../app` so the env proxy
-// reads ALLOW_DEV_AUTH=true on first access.
+// reads ALLOW_DEV_AUTH=true on first access. The prior value is captured
+// so `afterAll` can restore it — under single-fork execution every test
+// file shares one process, so leaking ALLOW_DEV_AUTH=true would break
+// suites that later force NODE_ENV=production.
+const _priorAllowDevAuth = process.env.ALLOW_DEV_AUTH;
 process.env.ALLOW_DEV_AUTH = "true";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -159,6 +163,14 @@ beforeAll(() => {
 
 afterAll(() => {
 	setPrismaClientForTesting(null);
+	// Restore the env this file mutated at load time so the value does
+	// not leak into other suites sharing the process (single-fork).
+	if (_priorAllowDevAuth === undefined) {
+		delete process.env.ALLOW_DEV_AUTH;
+	} else {
+		process.env.ALLOW_DEV_AUTH = _priorAllowDevAuth;
+	}
+	_resetEnvForTesting();
 });
 
 describe("liveness probes", () => {
