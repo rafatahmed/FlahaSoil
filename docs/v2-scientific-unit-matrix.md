@@ -24,7 +24,7 @@
 | Wilting point (θWP)     | `calculateSoilPhysics.wiltingPoint`                                               | % v/v       | `waterRetention.wiltingPoint.waterContentVolPercent`                | **% v/v** (WS1)        | `waterContent`    | 1         | (anchor for PAW)                                            |
 | Plant available water   | `calculateSoilPhysics.plantAvailableWater`                                        | **% v/v**   | `waterRetention.plantAvailableWater`                                | **% v/v** (WS1)        | `waterContent`    | 1         | `classifyWaterHolding` (Low <10, Mod 10–15, High ≥15) — WS3 |
 | Saturation (θS)         | `calculateSoilPhysics.saturation`                                                 | % v/v       | `waterRetention.saturation.waterContentVolPercent`                  | % v/v                  | `waterContent`    | 1         | —                                                           |
-| Ksat                    | `calculateSoilPhysics.saturatedConductivity`                                      | mm/h        | passthrough                                                         | mm/h                   | `conductivity`    | 2         | `classifyDrainageFromKsat`, `classifyInfiltration`          |
+| Ksat                    | `calculateSoilPhysics.saturatedConductivity`                                      | mm/h        | passthrough                                                         | mm/h (WS6)             | `conductivity`    | 2         | `classifyDrainageFromKsat`, `classifyInfiltration`          |
 | Air-entry tension (ψae) | `waterRetentionCurve.airEntryTensionKpa`                                          | kPa         | `waterRetention.airEntryTensionKpa`                                 | kPa (WS1)              | `tensionKpa`      | 1         | —                                                           |
 | Tension @ FC / WP / MAD | `waterRetentionCurve.{fieldCapacity,wiltingPoint,irrigationThreshold}.tensionKpa` | kPa         | same                                                                | kPa (WS1)              | `tensionKpa`      | 1         | —                                                           |
 | pF                      | `waterRetentionCurve.points[].pF`                                                 | unitless    | same                                                                | log₁₀(cm H₂O)          | `pF`              | 2         | —                                                           |
@@ -40,6 +40,16 @@ floated as a bare number now carries an explicit `units` block
 interpretation rule was anchored to depth-integrated `mm/m`
 thresholds (50 / 150) while the engine emitted `% v/v`, which
 forced every realistic mineral soil into "Low".
+
+**WS6 — Ksat domain guard (Phase 10B, BUG-10B-01).** The unit
+remains **mm/h**. Phase 10B added a domain guard for extreme
+texture / bulk-density combinations: the Saxton-Rawls conductivity
+term (θ(S-33)DF, Eq 10) is constrained before exponentiation
+(`Math.pow(thetaS33DF, 3 − λ)`, Eq 16) when the equation enters an
+invalid mathematical domain (a negative base raised to a fractional
+exponent). This prevents `NaN` / `Infinity` output and guarantees a
+finite Ksat. This is a **numerical robustness correction, not a unit
+change** — no formula, threshold, or precision was altered.
 
 ---
 
