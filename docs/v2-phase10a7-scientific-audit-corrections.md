@@ -3,9 +3,18 @@
 # FlahaSOIL v2 — Phase 10A.7 Scientific Audit Corrections
 
 > Closes the release-blocking findings from the Phase 10S-3 / 10S-4
-> scientific audits. Branch:
-> `phase-10a7-scientific-audit-corrections`. Baseline:
-> `70d788f`. **No push, no merge, no tag** — awaiting review.
+> scientific audits. Baseline: `70d788f`.
+>
+> **Status: MERGED.** Phase 10A.7 is merged into `main` and tagged
+> `v0.10.7-phase-10a7`.
+>
+> - Scientific corrections commit: `2e1ab7f`
+> - Backend test-stability commit: `9282d6b`
+> - Merge commit: `f70acbb`
+>
+> A concise release sign-off (final verification matrix, non-blocking
+> warnings, and known technical debt) is recorded in
+> `docs/v2-phase10a7-release-summary.md`.
 
 ---
 
@@ -186,7 +195,110 @@ The Phase 10A.7 verification revealed two pre-existing stability issues in the b
 
 ---
 
-## 5. References
+## 6. Reporting-contract clarifications (B-series)
+
+These items refine how Phase 10A.7 surfaces chemistry and bulk-density
+provenance in the professional report. They are unit/provenance honesty
+rules, not new calculations.
+
+### 6.1 CEC provenance (B5)
+
+The report never silently promotes a non-lab CEC to a lab measurement.
+`CecSource` (`packages/shared-types/src/professional-report.ts`) is one
+of:
+
+```text
+LAB                — `cec` came directly from the chemistry input row.
+DERIVED_CATION_SUM — LAB mode with no CEC input; engine summed cations.
+ESTIMATED          — ESTIMATED mode (clay × 0.5 + organic matter × 2).
+MISSING            — no chemistry result was produced.
+```
+
+`deriveCecSource` (`composeProfessionalReport.ts`) selects the value
+and `cecSourceBanner` (`renderer/defaultTemplate.ts`) renders a
+**Provisional CEC** banner for any non-`LAB` source. Derived CEC must
+be presented as provisional, not as lab CEC.
+
+### 6.2 Exchangeable cations vs plant-available K (B4 / B6)
+
+Exchangeable cations and plant-available nutrients carry different
+units and MUST NOT be merged at the renderer:
+
+```text
+Exchangeable Ca, Mg, K, Na = cmol(+)/kg   (ExchangeableCationsBlock)
+Plant-available / extractable K = mg/kg   (macronutrient cell, `kMgKg`)
+```
+
+The chemistry input row stores `k` as **exchangeable K in cmol(+)/kg**.
+It is not mirrored into the mg/kg macronutrient cell (doing so would
+drop the unit and mislead by a factor of ~390). Until a dedicated
+`kMgKg` field is supplied, the report renders the plant-available K
+cell as missing. Only sulphur (S) remains in the mg/kg secondary block.
+
+### 6.3 CEC structure triangle — display honesty (B10)
+
+```text
+SVG asset:     public/assets/img/Structure Triangle.svg
+Frontend path: /assets/img/Structure%20Triangle.svg
+```
+
+The plotted point uses **CEC saturation** barycentric coordinates:
+
+```text
+Ca saturation  = Ca / CEC × 100
+Mg saturation  = Mg / CEC × 100
+Residual CEC   = 100 − Ca saturation − Mg saturation
+```
+
+Honesty rule: the SVG's coloured zone polygons are a **visual
+background only**. They are not digitized, so SVG zone-polygon
+classification is **not** claimed. The verdict label comes from the
+`@flaha/soil-chemistry` threshold rules (`STRUCTURE_THRESHOLDS`),
+reported separately from the plotted saturation point.
+
+### 6.4 Salinity / sodicity reference gate
+
+The locked reference sample pins benign salinity/sodicity so the rule
+layer cannot regress into spurious remediation advice:
+
+```text
+Reference sample: EC = 1.00 dS/m, SAR ≈ 0.15, ESP ≈ 2.22 %
+
+Expected: Salinity = None or Low
+          Sodicity = None or Low
+          No gypsum recommendation
+          No leaching recommendation
+          No salt-tolerant-crop recommendation
+```
+
+This is asserted in
+`packages/soil-chemistry/src/__tests__/reference-sample.test.ts`.
+
+---
+
+## 7. Final verification (merged on `main`)
+
+```text
+API typecheck: PASS
+API tests:     22 passed / 1 skipped files, 206 passed / 1 skipped tests
+
+Web typecheck: PASS
+Web tests:     10 passed files, 40 passed tests
+Web build:     PASS
+
+Soil physics tests:        70 passed
+Soil chemistry tests:      45 passed
+Soil interpretation tests: 37 passed
+```
+
+Backend stability: the suite runs in single-fork mode (see §5) and
+exited cleanly across repeated runs on Windows. Full sign-off, commit
+references, non-blocking warnings, and technical debt are recorded in
+`docs/v2-phase10a7-release-summary.md`.
+
+---
+
+## 8. References
 
 - USDA NRCS Soil Survey Manual (Handbook 18), Ch. 3 (texture) and Ch. 5 (water).
 - Saxton, K.E. & Rawls, W.J. (2006). _Soil water characteristic estimates by texture and organic matter for hydrologic solutions._ SSSAJ 70:1569-1578.

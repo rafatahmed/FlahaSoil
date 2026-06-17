@@ -2,6 +2,12 @@
 
 # FlahaSOIL v2 — API Contracts (Phase 4)
 
+> **Note:** This document is a Phase 4 draft and does not fully describe
+> Phase 10A.7 professional-report / scientific-coverage contracts. See
+> `docs/v2-phase10a7-release-summary.md` and
+> `docs/v2-phase10a7-scientific-audit-corrections.md` for the current
+> Phase 10A.7 report/scientific contract.
+
 > **Status:** Draft. Contracts live in `packages/shared-types/src/`. No
 > controllers, routes, or runtime validation have been implemented.
 > The legacy API under `api-implementation/` remains the runtime source

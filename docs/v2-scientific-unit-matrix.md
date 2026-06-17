@@ -47,8 +47,9 @@ forced every realistic mineral soil into "Low".
 
 | Variable             | Engine output                             | Engine unit   | DTO field (`StructureAnalysisBlock` / report) | DTO unit             | `QuantityKind`     | Precision | Interpretation rule                                            |
 | -------------------- | ----------------------------------------- | ------------- | --------------------------------------------- | -------------------- | ------------------ | --------- | -------------------------------------------------------------- |
-| CEC                  | `calculateSoilChemistry.cec`              | cmol(+)/kg    | `structure.cec`                               | **cmol(+)/kg** (WS5) | `cec`              | 1         | `classifyCec`                                                  |
-| Ca, Mg, K, Na        | `calculateSoilChemistry.{ca,mg,k,na}`     | cmol(+)/kg    | `structure.{ca,mg,k,na}` + `structure.unit`   | **cmol(+)/kg** (WS5) | `cation`           | 2         | (used by triangle + ratios)                                    |
+| CEC                  | `calculateSoilChemistry.cec`              | cmol(+)/kg    | `structure.cec` + `cecSource` (B5)            | **cmol(+)/kg** (WS5) | `cec`              | 1         | `classifyCec`                                                  |
+| Ca, Mg, K, Na (exch) | `calculateSoilChemistry.{ca,mg,k,na}`     | cmol(+)/kg    | `exchangeableCations.{ca,mg,k,na}` + `unit`   | **cmol(+)/kg** (B4)  | `cation`           | 2         | (used by triangle + ratios)                                    |
+| K (plant-available)  | macronutrient input `kMgKg` (B6)          | mg/kg         | macronutrient cell (separate from exch. K)    | **mg/kg**            | `nutrientMgKg`     | 1         | (fertility only — never mirrored from exchangeable K)          |
 | Ca/Mg/K saturation % | `calculateSoilChemistry.{ca,mg,k}Percent` | % of CEC      | `structure.normalized.{ca,mg,k}`              | % of (Ca+Mg+K)       | `cationSaturation` | 1         | `classifyCationBalance` (Ca 60-75, Mg 10-20, K 2-5)            |
 | Base saturation      | `calculateSoilChemistry.baseSaturation`   | % of CEC      | report `baseSaturation`                       | %                    | `baseSaturation`   | 1         | `classifyBaseSaturation`                                       |
 | ESP                  | `calculateSoilChemistry.esp`              | % of CEC      | report `esp`                                  | %                    | `esp`              | 1         | `classifySodiumRisk`, `classifySodicitySeverity`               |
@@ -63,6 +64,25 @@ triangle MUST also carry `STRUCTURE_TRIANGLE_DISCLAIMER` (Kopittke &
 Menzies 2007, SSSAJ 71:259-265). The disclaimer is checked in
 `packages/soil-chemistry/src/__tests__/reference-sample.test.ts` to
 prevent silent removal.
+
+**B5 — CEC provenance.** The report carries a `cecSource` of `LAB` /
+`DERIVED_CATION_SUM` / `ESTIMATED` / `MISSING`. Only `LAB` is a
+measured value; every other source renders a **Provisional CEC**
+banner. Derived CEC must never be presented as lab CEC.
+
+**B4 / B6 — cation unit separation.** Exchangeable Ca/Mg/K/Na are
+`cmol(+)/kg` (`ExchangeableCationsBlock`); plant-available K is
+`mg/kg` (`kMgKg` macronutrient cell). Exchangeable K must not be
+displayed as K mg/kg — the two are never mirrored at the renderer.
+
+**B10 — structure-triangle display honesty.** The triangle backdrop is
+the SVG asset `public/assets/img/Structure Triangle.svg` (served at
+`/assets/img/Structure%20Triangle.svg`). The plotted point uses CEC
+saturation barycentric coordinates (`Ca/CEC`, `Mg/CEC`, residual =
+`100 − Ca_sat − Mg_sat`). The SVG zone polygons are a **visual
+reference only and are not digitized**; classification comes from
+`@flaha/soil-chemistry` threshold rules (`STRUCTURE_THRESHOLDS`),
+reported separately. SVG zone-polygon classification is not claimed.
 
 ---
 
