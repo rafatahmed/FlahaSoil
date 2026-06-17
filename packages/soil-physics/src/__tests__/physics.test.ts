@@ -15,7 +15,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { calculateSoilPhysics } from "../calculateSoilPhysics";
+import { calculateSoilPhysics, determineSoilTextureClass } from "../calculateSoilPhysics";
 import type { SoilPhysicsInput, UserPlan } from "../types";
 
 interface BaselineCore {
@@ -308,4 +308,110 @@ describe("calculateSoilPhysics — legacy baseline regression", () => {
 			});
 		});
 	}
+});
+
+// ---------------------------------------------------------------------------
+// BUG-10C-C-01 — determineSoilTextureClass: Sandy Clay Loam boundary
+//
+// USDA defines Sandy Clay Loam as clay 20-35%, silt <28%, sand >45%.
+// The legacy rule-based classifier only checked for Sandy Clay Loam when
+// clay ≥ 27, causing soils with clay 20-26% + sand >45% + silt <28% to
+// be misclassified as Loam. Confirmed by comparing against the polygon-
+// based classifyTexture engine (textureTriangle.ts).
+// ---------------------------------------------------------------------------
+
+describe("BUG-10C-C-01 — determineSoilTextureClass Sandy Clay Loam boundary", () => {
+	it("sand=60 silt=15 clay=25 → Sandy Clay Loam (Phase 10C-C regression)", () => {
+		// BENCH_SANDY_CLAY_LOAM_01 composition; was incorrectly returned as Loam.
+		expect(determineSoilTextureClass(60, 25)).toBe("Sandy Clay Loam");
+	});
+
+	it("sand=65 silt=15 clay=20 → Sandy Clay Loam (PRELIMINARY golden composition)", () => {
+		// Golden Test A 65/15/20 falls in the same buggy range.
+		expect(determineSoilTextureClass(65, 20)).toBe("Sandy Clay Loam");
+	});
+
+	it("sand=80 silt=0 clay=20 → Sandy Clay Loam (polygon vertex, lower-sand limit)", () => {
+		// Sandy Clay Loam polygon vertex at clay=20, sand=80 (textureTriangle.ts).
+		expect(determineSoilTextureClass(80, 20)).toBe("Sandy Clay Loam");
+	});
+
+	it("sand=40 silt=40 clay=20 → Loam (silt ≥ 28, not Sandy Clay Loam)", () => {
+		// High silt disqualifies Sandy Clay Loam; must stay Loam.
+		expect(determineSoilTextureClass(40, 20)).toBe("Loam");
+	});
+
+	it("sand=44 silt=36 clay=20 → Loam (sand ≤ 45, not Sandy Clay Loam)", () => {
+		// Low sand disqualifies Sandy Clay Loam; must stay Loam.
+		expect(determineSoilTextureClass(44, 20)).toBe("Loam");
+	});
+
+	it("sand=60 silt=13 clay=27 → Sandy Clay Loam (clay=27 existing branch still correct)", () => {
+		// Verifies the clay ≥ 27 branch is still intact after the fix.
+		expect(determineSoilTextureClass(60, 27)).toBe("Sandy Clay Loam");
+	});
+});
+
+// ---------------------------------------------------------------------------
+// BUG-10C-C-02 — theta1500DF NaN at the sand apex
+//
+// For sand=99%, clay=0%, OM=0.2% the Saxton-Rawls Eq-1 regression yields
+// theta1500t ≈ 0.007. The density-adjustment (theta1500t + 0.14·theta1500t
+// − 0.02) then produces theta1500DF ≈ −0.012 — a negative number.
+// Math.log(negative) = NaN, which silently corrupts B, lambda, and KS.
+//
+// Fix: CLAMPS.theta1500DFMin = 0.001 is applied in calculateDensityEffects
+// before the value enters the logarithm equations (Eqs 11–12).
+// ---------------------------------------------------------------------------
+
+describe("BUG-10C-C-02 — theta1500DF NaN at sand apex", () => {
+	it("sand=99 clay=0 OM=0.2 → saturatedConductivity is finite (not NaN)", () => {
+		// BENCH_EDGE_EXTREME_SAND_01 composition — previously NaN via
+		// Math.log(negative theta1500DF).
+		const result = calculateSoilPhysics({
+			sand: 99,
+			clay: 0,
+			organicMatter: 0.2,
+			densityFactor: 1.3,
+			gravelContent: 0,
+			electricalConductivity: 0.5,
+			userPlan: "PROFESSIONAL",
+		});
+		const ksat = parseFloat(result.saturatedConductivity);
+		expect(Number.isFinite(ksat)).toBe(true);
+		expect(ksat).toBeGreaterThan(0);
+	});
+
+	it("sand=99 clay=0 OM=0.2 → wiltingPoint is positive and finite", () => {
+		const result = calculateSoilPhysics({
+			sand: 99,
+			clay: 0,
+			organicMatter: 0.2,
+			densityFactor: 1.3,
+			gravelContent: 0,
+			electricalConductivity: 0.5,
+			userPlan: "PROFESSIONAL",
+		});
+		const wp = parseFloat(result.wiltingPoint);
+		expect(Number.isFinite(wp)).toBe(true);
+		expect(wp).toBeGreaterThan(0);
+	});
+
+	it("normal loam (40/20 OM=2.5) → saturatedConductivity unaffected by the clamp", () => {
+		// Verify the floor does not alter output for soils within the
+		// Saxton-Rawls calibration domain.
+		const result = calculateSoilPhysics({
+			sand: 40,
+			clay: 20,
+			organicMatter: 2.5,
+			densityFactor: 1.3,
+			gravelContent: 0,
+			electricalConductivity: 0.5,
+			userPlan: "PROFESSIONAL",
+		});
+		const ksat = parseFloat(result.saturatedConductivity);
+		expect(Number.isFinite(ksat)).toBe(true);
+		expect(ksat).toBeGreaterThan(1);
+		expect(ksat).toBeLessThan(100);
+	});
 });

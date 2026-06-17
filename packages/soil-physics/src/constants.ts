@@ -36,6 +36,18 @@ export const CLAMPS = {
 	theta33DFMin: 0.05,
 	theta33DFMax: 0.5,
 	thetaS33DFMin: 0.01,
+	/**
+	 * BUG-10C-C-02 — Floor for the density-adjusted wilting-point (θ1500DF).
+	 * At the sand apex (sand ≈ 99%, clay ≈ 0%) the Saxton-Rawls Eq-1
+	 * regression yields a near-zero θ1500t; the subsequent density adjustment
+	 * (θ1500t + 0.14·θ1500t − 0.02) pushes θ1500DF below zero.
+	 * Math.log of a non-positive number is NaN, which silently corrupts
+	 * parameter B, lambda, and finally KS.  A floor of 0.001 (0.1 % v/v)
+	 * is below any physically realistic wilting-point for sandy soils
+	 * (literature values ≥ 0.01 % v/v) and prevents NaN propagation without
+	 * affecting soils whose θ1500DF is well above the floor.
+	 */
+	theta1500DFMin: 0.001,
 	AMin: 0.1,
 	BMin: 0.1,
 	BMax: 10,

@@ -37,17 +37,19 @@ describe("golden DTO integrity — PRELIMINARY", () => {
 		});
 	});
 
-	it("executive summary — saline sandy-loam Poor rating", async () => {
+	it("executive summary — saline sandy-clay-loam Poor rating", async () => {
 		const { dto } = await runGoldenPipeline(GOLDEN_PRELIMINARY);
-		// 65/15/20 Loam at EC 6.0 → Moderate salinity → Poor overall
+		// 65/15/20 Sandy Clay Loam at EC 6.0 → Moderate salinity → Poor overall
+		// BUG-10C-C-01 FIX: 65/15/20 now correctly classified as Sandy Clay Loam.
 		expect(dto.executiveSummary.overallRating).toBe("Poor");
 		expect(dto.executiveSummary.actionItemCount).toBe(0);
 		expect(dto.executiveSummary.headlineFindings).toHaveLength(4);
 	});
 
-	it("physics — Loam 65/15/20 OM 1.5, DEFAULT bulkDensityTrace", async () => {
+	it("physics — Sandy Clay Loam 65/15/20 OM 1.5, DEFAULT bulkDensityTrace", async () => {
 		const { dto } = await runGoldenPipeline(GOLDEN_PRELIMINARY);
 		// Saxton-Rawls for 65/15/20 OM 1.5 (distinct from MODERATE 60/25/15)
+		// Physics values unchanged by BUG-10C-C-01 fix (Saxton-Rawls uses sand/clay/OM).
 		expect(dto.physics.fieldCapacity).toBe(20.1);
 		expect(dto.physics.wiltingPoint).toBe(11.9);
 		expect(dto.physics.plantAvailableWater).toBe(8.3);
