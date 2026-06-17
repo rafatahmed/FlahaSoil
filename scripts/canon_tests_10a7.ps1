@@ -1,5 +1,23 @@
-# Phase 10A.7 canonical integration test runner
-# Runs through the REAL app path: register -> project -> sample -> test -> calculate -> report
+# =============================================================================
+# FlahaSOIL v2 — Phase 10A.7 canonical integration test runner
+# =============================================================================
+# Purpose:  Exercises the live HTTP API end-to-end for three canonical soil
+#           levels (PRELIMINARY / MODERATE / ADVANCED).  Uses the REAL app
+#           path: login → project → sample → test → calculate → report.
+#           Serves as the authoritative source of canonical inputs that are
+#           mirrored as static fixtures in Phase 10A.8 golden tests.
+#
+# Required environment:
+#   • Backend running on http://localhost:3002
+#   • A seeded test account: canon10a7@flahasoil.test / Canon10A7!Test
+#
+# Expected output:
+#   AUTH_OK=true, PROJECT_ID=…, then per-level: sample / test / physics /
+#   chemistry / report JSON fragments.  Exits non-zero on any API failure.
+#
+# CI-safe: NO — requires a live database and seeded credentials.
+#           Run locally before tagging a Phase 10A release.
+# =============================================================================
 
 $BASE = "http://localhost:3002/api/v2"
 
