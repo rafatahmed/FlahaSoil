@@ -29,6 +29,9 @@ export type {
 	TextureSuitabilityInput,
 } from "./rules";
 
+// Phase 10C-A — Scientific Calibration Framework (metadata only).
+export * from "./calibration";
+
 /** Phase-1 sentinel kept for backwards compatibility with the skeleton. */
 export function soilInterpretationPackageReady(): boolean {
 	return true;
