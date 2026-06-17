@@ -277,10 +277,13 @@ export function calculateMoistureConductivity(
 	_S: number,
 	_C: number
 ): ConductivityResults {
-	const { thetaSDF, theta33DF, lambda } = tensionResults;
+const { thetaSDF, theta33DF, lambda, thetaS33DF } = tensionResults;
 
-	// Equation 16: Saturated hydraulic conductivity (KS)
-	const KS = KS_COEFFICIENT * Math.pow(thetaSDF - theta33DF, 3 - lambda);
+// Equation 16: Saturated hydraulic conductivity (KS)
+// Phase 10B (BUG-10B-01) — Use the clamped `thetaS33DF` (Eq 10) instead
+// of raw `thetaSDF - theta33DF` to avoid `Math.pow(negative, fractional)`
+// which yields NaN for highly compacted heavy clays.
+const KS = KS_COEFFICIENT * Math.pow(thetaS33DF, 3 - lambda);
 
 	// Equation 17: Unsaturated hydraulic conductivity exponent
 	const conductivityExponent = 3 + 2 / lambda;
